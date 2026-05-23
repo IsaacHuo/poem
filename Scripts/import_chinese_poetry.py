@@ -50,7 +50,8 @@ SOURCES = {
     },
 }
 
-EXPECTED_TOTAL = sum(source["expected_count"] for source in SOURCES.values())
+EXPECTED_SKIPPED_EMPTY_TEXT_COUNT = 2
+EXPECTED_TOTAL = sum(source["expected_count"] for source in SOURCES.values()) - EXPECTED_SKIPPED_EMPTY_TEXT_COUNT
 
 TANG_FORMS = [
     "五言绝句",
@@ -115,6 +116,10 @@ def main() -> int:
         print(f"{source_id}: {count}")
     if report["duplicate_base_ids"]:
         print(f"Duplicate content hashes with stable suffixes: {report['duplicate_base_ids']}")
+    if report["skipped_items"]:
+        print("Skipped empty-text items:")
+        for item in report["skipped_items"]:
+            print(f"- {item}")
 
     return 0
 
@@ -122,6 +127,7 @@ def main() -> int:
 def build_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
     poems: list[dict[str, Any]] = []
     source_counts: dict[str, int] = {}
+    skipped_items: list[str] = []
     base_id_counts: collections.Counter[str] = collections.Counter()
 
     for source_id, config in SOURCES.items():
@@ -134,7 +140,14 @@ def build_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
 
         source_counts[source_id] = len(items)
         for item in items:
-            poems.append(convert_item(source_id, config, item, base_id_counts))
+            poem = convert_item(source_id, config, item, base_id_counts)
+            if poem is None:
+                skipped_items.append(f"{source_id}/{clean_text(item.get('author')) or '佚名'}/{clean_text(item.get('title')) or clean_text(item.get('rhythmic')) or '无题'}")
+                continue
+            poems.append(poem)
+
+    if len(skipped_items) != EXPECTED_SKIPPED_EMPTY_TEXT_COUNT:
+        raise ValueError(f"Expected {EXPECTED_SKIPPED_EMPTY_TEXT_COUNT} skipped empty-text items, got {len(skipped_items)}: {skipped_items}")
 
     collections_data = build_collections(poems)
     categories = build_categories(poems)
@@ -145,6 +158,7 @@ def build_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
     }
     report = {
         "source_counts": source_counts,
+        "skipped_items": skipped_items,
         "duplicate_base_ids": sum(1 for count in base_id_counts.values() if count > 1),
     }
     return catalog, report
@@ -165,7 +179,7 @@ def convert_item(
     config: dict[str, Any],
     item: dict[str, Any],
     base_id_counts: collections.Counter[str],
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     author = clean_text(item.get("author")) or "佚名"
     title = clean_text(item.get("title")) or clean_text(item.get("rhythmic")) or "无题"
     paragraphs = [clean_text(paragraph) for paragraph in item.get("paragraphs", [])]
@@ -173,7 +187,7 @@ def convert_item(
     if not paragraphs:
         title, paragraphs = repair_empty_paragraphs(source_id, title)
     if not paragraphs:
-        raise ValueError(f"{source_id}/{author}/{title} has no paragraphs")
+        return None
 
     base_id = stable_base_id(source_id, author, title, paragraphs)
     base_id_counts[base_id] += 1

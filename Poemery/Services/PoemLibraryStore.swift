@@ -11,7 +11,7 @@ final class PoemLibraryStore {
     private var poemsByID: [Poem.ID: Poem]
 
     init(catalog: PoemSeedCatalog = PoemLibraryStore.loadBundledCatalog()) {
-        self.poems = catalog.poems.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+        self.poems = catalog.poems
         self.collections = catalog.collections
         self.categories = catalog.categories
         self.poemsByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { ($0.id, $0) })
