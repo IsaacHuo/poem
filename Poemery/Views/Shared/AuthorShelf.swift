@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AuthorShelf: View {
     let authors: [AuthorResult]
-    let onOpenPoem: (Poem) -> Void
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -13,7 +13,7 @@ struct AuthorShelf: View {
                     ForEach(authors) { author in
                         Button {
                             if let poem = author.poems.first {
-                                onOpenPoem(poem)
+                                onOpenPoem(poem, ReadingQueue(title: author.name, poems: author.poems))
                             }
                         } label: {
                             VStack(spacing: 10) {

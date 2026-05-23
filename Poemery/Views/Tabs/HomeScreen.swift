@@ -3,7 +3,7 @@ import SwiftUI
 struct HomeScreen: View {
     let library: PoemLibraryStore
     let session: ReadingSessionStore
-    let onOpenPoem: (Poem) -> Void
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
 
     var body: some View {

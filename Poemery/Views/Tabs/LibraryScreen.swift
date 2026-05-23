@@ -3,7 +3,7 @@ import SwiftUI
 struct LibraryScreen: View {
     let library: PoemLibraryStore
     let session: ReadingSessionStore
-    let onOpenPoem: (Poem) -> Void
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
 
     var body: some View {
@@ -59,28 +59,30 @@ struct LibraryScreen: View {
     }
 
     private func openFirstAuthor() {
-        if let poem = library.authors().first?.poems.first {
-            onOpenPoem(poem)
+        if let author = library.authors().first, let poem = author.poems.first {
+            onOpenPoem(poem, ReadingQueue(title: author.name, poems: author.poems))
         }
     }
 
     private func openFirstPoem() {
         if let poem = library.poems.first {
-            onOpenPoem(poem)
+            onOpenPoem(poem, ReadingQueue(title: "诗词", poems: library.poems))
         }
     }
 
     private func openFirstFavorite() {
-        if let poem = session.favoritePoems(in: library).first {
-            onOpenPoem(poem)
+        let poems = session.favoritePoems(in: library)
+        if let poem = poems.first {
+            onOpenPoem(poem, ReadingQueue(title: "收藏", poems: poems))
         } else {
             openFirstPoem()
         }
     }
 
     private func openFirstRecent() {
-        if let poem = session.recentPoems(in: library).first {
-            onOpenPoem(poem)
+        let poems = session.recentPoems(in: library)
+        if let poem = poems.first {
+            onOpenPoem(poem, ReadingQueue(title: "最近阅读", poems: poems))
         } else {
             openFirstPoem()
         }

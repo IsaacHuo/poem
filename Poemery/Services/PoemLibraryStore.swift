@@ -66,7 +66,6 @@ final class PoemLibraryStore {
                 poem.author,
                 poem.dynasty,
                 poem.form,
-                poem.summary,
                 poem.fullText,
                 poem.tags.joined(separator: " ")
             ]

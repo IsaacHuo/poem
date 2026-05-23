@@ -3,6 +3,17 @@ import SwiftUI
 struct FeaturedCollectionCard: View {
     let collection: PoemCollection
     let poems: [Poem]
+    let size: CGSize
+
+    init(
+        collection: PoemCollection,
+        poems: [Poem],
+        size: CGSize = CGSize(width: 320, height: 346)
+    ) {
+        self.collection = collection
+        self.poems = poems
+        self.size = size
+    }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -11,7 +22,7 @@ struct FeaturedCollectionCard: View {
             bottomGradient
             titleBlock
         }
-        .frame(width: 320, height: 420)
+        .frame(width: size.width, height: size.height)
         .shadow(color: collection.accent.primary.opacity(0.22), radius: 24, x: 0, y: 14)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(collection.title)，\(collection.subtitle)，\(poems.count) 首")
@@ -38,33 +49,33 @@ struct FeaturedCollectionCard: View {
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(.white.opacity(0.12))
-                .frame(width: 132, height: 188)
+                .frame(width: size.width * 0.41, height: size.height * 0.45)
                 .rotationEffect(.degrees(-9))
-                .offset(x: -68, y: -78)
+                .offset(x: -size.width * 0.21, y: -size.height * 0.19)
 
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(.white.opacity(0.25), lineWidth: 1)
-                .frame(width: 178, height: 260)
+                .frame(width: size.width * 0.56, height: size.height * 0.62)
                 .rotationEffect(.degrees(7))
-                .offset(x: 68, y: -16)
+                .offset(x: size.width * 0.21, y: -size.height * 0.04)
 
             Text(collection.accent.glyph)
-                .font(PoemeryTheme.chineseFont(size: 150, relativeTo: .largeTitle))
+                .font(PoemeryTheme.chineseFont(size: size.width * 0.42, relativeTo: .largeTitle))
                 .foregroundStyle(.white.opacity(0.22))
-                .offset(x: 42, y: -54)
+                .offset(x: size.width * 0.13, y: -size.height * 0.13)
 
             VStack(spacing: 4) {
                 Text("诗")
                 Text("境")
             }
-            .font(PoemeryTheme.chineseFont(size: 20, relativeTo: .title3))
+            .font(PoemeryTheme.chineseFont(size: size.width * 0.06, relativeTo: .title3))
             .foregroundStyle(.white.opacity(0.82))
-            .frame(width: 54, height: 54)
+            .frame(width: size.width * 0.17, height: size.width * 0.17)
             .overlay {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .stroke(.white.opacity(0.58), lineWidth: 1)
             }
-            .offset(x: 112, y: -154)
+            .offset(x: size.width * 0.35, y: -size.height * 0.37)
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
@@ -85,7 +96,7 @@ struct FeaturedCollectionCard: View {
                 .foregroundStyle(.white.opacity(0.82))
 
             Text(collection.title)
-                .font(.system(size: 34, weight: .bold))
+                .font(.system(size: max(28, size.width * 0.10), weight: .bold))
                 .foregroundStyle(.white)
                 .lineLimit(2)
                 .minimumScaleFactor(0.78)
@@ -100,7 +111,7 @@ struct FeaturedCollectionCard: View {
                 .foregroundStyle(.white.opacity(0.76))
                 .padding(.top, 4)
         }
-        .padding(20)
+        .padding(max(18, size.width * 0.06))
     }
 
     private var label: String {

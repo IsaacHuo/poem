@@ -17,35 +17,13 @@ struct PoemArtwork: View {
                 )
                 .overlay(PaperTexture().opacity(0.20))
 
-            VStack {
-                HStack {
-                    Text(poem.dynasty)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.82))
-                    Spacer()
-                    Text(poem.form)
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.76))
-                }
-                Spacer()
-            }
-            .padding(max(8, size * 0.08))
-
-            Text(poem.artworkStyle.glyph)
-                .font(PoemeryTheme.chineseFont(size: size * 0.42, relativeTo: .largeTitle))
-                .foregroundStyle(.white.opacity(0.86))
-
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading) {
                 Spacer()
                 Text(poem.title)
-                    .font(.system(size: max(14, size * 0.13), weight: .bold))
+                    .font(.system(size: max(13, size * 0.15), weight: .bold))
                     .foregroundStyle(.white)
-                    .lineLimit(2)
+                    .lineLimit(size < 70 ? 1 : 3)
                     .minimumScaleFactor(0.62)
-                Text(poem.author)
-                    .font(.system(size: max(11, size * 0.08), weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.78))
-                    .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(max(8, size * 0.08))

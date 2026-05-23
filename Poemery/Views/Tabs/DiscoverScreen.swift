@@ -3,7 +3,7 @@ import SwiftUI
 struct DiscoverScreen: View {
     let library: PoemLibraryStore
     @Binding var searchText: String
-    let onOpenPoem: (Poem) -> Void
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
 
     private let columns = [

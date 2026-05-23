@@ -3,7 +3,7 @@ import SwiftUI
 struct ProfileScreen: View {
     let library: PoemLibraryStore
     let session: ReadingSessionStore
-    let onOpenPoem: (Poem) -> Void
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
 
     private var favoritePoems: [Poem] {

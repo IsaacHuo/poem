@@ -3,7 +3,7 @@ import SwiftUI
 struct CollectionDetailView: View {
     let collection: PoemCollection
     let poems: [Poem]
-    let onOpenPoem: (Poem) -> Void
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
@@ -59,7 +59,7 @@ struct CollectionDetailView: View {
             LazyVStack(spacing: 0) {
                 ForEach(poems) { poem in
                     Button {
-                        onOpenPoem(poem)
+                        onOpenPoem(poem, ReadingQueue(title: collection.title, poems: poems))
                     } label: {
                         PoemListRow(poem: poem)
                     }

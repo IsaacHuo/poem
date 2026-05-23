@@ -5,7 +5,8 @@ struct PoemListSection: View {
     let poems: [Poem]
     var emptyTitle: String = ""
     var emptySubtitle: String = ""
-    let onOpenPoem: (Poem) -> Void
+    var queueTitle: String?
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -17,7 +18,7 @@ struct PoemListSection: View {
                 VStack(spacing: 0) {
                     ForEach(poems) { poem in
                         Button {
-                            onOpenPoem(poem)
+                            onOpenPoem(poem, ReadingQueue(title: queueTitle ?? title, poems: poems))
                         } label: {
                             PoemListRow(poem: poem)
                         }

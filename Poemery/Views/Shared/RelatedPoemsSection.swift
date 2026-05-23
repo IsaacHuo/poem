@@ -2,7 +2,7 @@ import SwiftUI
 
 struct RelatedPoemsSection: View {
     let poems: [Poem]
-    let onOpenPoem: (Poem) -> Void
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
 
     var body: some View {
         if !poems.isEmpty {

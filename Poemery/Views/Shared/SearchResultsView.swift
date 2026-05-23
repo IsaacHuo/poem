@@ -2,12 +2,12 @@ import SwiftUI
 
 struct SearchResultsView: View {
     let results: SearchResults
-    let onOpenPoem: (Poem) -> Void
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            PoemListSection(title: "诗词", poems: results.poems, onOpenPoem: onOpenPoem)
+            PoemListSection(title: "诗词", poems: results.poems, queueTitle: "搜索结果", onOpenPoem: onOpenPoem)
 
             if !results.authors.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
@@ -15,7 +15,7 @@ struct SearchResultsView: View {
                     ForEach(results.authors) { author in
                         Button {
                             if let poem = author.poems.first {
-                                onOpenPoem(poem)
+                                onOpenPoem(poem, ReadingQueue(title: author.name, poems: author.poems))
                             }
                         } label: {
                             HStack {
