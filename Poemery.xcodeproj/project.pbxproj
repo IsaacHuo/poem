@@ -1,0 +1,536 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03738A49989425CE080A2E38 /* SectionTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF037B554636ADFFD33B8117 /* SectionTitle.swift */; };
+		0A0001010000000000000001 /* PoemeryApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000001 /* PoemeryApp.swift */; };
+		0A0001010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000002 /* ContentView.swift */; };
+		0A0001010000000000000003 /* Poem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000003 /* Poem.swift */; };
+		0A0001010000000000000004 /* PoemeryTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000004 /* PoemeryTheme.swift */; };
+		0A0001010000000000000005 /* AdaptiveGlassSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000005 /* AdaptiveGlassSurface.swift */; };
+		0A000101000000000000000A /* SpeechConductor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000201000000000000000A /* SpeechConductor.swift */; };
+		0A000101000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A000201000000000000000B /* Assets.xcassets */; };
+		0A000101000000000000000D /* HYWenRunSongYunU.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0A000201000000000000000E /* HYWenRunSongYunU.ttf */; };
+		0A000101000000000000000E /* PoemLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000010 /* PoemLibraryStore.swift */; };
+		0A000101000000000000000F /* ReadingSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000011 /* ReadingSessionStore.swift */; };
+		0A0001010000000000000010 /* PoemsSeed.json in Resources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000012 /* PoemsSeed.json */; };
+		13984D1CC479C6E32474B273 /* CollectionListSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83BE3902869F772948910F7A /* CollectionListSection.swift */; };
+		1B15A2099817C8BC95A22E41 /* AnnotationDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74CAC4EC4FA0892CC46FD441 /* AnnotationDetailSheet.swift */; };
+		1C4216FA41EC9A601C641443 /* MiniReadingBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = B40BA1DB466E16DE851E4CA5 /* MiniReadingBar.swift */; };
+		2231F43E636C8450920E289D /* LibraryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA59D75576B7C3C24A4D58D /* LibraryScreen.swift */; };
+		2913AA5948AB5E1C98E650F3 /* LibraryMetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A75FFC2B334649B6D6E6E53C /* LibraryMetricCard.swift */; };
+		3775010A808D74167B6F943E /* DiscoverScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D44AE697C312EB4ED9C80B2 /* DiscoverScreen.swift */; };
+		3EE60A3F92C5F2DD61594B5A /* RadioScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4526ADD437011A61B38C910 /* RadioScreen.swift */; };
+		41D1EF21D39E2E67B907FD53 /* SearchResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DFE055923C1EB72B8AB5B28 /* SearchResultsView.swift */; };
+		472598E090EDDD12331C2FC6 /* ScreenHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D6BAB78A424D3E98C3842E /* ScreenHeader.swift */; };
+		4D03D6C5BB71CD4B4656A1D7 /* QuickLibraryGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92BA91CF721BBFF759723A6F /* QuickLibraryGrid.swift */; };
+		4E85AB9DEA09129C3BE4397D /* PoemTextSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21B27E4DD1CFD2101CC3A421 /* PoemTextSection.swift */; };
+		4F117507D19F76764CE2E32A /* PaperTexture.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFBC24C2E6355665253B92AD /* PaperTexture.swift */; };
+		5BA9C16F5859BEE19D82BF02 /* GlassContainerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16114CCF7DC04597763065C4 /* GlassContainerModifier.swift */; };
+		5EBF85137D535CD81C4299A9 /* HomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DECAC45A84355C0EC93FF61 /* HomeScreen.swift */; };
+		5EF82DAF3D411BFD228B4BFF /* FeaturedCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A4BBE251278816BCB64043B /* FeaturedCarousel.swift */; };
+		6B0F90248B908DAEE030FB2D /* PoemDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0529A348D8CDB99CDADDEB /* PoemDetailView.swift */; };
+		75381D38F898785552497076 /* PoemArtwork.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45124D15ECCA5DFBCB9217A /* PoemArtwork.swift */; };
+		7C8DAA7EA0D3CD20D999DABC /* FeaturedCollectionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E54109CC495D6457DD03235D /* FeaturedCollectionCard.swift */; };
+		7CFF65EB00743BB757873550 /* PoemShelf.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3424D0C258D14623D6AFC8F8 /* PoemShelf.swift */; };
+		7E709D9DAA3A3288F5294729 /* PoemListSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D66D8A2BCD67D45B08E5B315 /* PoemListSection.swift */; };
+		8AD9BFDA0328E8FE1780FA0D /* RadioRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B51636C7FCFBC411ABDA4B /* RadioRow.swift */; };
+		92387182E82A4866B997ED1D /* EmptyLibraryState.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD94AEF758947659A3DB0F8F /* EmptyLibraryState.swift */; };
+		92B354CACA12D4C647A04F4D /* RelatedPoemsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D8F801DF8F2EF4032022B4 /* RelatedPoemsSection.swift */; };
+		983EC6C1BB187D2161EFD1A2 /* PoemListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67910F5BBE31738F57710922 /* PoemListRow.swift */; };
+		ACD6C71C97FAE33B77D7DF40 /* NowReadingControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9DD642AD4D39919DF8599BC /* NowReadingControls.swift */; };
+		AEC4BF32178A4DBE37911272 /* CompactPoemCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CA5D3AFA21742A20BAAD14E /* CompactPoemCard.swift */; };
+		BD5A83E8B793033D467FCD03 /* CategoryTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = E839657D14CBBE6EAB5023D1 /* CategoryTile.swift */; };
+		CFA3A1F92E018E2DB169111F /* NowReadingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA8294CE96D63CF163E780DF /* NowReadingView.swift */; };
+		D4C0175FA5D6444A7B0F2718 /* SearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3BCE87DBC79874C20D1FD86 /* SearchScreen.swift */; };
+		DE7D802C2E0CAAB10B909303 /* ViewExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F5C4D56160892C0886E8080 /* ViewExtensions.swift */; };
+		F1FD9A4FA1D2360A22890B29 /* AuthorShelf.swift in Sources */ = {isa = PBXBuildFile; fileRef = B873180A122CCABB01211EDF /* AuthorShelf.swift */; };
+		F8B867F0884735EC79406279 /* SearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F510C9BB0B7FB51613CB9F5 /* SearchField.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0A0002010000000000000001 /* PoemeryApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoemeryApp.swift; sourceTree = "<group>"; };
+		0A0002010000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		0A0002010000000000000003 /* Poem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/Poem.swift; sourceTree = "<group>"; };
+		0A0002010000000000000004 /* PoemeryTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/PoemeryTheme.swift; sourceTree = "<group>"; };
+		0A0002010000000000000005 /* AdaptiveGlassSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/AdaptiveGlassSurface.swift; sourceTree = "<group>"; };
+		0A0002010000000000000006 /* LivingPoemScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scenes/LivingPoemScene.swift; sourceTree = "<group>"; };
+		0A0002010000000000000007 /* GlassControlIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/GlassControlIsland.swift; sourceTree = "<group>"; };
+		0A0002010000000000000008 /* AnnotationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/AnnotationPanel.swift; sourceTree = "<group>"; };
+		0A0002010000000000000009 /* PoemCardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/PoemCardSheet.swift; sourceTree = "<group>"; };
+		0A000201000000000000000A /* SpeechConductor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/SpeechConductor.swift; sourceTree = "<group>"; };
+		0A000201000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		0A000201000000000000000C /* Poemery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Poemery.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A000201000000000000000D /* PoemVersePager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/PoemVersePager.swift; sourceTree = "<group>"; };
+		0A000201000000000000000E /* HYWenRunSongYunU.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = HYWenRunSongYunU.ttf; sourceTree = "<group>"; };
+		0A000201000000000000000F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0A0002010000000000000010 /* PoemLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PoemLibraryStore.swift; sourceTree = "<group>"; };
+		0A0002010000000000000011 /* ReadingSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ReadingSessionStore.swift; sourceTree = "<group>"; };
+		0A0002010000000000000012 /* PoemsSeed.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = PoemsSeed.json; sourceTree = "<group>"; };
+		16114CCF7DC04597763065C4 /* GlassContainerModifier.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlassContainerModifier.swift; sourceTree = "<group>"; };
+		1DFE055923C1EB72B8AB5B28 /* SearchResultsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchResultsView.swift; sourceTree = "<group>"; };
+		20D8F801DF8F2EF4032022B4 /* RelatedPoemsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RelatedPoemsSection.swift; sourceTree = "<group>"; };
+		21B27E4DD1CFD2101CC3A421 /* PoemTextSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PoemTextSection.swift; sourceTree = "<group>"; };
+		2DECAC45A84355C0EC93FF61 /* HomeScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
+		2F510C9BB0B7FB51613CB9F5 /* SearchField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchField.swift; sourceTree = "<group>"; };
+		3424D0C258D14623D6AFC8F8 /* PoemShelf.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PoemShelf.swift; sourceTree = "<group>"; };
+		3CA5D3AFA21742A20BAAD14E /* CompactPoemCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CompactPoemCard.swift; sourceTree = "<group>"; };
+		5A4BBE251278816BCB64043B /* FeaturedCarousel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FeaturedCarousel.swift; sourceTree = "<group>"; };
+		67910F5BBE31738F57710922 /* PoemListRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PoemListRow.swift; sourceTree = "<group>"; };
+		6F5C4D56160892C0886E8080 /* ViewExtensions.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ViewExtensions.swift; sourceTree = "<group>"; };
+		74CAC4EC4FA0892CC46FD441 /* AnnotationDetailSheet.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AnnotationDetailSheet.swift; sourceTree = "<group>"; };
+		80B51636C7FCFBC411ABDA4B /* RadioRow.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RadioRow.swift; sourceTree = "<group>"; };
+		83BE3902869F772948910F7A /* CollectionListSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CollectionListSection.swift; sourceTree = "<group>"; };
+		87D6BAB78A424D3E98C3842E /* ScreenHeader.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenHeader.swift; sourceTree = "<group>"; };
+		8D44AE697C312EB4ED9C80B2 /* DiscoverScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DiscoverScreen.swift; sourceTree = "<group>"; };
+		8E0529A348D8CDB99CDADDEB /* PoemDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PoemDetailView.swift; sourceTree = "<group>"; };
+		92BA91CF721BBFF759723A6F /* QuickLibraryGrid.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = QuickLibraryGrid.swift; sourceTree = "<group>"; };
+		A75FFC2B334649B6D6E6E53C /* LibraryMetricCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibraryMetricCard.swift; sourceTree = "<group>"; };
+		B40BA1DB466E16DE851E4CA5 /* MiniReadingBar.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MiniReadingBar.swift; sourceTree = "<group>"; };
+		B45124D15ECCA5DFBCB9217A /* PoemArtwork.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PoemArtwork.swift; sourceTree = "<group>"; };
+		B873180A122CCABB01211EDF /* AuthorShelf.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuthorShelf.swift; sourceTree = "<group>"; };
+		BA8294CE96D63CF163E780DF /* NowReadingView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowReadingView.swift; sourceTree = "<group>"; };
+		CD94AEF758947659A3DB0F8F /* EmptyLibraryState.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EmptyLibraryState.swift; sourceTree = "<group>"; };
+		D4526ADD437011A61B38C910 /* RadioScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RadioScreen.swift; sourceTree = "<group>"; };
+		D66D8A2BCD67D45B08E5B315 /* PoemListSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PoemListSection.swift; sourceTree = "<group>"; };
+		D9DD642AD4D39919DF8599BC /* NowReadingControls.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NowReadingControls.swift; sourceTree = "<group>"; };
+		E3BCE87DBC79874C20D1FD86 /* SearchScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchScreen.swift; sourceTree = "<group>"; };
+		E54109CC495D6457DD03235D /* FeaturedCollectionCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FeaturedCollectionCard.swift; sourceTree = "<group>"; };
+		E839657D14CBBE6EAB5023D1 /* CategoryTile.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CategoryTile.swift; sourceTree = "<group>"; };
+		EFBC24C2E6355665253B92AD /* PaperTexture.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PaperTexture.swift; sourceTree = "<group>"; };
+		FEA59D75576B7C3C24A4D58D /* LibraryScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LibraryScreen.swift; sourceTree = "<group>"; };
+		FF037B554636ADFFD33B8117 /* SectionTitle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SectionTitle.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0A0005010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0A0004010000000000000001 /* Poemery */ = {
+			isa = PBXGroup;
+			children = (
+				0A0002010000000000000001 /* PoemeryApp.swift */,
+				0A0002010000000000000002 /* ContentView.swift */,
+				0A0002010000000000000003 /* Poem.swift */,
+				0A0002010000000000000004 /* PoemeryTheme.swift */,
+				0A0002010000000000000005 /* AdaptiveGlassSurface.swift */,
+				0A0002010000000000000006 /* LivingPoemScene.swift */,
+				0A0002010000000000000007 /* GlassControlIsland.swift */,
+				0A0002010000000000000008 /* AnnotationPanel.swift */,
+				0A0002010000000000000009 /* PoemCardSheet.swift */,
+				0A000201000000000000000D /* PoemVersePager.swift */,
+				0A000201000000000000000A /* SpeechConductor.swift */,
+				0A0002010000000000000010 /* PoemLibraryStore.swift */,
+				0A0002010000000000000011 /* ReadingSessionStore.swift */,
+				0A000201000000000000000B /* Assets.xcassets */,
+				0A000201000000000000000E /* HYWenRunSongYunU.ttf */,
+				0A0002010000000000000012 /* PoemsSeed.json */,
+				0A000201000000000000000F /* Info.plist */,
+				F6BCD09E682BE94109CCBA2F /* Views */,
+			);
+			path = Poemery;
+			sourceTree = "<group>";
+		};
+		0A0006010000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				0A0004010000000000000001 /* Poemery */,
+				0A0006010000000000000002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0A0006010000000000000002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0A000201000000000000000C /* Poemery.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		52D99A9D46DDFA9C8479F6E7 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				6F5C4D56160892C0886E8080 /* ViewExtensions.swift */,
+				EFBC24C2E6355665253B92AD /* PaperTexture.swift */,
+				B873180A122CCABB01211EDF /* AuthorShelf.swift */,
+				80B51636C7FCFBC411ABDA4B /* RadioRow.swift */,
+				5A4BBE251278816BCB64043B /* FeaturedCarousel.swift */,
+				A75FFC2B334649B6D6E6E53C /* LibraryMetricCard.swift */,
+				3424D0C258D14623D6AFC8F8 /* PoemShelf.swift */,
+				16114CCF7DC04597763065C4 /* GlassContainerModifier.swift */,
+				8E0529A348D8CDB99CDADDEB /* PoemDetailView.swift */,
+				CD94AEF758947659A3DB0F8F /* EmptyLibraryState.swift */,
+				67910F5BBE31738F57710922 /* PoemListRow.swift */,
+				83BE3902869F772948910F7A /* CollectionListSection.swift */,
+				FF037B554636ADFFD33B8117 /* SectionTitle.swift */,
+				E54109CC495D6457DD03235D /* FeaturedCollectionCard.swift */,
+				87D6BAB78A424D3E98C3842E /* ScreenHeader.swift */,
+				D9DD642AD4D39919DF8599BC /* NowReadingControls.swift */,
+				B45124D15ECCA5DFBCB9217A /* PoemArtwork.swift */,
+				E839657D14CBBE6EAB5023D1 /* CategoryTile.swift */,
+				2F510C9BB0B7FB51613CB9F5 /* SearchField.swift */,
+				3CA5D3AFA21742A20BAAD14E /* CompactPoemCard.swift */,
+				92BA91CF721BBFF759723A6F /* QuickLibraryGrid.swift */,
+				20D8F801DF8F2EF4032022B4 /* RelatedPoemsSection.swift */,
+				BA8294CE96D63CF163E780DF /* NowReadingView.swift */,
+				B40BA1DB466E16DE851E4CA5 /* MiniReadingBar.swift */,
+				1DFE055923C1EB72B8AB5B28 /* SearchResultsView.swift */,
+				D66D8A2BCD67D45B08E5B315 /* PoemListSection.swift */,
+				74CAC4EC4FA0892CC46FD441 /* AnnotationDetailSheet.swift */,
+				21B27E4DD1CFD2101CC3A421 /* PoemTextSection.swift */,
+			);
+			name = Shared;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		9383DA0E3CCED4275765F91F /* Tabs */ = {
+			isa = PBXGroup;
+			children = (
+				FEA59D75576B7C3C24A4D58D /* LibraryScreen.swift */,
+				E3BCE87DBC79874C20D1FD86 /* SearchScreen.swift */,
+				2DECAC45A84355C0EC93FF61 /* HomeScreen.swift */,
+				8D44AE697C312EB4ED9C80B2 /* DiscoverScreen.swift */,
+				D4526ADD437011A61B38C910 /* RadioScreen.swift */,
+			);
+			name = Tabs;
+			path = Tabs;
+			sourceTree = "<group>";
+		};
+		F6BCD09E682BE94109CCBA2F /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				9383DA0E3CCED4275765F91F /* Tabs */,
+				52D99A9D46DDFA9C8479F6E7 /* Shared */,
+			);
+			name = Views;
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0A0007010000000000000001 /* Poemery */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0A0008010000000000000002 /* Build configuration list for PBXNativeTarget "Poemery" */;
+			buildPhases = (
+				0A0009010000000000000001 /* Sources */,
+				0A0005010000000000000001 /* Frameworks */,
+				0A000A010000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Poemery;
+			productName = Poemery;
+			productReference = 0A000201000000000000000C /* Poemery.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0A000B010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2640;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					0A0007010000000000000001 = {
+						CreatedOnToolsVersion = 26.4.1;
+					};
+				};
+			};
+			buildConfigurationList = 0A0008010000000000000001 /* Build configuration list for PBXProject "Poemery" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				"zh-Hans",
+			);
+			mainGroup = 0A0006010000000000000001;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0A0006010000000000000002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0A0007010000000000000001 /* Poemery */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0A000A010000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A000101000000000000000B /* Assets.xcassets in Resources */,
+				0A000101000000000000000D /* HYWenRunSongYunU.ttf in Resources */,
+				0A0001010000000000000010 /* PoemsSeed.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0A0009010000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0A0001010000000000000001 /* PoemeryApp.swift in Sources */,
+				0A0001010000000000000002 /* ContentView.swift in Sources */,
+				0A0001010000000000000003 /* Poem.swift in Sources */,
+				0A0001010000000000000004 /* PoemeryTheme.swift in Sources */,
+				0A0001010000000000000005 /* AdaptiveGlassSurface.swift in Sources */,
+				0A000101000000000000000A /* SpeechConductor.swift in Sources */,
+				0A000101000000000000000E /* PoemLibraryStore.swift in Sources */,
+				0A000101000000000000000F /* ReadingSessionStore.swift in Sources */,
+				2231F43E636C8450920E289D /* LibraryScreen.swift in Sources */,
+				D4C0175FA5D6444A7B0F2718 /* SearchScreen.swift in Sources */,
+				5EBF85137D535CD81C4299A9 /* HomeScreen.swift in Sources */,
+				3775010A808D74167B6F943E /* DiscoverScreen.swift in Sources */,
+				3EE60A3F92C5F2DD61594B5A /* RadioScreen.swift in Sources */,
+				DE7D802C2E0CAAB10B909303 /* ViewExtensions.swift in Sources */,
+				4F117507D19F76764CE2E32A /* PaperTexture.swift in Sources */,
+				F1FD9A4FA1D2360A22890B29 /* AuthorShelf.swift in Sources */,
+				8AD9BFDA0328E8FE1780FA0D /* RadioRow.swift in Sources */,
+				5EF82DAF3D411BFD228B4BFF /* FeaturedCarousel.swift in Sources */,
+				2913AA5948AB5E1C98E650F3 /* LibraryMetricCard.swift in Sources */,
+				7CFF65EB00743BB757873550 /* PoemShelf.swift in Sources */,
+				5BA9C16F5859BEE19D82BF02 /* GlassContainerModifier.swift in Sources */,
+				6B0F90248B908DAEE030FB2D /* PoemDetailView.swift in Sources */,
+				92387182E82A4866B997ED1D /* EmptyLibraryState.swift in Sources */,
+				983EC6C1BB187D2161EFD1A2 /* PoemListRow.swift in Sources */,
+				13984D1CC479C6E32474B273 /* CollectionListSection.swift in Sources */,
+				03738A49989425CE080A2E38 /* SectionTitle.swift in Sources */,
+				7C8DAA7EA0D3CD20D999DABC /* FeaturedCollectionCard.swift in Sources */,
+				472598E090EDDD12331C2FC6 /* ScreenHeader.swift in Sources */,
+				ACD6C71C97FAE33B77D7DF40 /* NowReadingControls.swift in Sources */,
+				75381D38F898785552497076 /* PoemArtwork.swift in Sources */,
+				BD5A83E8B793033D467FCD03 /* CategoryTile.swift in Sources */,
+				F8B867F0884735EC79406279 /* SearchField.swift in Sources */,
+				AEC4BF32178A4DBE37911272 /* CompactPoemCard.swift in Sources */,
+				4D03D6C5BB71CD4B4656A1D7 /* QuickLibraryGrid.swift in Sources */,
+				92B354CACA12D4C647A04F4D /* RelatedPoemsSection.swift in Sources */,
+				CFA3A1F92E018E2DB169111F /* NowReadingView.swift in Sources */,
+				1C4216FA41EC9A601C641443 /* MiniReadingBar.swift in Sources */,
+				41D1EF21D39E2E67B907FD53 /* SearchResultsView.swift in Sources */,
+				7E709D9DAA3A3288F5294729 /* PoemListSection.swift in Sources */,
+				1B15A2099817C8BC95A22E41 /* AnnotationDetailSheet.swift in Sources */,
+				4E85AB9DEA09129C3BE4397D /* PoemTextSection.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0A000C010000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		0A000C010000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0A000C010000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Poemery/Preview Content\"";
+				DEVELOPMENT_TEAM = G229WP43HH;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Poemery/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.isaachuo.poemery;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		0A000C010000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Poemery/Preview Content\"";
+				DEVELOPMENT_TEAM = G229WP43HH;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Poemery/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.isaachuo.poemery;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0A0008010000000000000001 /* Build configuration list for PBXProject "Poemery" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A000C010000000000000001 /* Debug */,
+				0A000C010000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0A0008010000000000000002 /* Build configuration list for PBXNativeTarget "Poemery" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0A000C010000000000000003 /* Debug */,
+				0A000C010000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0A000B010000000000000001 /* Project object */;
+}

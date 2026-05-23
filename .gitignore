@@ -1,0 +1,25 @@
+.DS_Store
+
+# Xcode user state
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+
+# Build products and indexes
+build/
+DerivedData/
+.build/
+*.result
+*.xcresult
+
+# Swift Package Manager
+Packages/
+.swiftpm/
+
+# App packaging
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Logs
+*.log

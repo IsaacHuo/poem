@@ -1,0 +1,578 @@
+{
+  "poems": [
+    {
+      "id": "jing-ye-si",
+      "title": "静夜思",
+      "author": "李白",
+      "dynasty": "唐",
+      "form": "五言绝句",
+      "tags": ["唐诗", "思乡", "月夜", "入门"],
+      "summary": "以床前月光起兴，把瞬间的抬头与低头写成最直接的乡愁。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E9%9D%9C%E5%A4%9C%E6%80%9D",
+      "artworkStyle": {
+        "primaryHex": "#E93445",
+        "secondaryHex": "#F8BBD0",
+        "tertiaryHex": "#2B2B34",
+        "glyph": "月"
+      },
+      "lines": [
+        { "id": "jing-ye-si-1", "order": 0, "text": "床前明月光，" },
+        { "id": "jing-ye-si-2", "order": 1, "text": "疑是地上霜。" },
+        { "id": "jing-ye-si-3", "order": 2, "text": "举头望明月，" },
+        { "id": "jing-ye-si-4", "order": 3, "text": "低头思故乡。" }
+      ],
+      "annotations": [
+        {
+          "id": "jing-ye-si-a1",
+          "lineID": "jing-ye-si-1",
+          "term": "明月光",
+          "reading": "ming yue guang",
+          "summary": "月光是触发乡思的入口。",
+          "detail": "诗没有先说愁，而是先放出一片安静的光，让情绪从景物里自然浮出。"
+        },
+        {
+          "id": "jing-ye-si-a2",
+          "lineID": "jing-ye-si-4",
+          "term": "思故乡",
+          "reading": "si gu xiang",
+          "summary": "结句直接点明情感。",
+          "detail": "抬头与低头之间形成动作上的转折，也完成从外在月色到内心乡愁的转入。"
+        }
+      ]
+    },
+    {
+      "id": "chun-xiao",
+      "title": "春晓",
+      "author": "孟浩然",
+      "dynasty": "唐",
+      "form": "五言绝句",
+      "tags": ["唐诗", "春天", "自然", "入门"],
+      "summary": "从春眠初醒写起，用鸟声、风雨和落花补出一夜春意。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E6%98%A5%E6%9B%89",
+      "artworkStyle": {
+        "primaryHex": "#37B779",
+        "secondaryHex": "#B8E986",
+        "tertiaryHex": "#1E4F43",
+        "glyph": "春"
+      },
+      "lines": [
+        { "id": "chun-xiao-1", "order": 0, "text": "春眠不觉晓，" },
+        { "id": "chun-xiao-2", "order": 1, "text": "处处闻啼鸟。" },
+        { "id": "chun-xiao-3", "order": 2, "text": "夜来风雨声，" },
+        { "id": "chun-xiao-4", "order": 3, "text": "花落知多少。" }
+      ],
+      "annotations": [
+        {
+          "id": "chun-xiao-a1",
+          "lineID": "chun-xiao-1",
+          "term": "不觉晓",
+          "reading": "bu jue xiao",
+          "summary": "写春睡的沉酣。",
+          "detail": "不觉天明，说明春日气候舒适，也让全诗带着刚醒时的柔和。"
+        },
+        {
+          "id": "chun-xiao-a2",
+          "lineID": "chun-xiao-4",
+          "term": "知多少",
+          "reading": "zhi duo shao",
+          "summary": "不确定反而留下余味。",
+          "detail": "诗人没有描写落花的数量，而用疑问把惜春之情交给读者想象。"
+        }
+      ]
+    },
+    {
+      "id": "deng-guan-que-lou",
+      "title": "登鹳雀楼",
+      "author": "王之涣",
+      "dynasty": "唐",
+      "form": "五言绝句",
+      "tags": ["唐诗", "登临", "壮阔", "哲理"],
+      "summary": "以登楼远眺展开空间，再用更上一层楼写出进取与眼界。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E7%99%BB%E9%B9%B3%E9%9B%80%E6%A8%93",
+      "artworkStyle": {
+        "primaryHex": "#FF9F1C",
+        "secondaryHex": "#FFD166",
+        "tertiaryHex": "#24507A",
+        "glyph": "楼"
+      },
+      "lines": [
+        { "id": "deng-guan-que-lou-1", "order": 0, "text": "白日依山尽，" },
+        { "id": "deng-guan-que-lou-2", "order": 1, "text": "黄河入海流。" },
+        { "id": "deng-guan-que-lou-3", "order": 2, "text": "欲穷千里目，" },
+        { "id": "deng-guan-que-lou-4", "order": 3, "text": "更上一层楼。" }
+      ],
+      "annotations": [
+        {
+          "id": "deng-guan-que-lou-a1",
+          "lineID": "deng-guan-que-lou-3",
+          "term": "千里目",
+          "reading": "qian li mu",
+          "summary": "指更辽阔的视野。",
+          "detail": "空间上的远望转成精神上的追求，诗意从景色进入人生判断。"
+        },
+        {
+          "id": "deng-guan-que-lou-a2",
+          "lineID": "deng-guan-que-lou-4",
+          "term": "更上一层楼",
+          "reading": "geng shang yi ceng lou",
+          "summary": "成为经典的进取表达。",
+          "detail": "它既是实际登楼，也是提醒人要改变位置、提升眼界。"
+        }
+      ]
+    },
+    {
+      "id": "xiang-si",
+      "title": "相思",
+      "author": "王维",
+      "dynasty": "唐",
+      "form": "五言绝句",
+      "tags": ["唐诗", "相思", "赠别", "红豆"],
+      "summary": "借红豆寄托相思，把深情压缩在可采、可赠、可记的一物之中。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E7%9B%B8%E6%80%9D_(%E7%8E%8B%E7%B6%AD)",
+      "artworkStyle": {
+        "primaryHex": "#C1121F",
+        "secondaryHex": "#FF6B6B",
+        "tertiaryHex": "#641220",
+        "glyph": "豆"
+      },
+      "lines": [
+        { "id": "xiang-si-1", "order": 0, "text": "红豆生南国，" },
+        { "id": "xiang-si-2", "order": 1, "text": "春来发几枝。" },
+        { "id": "xiang-si-3", "order": 2, "text": "愿君多采撷，" },
+        { "id": "xiang-si-4", "order": 3, "text": "此物最相思。" }
+      ],
+      "annotations": [
+        {
+          "id": "xiang-si-a1",
+          "lineID": "xiang-si-1",
+          "term": "红豆",
+          "reading": "hong dou",
+          "summary": "传统相思信物。",
+          "detail": "诗把抽象的思念落在红豆上，使情感有了可以采摘和保存的形状。"
+        }
+      ]
+    },
+    {
+      "id": "wang-lu-shan-pu-bu",
+      "title": "望庐山瀑布",
+      "author": "李白",
+      "dynasty": "唐",
+      "form": "七言绝句",
+      "tags": ["唐诗", "山水", "瀑布", "浪漫"],
+      "summary": "以夸张和想象写瀑布之势，视觉开阔，气息飞动。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E6%9C%9B%E5%BB%AC%E5%B1%B1%E7%80%91%E5%B8%83",
+      "artworkStyle": {
+        "primaryHex": "#277DA1",
+        "secondaryHex": "#90E0EF",
+        "tertiaryHex": "#0B3954",
+        "glyph": "瀑"
+      },
+      "lines": [
+        { "id": "wang-lu-shan-pu-bu-1", "order": 0, "text": "日照香炉生紫烟，" },
+        { "id": "wang-lu-shan-pu-bu-2", "order": 1, "text": "遥看瀑布挂前川。" },
+        { "id": "wang-lu-shan-pu-bu-3", "order": 2, "text": "飞流直下三千尺，" },
+        { "id": "wang-lu-shan-pu-bu-4", "order": 3, "text": "疑是银河落九天。" }
+      ],
+      "annotations": [
+        {
+          "id": "wang-lu-shan-pu-bu-a1",
+          "lineID": "wang-lu-shan-pu-bu-4",
+          "term": "银河落九天",
+          "reading": "yin he luo jiu tian",
+          "summary": "以天河坠落形容瀑布。",
+          "detail": "夸张不是单纯放大，而是把庐山瀑布写成天上景象落入人间。"
+        }
+      ]
+    },
+    {
+      "id": "jiang-xue",
+      "title": "江雪",
+      "author": "柳宗元",
+      "dynasty": "唐",
+      "form": "五言绝句",
+      "tags": ["唐诗", "冬雪", "孤独", "山水"],
+      "summary": "用极简景物营造空旷寒意，孤舟独钓成为高洁孤绝的形象。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E6%B1%9F%E9%9B%AA",
+      "artworkStyle": {
+        "primaryHex": "#8ECAE6",
+        "secondaryHex": "#F6F8FA",
+        "tertiaryHex": "#1D3557",
+        "glyph": "雪"
+      },
+      "lines": [
+        { "id": "jiang-xue-1", "order": 0, "text": "千山鸟飞绝，" },
+        { "id": "jiang-xue-2", "order": 1, "text": "万径人踪灭。" },
+        { "id": "jiang-xue-3", "order": 2, "text": "孤舟蓑笠翁，" },
+        { "id": "jiang-xue-4", "order": 3, "text": "独钓寒江雪。" }
+      ],
+      "annotations": [
+        {
+          "id": "jiang-xue-a1",
+          "lineID": "jiang-xue-3",
+          "term": "孤舟",
+          "reading": "gu zhou",
+          "summary": "孤独形象的中心。",
+          "detail": "前两句清空世界，后两句才推出孤舟与老翁，人的存在因此更冷、更硬。"
+        },
+        {
+          "id": "jiang-xue-a2",
+          "lineID": "jiang-xue-4",
+          "term": "寒江雪",
+          "reading": "han jiang xue",
+          "summary": "把寒意推到极致。",
+          "detail": "钓的不是鱼，更像是在雪与江之间守住一种不随俗的姿态。"
+        }
+      ]
+    },
+    {
+      "id": "yin-hu-shang-chu-qing-hou-yu",
+      "title": "饮湖上初晴后雨",
+      "author": "苏轼",
+      "dynasty": "宋",
+      "form": "七言绝句",
+      "tags": ["宋诗", "西湖", "山水", "雨晴"],
+      "summary": "晴光与雨色互相映照，最后以西子比西湖，写出天然妆容之美。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E9%A3%B2%E6%B9%96%E4%B8%8A%E5%88%9D%E6%99%B4%E5%BE%8C%E9%9B%A8",
+      "artworkStyle": {
+        "primaryHex": "#06D6A0",
+        "secondaryHex": "#BFD7EA",
+        "tertiaryHex": "#2F4858",
+        "glyph": "湖"
+      },
+      "lines": [
+        { "id": "yin-hu-shang-chu-qing-hou-yu-1", "order": 0, "text": "水光潋滟晴方好，" },
+        { "id": "yin-hu-shang-chu-qing-hou-yu-2", "order": 1, "text": "山色空蒙雨亦奇。" },
+        { "id": "yin-hu-shang-chu-qing-hou-yu-3", "order": 2, "text": "欲把西湖比西子，" },
+        { "id": "yin-hu-shang-chu-qing-hou-yu-4", "order": 3, "text": "淡妆浓抹总相宜。" }
+      ],
+      "annotations": [
+        {
+          "id": "yin-hu-shang-a1",
+          "lineID": "yin-hu-shang-chu-qing-hou-yu-4",
+          "term": "淡妆浓抹",
+          "reading": "dan zhuang nong mo",
+          "summary": "晴雨皆美的比喻。",
+          "detail": "苏轼用人的妆容解释湖山变化，让西湖在不同天气里都成立为美。"
+        }
+      ]
+    },
+    {
+      "id": "shui-diao-ge-tou",
+      "title": "水调歌头·明月几时有",
+      "author": "苏轼",
+      "dynasty": "宋",
+      "form": "词",
+      "tags": ["宋词", "中秋", "明月", "豪放", "思亲"],
+      "summary": "从问月到怀人，既有旷达哲思，也有对亲人的深切祝愿。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E6%B0%B4%E8%AA%BF%E6%AD%8C%E9%A0%AD",
+      "artworkStyle": {
+        "primaryHex": "#4361EE",
+        "secondaryHex": "#B8C0FF",
+        "tertiaryHex": "#10002B",
+        "glyph": "月"
+      },
+      "lines": [
+        { "id": "shui-diao-ge-tou-1", "order": 0, "text": "明月几时有，把酒问青天。" },
+        { "id": "shui-diao-ge-tou-2", "order": 1, "text": "不知天上宫阙，今夕是何年。" },
+        { "id": "shui-diao-ge-tou-3", "order": 2, "text": "我欲乘风归去，又恐琼楼玉宇，高处不胜寒。" },
+        { "id": "shui-diao-ge-tou-4", "order": 3, "text": "起舞弄清影，何似在人间。" },
+        { "id": "shui-diao-ge-tou-5", "order": 4, "text": "转朱阁，低绮户，照无眠。" },
+        { "id": "shui-diao-ge-tou-6", "order": 5, "text": "不应有恨，何事长向别时圆？" },
+        { "id": "shui-diao-ge-tou-7", "order": 6, "text": "人有悲欢离合，月有阴晴圆缺，此事古难全。" },
+        { "id": "shui-diao-ge-tou-8", "order": 7, "text": "但愿人长久，千里共婵娟。" }
+      ],
+      "annotations": [
+        {
+          "id": "shui-diao-a1",
+          "lineID": "shui-diao-ge-tou-1",
+          "term": "把酒问青天",
+          "reading": "ba jiu wen qing tian",
+          "summary": "以酒问月，气象开阔。",
+          "detail": "开篇不是低声怀人，而是对天发问，立刻把个人情绪放进宇宙尺度。"
+        },
+        {
+          "id": "shui-diao-a2",
+          "lineID": "shui-diao-ge-tou-7",
+          "term": "悲欢离合",
+          "reading": "bei huan li he",
+          "summary": "把人生无常与月相变化并置。",
+          "detail": "苏轼没有否认离别之苦，而是从更大的规律里寻找可以承受的答案。"
+        },
+        {
+          "id": "shui-diao-a3",
+          "lineID": "shui-diao-ge-tou-8",
+          "term": "共婵娟",
+          "reading": "gong chan juan",
+          "summary": "共享同一轮明月。",
+          "detail": "空间相隔千里，仍能共望明月；祝愿由个人思念变成普遍安慰。"
+        }
+      ]
+    },
+    {
+      "id": "nian-nu-jiao-chi-bi",
+      "title": "念奴娇·赤壁怀古",
+      "author": "苏轼",
+      "dynasty": "宋",
+      "form": "词",
+      "tags": ["宋词", "豪放", "怀古", "赤壁"],
+      "summary": "江山、历史与个人身世同场交汇，在壮阔之外写出人生如梦的清醒。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E5%BF%B5%E5%A5%B4%E5%AC%8C%C2%B7%E8%B5%A4%E5%A3%81%E6%80%80%E5%8F%A4",
+      "artworkStyle": {
+        "primaryHex": "#D00000",
+        "secondaryHex": "#FFBA08",
+        "tertiaryHex": "#370617",
+        "glyph": "江"
+      },
+      "lines": [
+        { "id": "nian-nu-jiao-chi-bi-1", "order": 0, "text": "大江东去，浪淘尽，千古风流人物。" },
+        { "id": "nian-nu-jiao-chi-bi-2", "order": 1, "text": "故垒西边，人道是，三国周郎赤壁。" },
+        { "id": "nian-nu-jiao-chi-bi-3", "order": 2, "text": "乱石穿空，惊涛拍岸，卷起千堆雪。" },
+        { "id": "nian-nu-jiao-chi-bi-4", "order": 3, "text": "江山如画，一时多少豪杰。" },
+        { "id": "nian-nu-jiao-chi-bi-5", "order": 4, "text": "遥想公瑾当年，小乔初嫁了，雄姿英发。" },
+        { "id": "nian-nu-jiao-chi-bi-6", "order": 5, "text": "羽扇纶巾，谈笑间，樯橹灰飞烟灭。" },
+        { "id": "nian-nu-jiao-chi-bi-7", "order": 6, "text": "故国神游，多情应笑我，早生华发。" },
+        { "id": "nian-nu-jiao-chi-bi-8", "order": 7, "text": "人生如梦，一尊还酹江月。" }
+      ],
+      "annotations": [
+        {
+          "id": "nian-nu-jiao-a1",
+          "lineID": "nian-nu-jiao-chi-bi-1",
+          "term": "大江东去",
+          "reading": "da jiang dong qu",
+          "summary": "以长江开出历史纵深。",
+          "detail": "水流带走人物与时代，开篇便把自然景观写成历史的时间轴。"
+        },
+        {
+          "id": "nian-nu-jiao-a2",
+          "lineID": "nian-nu-jiao-chi-bi-6",
+          "term": "谈笑间",
+          "reading": "tan xiao jian",
+          "summary": "写周瑜从容破敌。",
+          "detail": "战争的剧烈与人物的从容形成对比，突出少年英雄的风采。"
+        },
+        {
+          "id": "nian-nu-jiao-a3",
+          "lineID": "nian-nu-jiao-chi-bi-8",
+          "term": "酹江月",
+          "reading": "lei jiang yue",
+          "summary": "以酒祭江月。",
+          "detail": "结尾不再争胜负，而把感慨还给江月，豪放中含着自我化解。"
+        }
+      ]
+    },
+    {
+      "id": "tian-jing-sha-qiu-si",
+      "title": "天净沙·秋思",
+      "author": "马致远",
+      "dynasty": "元",
+      "form": "曲",
+      "tags": ["元曲", "秋思", "羁旅", "苍凉"],
+      "summary": "连续意象像镜头切换，最后落在断肠人，把秋景变成漂泊者心境。",
+      "sourceURL": "https://zh.wikisource.org/zh-hans/%E5%A4%A9%E6%B7%A8%E6%B2%99%C2%B7%E7%A7%8B%E6%80%9D",
+      "artworkStyle": {
+        "primaryHex": "#9A5C35",
+        "secondaryHex": "#DDA15E",
+        "tertiaryHex": "#283618",
+        "glyph": "秋"
+      },
+      "lines": [
+        { "id": "tian-jing-sha-qiu-si-1", "order": 0, "text": "枯藤老树昏鸦，" },
+        { "id": "tian-jing-sha-qiu-si-2", "order": 1, "text": "小桥流水人家，" },
+        { "id": "tian-jing-sha-qiu-si-3", "order": 2, "text": "古道西风瘦马。" },
+        { "id": "tian-jing-sha-qiu-si-4", "order": 3, "text": "夕阳西下，" },
+        { "id": "tian-jing-sha-qiu-si-5", "order": 4, "text": "断肠人在天涯。" }
+      ],
+      "annotations": [
+        {
+          "id": "tian-jing-sha-a1",
+          "lineID": "tian-jing-sha-qiu-si-1",
+          "term": "枯藤老树昏鸦",
+          "reading": "ku teng lao shu hun ya",
+          "summary": "三个意象压出暮秋气氛。",
+          "detail": "枯、老、昏三个字连续降温，使开头便有衰败和归巢不得的意味。"
+        },
+        {
+          "id": "tian-jing-sha-a2",
+          "lineID": "tian-jing-sha-qiu-si-5",
+          "term": "断肠人",
+          "reading": "duan chang ren",
+          "summary": "漂泊者的自画像。",
+          "detail": "前面所有景物最终汇聚到这个人身上，秋思不只是季节情绪，更是无家可归的疼痛。"
+        }
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "id": "daily-reading",
+      "title": "每日一诵",
+      "subtitle": "从十首经典里开始今天的阅读",
+      "kind": "radio",
+      "poemIDs": ["jing-ye-si", "chun-xiao", "deng-guan-que-lou", "xiang-si"],
+      "accent": {
+        "primaryHex": "#E93445",
+        "secondaryHex": "#F8BBD0",
+        "tertiaryHex": "#2B2B34",
+        "glyph": "今"
+      }
+    },
+    {
+      "id": "moon-and-distance",
+      "title": "月色与远方",
+      "subtitle": "明月、乡愁与千里共望",
+      "kind": "featured",
+      "poemIDs": ["jing-ye-si", "shui-diao-ge-tou", "xiang-si"],
+      "accent": {
+        "primaryHex": "#4361EE",
+        "secondaryHex": "#B8C0FF",
+        "tertiaryHex": "#10002B",
+        "glyph": "月"
+      }
+    },
+    {
+      "id": "su-shi-picks",
+      "title": "苏轼精选",
+      "subtitle": "旷达、山水与赤壁江月",
+      "kind": "author",
+      "poemIDs": ["yin-hu-shang-chu-qing-hou-yu", "shui-diao-ge-tou", "nian-nu-jiao-chi-bi"],
+      "accent": {
+        "primaryHex": "#D00000",
+        "secondaryHex": "#FFBA08",
+        "tertiaryHex": "#370617",
+        "glyph": "苏"
+      }
+    },
+    {
+      "id": "landscape-wide",
+      "title": "山水开阔",
+      "subtitle": "从瀑布、西湖到寒江雪",
+      "kind": "mood",
+      "poemIDs": ["wang-lu-shan-pu-bu", "yin-hu-shang-chu-qing-hou-yu", "jiang-xue"],
+      "accent": {
+        "primaryHex": "#277DA1",
+        "secondaryHex": "#90E0EF",
+        "tertiaryHex": "#0B3954",
+        "glyph": "山"
+      }
+    },
+    {
+      "id": "starter-chart",
+      "title": "入门排行榜",
+      "subtitle": "最适合先收藏的十首",
+      "kind": "chart",
+      "poemIDs": ["jing-ye-si", "chun-xiao", "deng-guan-que-lou", "xiang-si", "jiang-xue", "tian-jing-sha-qiu-si"],
+      "accent": {
+        "primaryHex": "#FF006E",
+        "secondaryHex": "#FFBE0B",
+        "tertiaryHex": "#3A0CA3",
+        "glyph": "榜"
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": "tang-poetry",
+      "title": "唐诗",
+      "subtitle": "绝句、山水与盛唐气象",
+      "tag": "唐诗",
+      "symbol": "square.grid.2x2.fill",
+      "artworkStyle": {
+        "primaryHex": "#E93445",
+        "secondaryHex": "#FFB703",
+        "tertiaryHex": "#2B2B34",
+        "glyph": "唐"
+      }
+    },
+    {
+      "id": "ci-poetry",
+      "title": "宋词",
+      "subtitle": "月色、江山与旷达心事",
+      "tag": "宋词",
+      "symbol": "text.quote",
+      "artworkStyle": {
+        "primaryHex": "#4361EE",
+        "secondaryHex": "#B8C0FF",
+        "tertiaryHex": "#10002B",
+        "glyph": "词"
+      }
+    },
+    {
+      "id": "yuan-qu",
+      "title": "元曲",
+      "subtitle": "苍凉、羁旅与散曲韵味",
+      "tag": "元曲",
+      "symbol": "waveform.path.ecg",
+      "artworkStyle": {
+        "primaryHex": "#9A5C35",
+        "secondaryHex": "#DDA15E",
+        "tertiaryHex": "#283618",
+        "glyph": "曲"
+      }
+    },
+    {
+      "id": "homesick",
+      "title": "思乡",
+      "subtitle": "月下低头，人在天涯",
+      "tag": "思乡",
+      "symbol": "moon.stars.fill",
+      "artworkStyle": {
+        "primaryHex": "#6D5DF6",
+        "secondaryHex": "#A2D2FF",
+        "tertiaryHex": "#1B1B3A",
+        "glyph": "乡"
+      }
+    },
+    {
+      "id": "landscape",
+      "title": "山水",
+      "subtitle": "瀑布、西湖与寒江雪",
+      "tag": "山水",
+      "symbol": "mountain.2.fill",
+      "artworkStyle": {
+        "primaryHex": "#277DA1",
+        "secondaryHex": "#90E0EF",
+        "tertiaryHex": "#0B3954",
+        "glyph": "山"
+      }
+    },
+    {
+      "id": "bold",
+      "title": "豪放",
+      "subtitle": "大江东去，千古风流",
+      "tag": "豪放",
+      "symbol": "flame.fill",
+      "artworkStyle": {
+        "primaryHex": "#D00000",
+        "secondaryHex": "#FFBA08",
+        "tertiaryHex": "#370617",
+        "glyph": "豪"
+      }
+    },
+    {
+      "id": "spring",
+      "title": "春天",
+      "subtitle": "啼鸟、落花与初醒",
+      "tag": "春天",
+      "symbol": "leaf.fill",
+      "artworkStyle": {
+        "primaryHex": "#37B779",
+        "secondaryHex": "#B8E986",
+        "tertiaryHex": "#1E4F43",
+        "glyph": "春"
+      }
+    },
+    {
+      "id": "charts",
+      "title": "排行榜",
+      "subtitle": "最常读的经典入口",
+      "tag": "入门",
+      "symbol": "chart.bar.fill",
+      "artworkStyle": {
+        "primaryHex": "#FF006E",
+        "secondaryHex": "#FFBE0B",
+        "tertiaryHex": "#3A0CA3",
+        "glyph": "榜"
+      }
+    }
+  ]
+}
