@@ -4,10 +4,8 @@ struct ContentView: View {
     @State private var library = PoemLibraryStore()
     @State private var session = ReadingSessionStore()
     @State private var selectedTab: AppTab = .home
-    @State private var presentedPoem: Poem?
-    @State private var nowReadingPoem: Poem?
+    @State private var presentedItem: PresentedLibraryItem?
     @State private var searchText = ""
-    @Namespace private var glassNamespace
 
     var body: some View {
         tabContainer
@@ -15,23 +13,21 @@ struct ContentView: View {
             .toolbarBackground(.ultraThinMaterial, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
             .background(PoemeryTheme.background.ignoresSafeArea())
-            .onAppear {
-                session.configureIfNeeded(with: library)
-            }
-            .sheet(item: $presentedPoem) { poem in
-                PoemDetailView(
-                    poem: poem,
-                    library: library,
-                    session: session,
-                    onStartReading: { startReading($0) }
-                )
-            }
-            .sheet(item: $nowReadingPoem) { poem in
-                NowReadingView(
-                    poem: poem,
-                    library: library,
-                    session: session
-                )
+            .sheet(item: $presentedItem) { item in
+                switch item {
+                case .poem(let poem):
+                    PoemDetailView(
+                        poem: poem,
+                        library: library,
+                        session: session
+                    )
+                case .collection(let collection):
+                    CollectionDetailView(
+                        collection: collection,
+                        poems: library.poems(for: collection),
+                        onOpenPoem: openPoem
+                    )
+                }
             }
             .preferredColorScheme(.light)
     }
@@ -59,16 +55,7 @@ struct ContentView: View {
             legacyTabScreen(.discover) {
                 DiscoverScreen(
                     library: library,
-                    session: session,
-                    onOpenPoem: openPoem,
-                    onOpenCollection: openCollection
-                )
-            }
-
-            legacyTabScreen(.radio) {
-                RadioScreen(
-                    library: library,
-                    session: session,
+                    searchText: $searchText,
                     onOpenPoem: openPoem,
                     onOpenCollection: openCollection
                 )
@@ -83,11 +70,10 @@ struct ContentView: View {
                 )
             }
 
-            legacyTabScreen(.search) {
-                SearchScreen(
+            legacyTabScreen(.profile) {
+                ProfileScreen(
                     library: library,
                     session: session,
-                    searchText: $searchText,
                     onOpenPoem: openPoem,
                     onOpenCollection: openCollection
                 )
@@ -96,18 +82,7 @@ struct ContentView: View {
     }
 
     @available(iOS 18.0, *)
-    @ViewBuilder
     private var modernTabView: some View {
-        if #available(iOS 26.0, *) {
-            modernTabViewContent
-                .tabViewSearchActivation(.searchTabSelection)
-        } else {
-            modernTabViewContent
-        }
-    }
-
-    @available(iOS 18.0, *)
-    private var modernTabViewContent: some View {
         TabView(selection: $selectedTab) {
             Tab(AppTab.home.title, systemImage: AppTab.home.symbol, value: AppTab.home) {
                 tabContent {
@@ -124,18 +99,7 @@ struct ContentView: View {
                 tabContent {
                     DiscoverScreen(
                         library: library,
-                        session: session,
-                        onOpenPoem: openPoem,
-                        onOpenCollection: openCollection
-                    )
-                }
-            }
-
-            Tab(AppTab.radio.title, systemImage: AppTab.radio.symbol, value: AppTab.radio) {
-                tabContent {
-                    RadioScreen(
-                        library: library,
-                        session: session,
+                        searchText: $searchText,
                         onOpenPoem: openPoem,
                         onOpenCollection: openCollection
                     )
@@ -153,12 +117,11 @@ struct ContentView: View {
                 }
             }
 
-            Tab(AppTab.search.title, systemImage: AppTab.search.symbol, value: AppTab.search, role: .search) {
+            Tab(AppTab.profile.title, systemImage: AppTab.profile.symbol, value: AppTab.profile) {
                 tabContent {
-                    SearchScreen(
+                    ProfileScreen(
                         library: library,
                         session: session,
-                        searchText: $searchText,
                         onOpenPoem: openPoem,
                         onOpenCollection: openCollection
                     )
@@ -174,64 +137,45 @@ struct ContentView: View {
         tabContent {
             content()
         }
-            .tag(tab)
-            .tabItem {
-                Label(tab.title, systemImage: tab.symbol)
-            }
+        .tag(tab)
+        .tabItem {
+            Label(tab.title, systemImage: tab.symbol)
+        }
     }
 
     private func tabContent<Content: View>(
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .safeAreaInset(edge: .bottom, spacing: 8) {
-                miniReadingInset
-            }
-    }
-
-    @ViewBuilder
-    private var miniReadingInset: some View {
-        if let poem = session.currentPoem(in: library) {
-            MiniReadingBar(
-                poem: poem,
-                namespace: glassNamespace,
-                onOpen: { nowReadingPoem = poem },
-                onContinue: { continueReading(poem) },
-                onNext: { session.playNext(in: library) }
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-        }
     }
 
     private func openPoem(_ poem: Poem) {
-        presentedPoem = poem
+        session.markRecent(poem)
+        presentedItem = .poem(poem)
     }
 
     private func openCollection(_ collection: PoemCollection) {
-        guard let poem = library.poems(for: collection).first else { return }
-        session.startReading(poem, queue: library.poems(for: collection))
-        presentedPoem = poem
+        presentedItem = .collection(collection)
     }
+}
 
-    private func startReading(_ poem: Poem) {
-        session.startReading(poem, queue: library.poems)
-        nowReadingPoem = poem
-    }
+private enum PresentedLibraryItem: Identifiable {
+    case poem(Poem)
+    case collection(PoemCollection)
 
-    private func continueReading(_ poem: Poem) {
-        session.continueReading(library)
-        nowReadingPoem = poem
+    var id: String {
+        switch self {
+        case .poem(let poem): "poem-\(poem.id)"
+        case .collection(let collection): "collection-\(collection.id)"
+        }
     }
 }
 
 private enum AppTab: String, Identifiable {
     case home
     case discover
-    case radio
     case library
-    case search
+    case profile
 
     var id: String { rawValue }
 
@@ -239,9 +183,8 @@ private enum AppTab: String, Identifiable {
         switch self {
         case .home: "主页"
         case .discover: "新发现"
-        case .radio: "广播"
         case .library: "资料库"
-        case .search: "搜索"
+        case .profile: "我的"
         }
     }
 
@@ -249,9 +192,8 @@ private enum AppTab: String, Identifiable {
         switch self {
         case .home: "house.fill"
         case .discover: "square.grid.2x2.fill"
-        case .radio: "dot.radiowaves.left.and.right"
         case .library: "books.vertical.fill"
-        case .search: "magnifyingglass"
+        case .profile: "person.crop.circle.fill"
         }
     }
 }

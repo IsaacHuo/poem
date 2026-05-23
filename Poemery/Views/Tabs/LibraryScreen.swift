@@ -9,7 +9,7 @@ struct LibraryScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                ScreenHeader(title: "资料库", subtitle: "收藏、诗单、诗人与最近诵读")
+                ScreenHeader(title: "资料库", subtitle: "收藏、诗单、诗人与最近阅读")
 
                 VStack(spacing: 0) {
                     LibraryNavigationRow(symbol: "rectangle.stack.fill", title: "诗单", value: "\(library.collections.count)") {

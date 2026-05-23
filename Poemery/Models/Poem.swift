@@ -55,7 +55,6 @@ enum CollectionKind: String, Codable, CaseIterable, Hashable {
     case mood
     case author
     case era
-    case radio
     case chart
 }
 

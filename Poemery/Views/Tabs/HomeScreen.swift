@@ -9,7 +9,7 @@ struct HomeScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                ScreenHeader(title: "主页", subtitle: "诗词歌赋，为你继续诵读")
+                ScreenHeader(title: "主页", subtitle: "诗词歌赋，为你继续阅读")
 
                 FeaturedCarousel(
                     title: "专属精选推荐",
@@ -19,7 +19,7 @@ struct HomeScreen: View {
                 )
 
                 PoemShelf(
-                    title: "最近诵读",
+                    title: "最近阅读",
                     poems: recentPoems,
                     emptyTitle: "还没有最近阅读",
                     emptySubtitle: "打开任意一首诗词后会出现在这里。",
@@ -27,7 +27,7 @@ struct HomeScreen: View {
                 )
 
                 PoemListSection(
-                    title: "继续诵读",
+                    title: "开始阅读",
                     poems: Array(library.poems.prefix(4)),
                     onOpenPoem: onOpenPoem
                 )

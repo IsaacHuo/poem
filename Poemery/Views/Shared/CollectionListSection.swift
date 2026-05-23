@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct CollectionListSection: View {
+    var title: String = "诗单"
     let collections: [PoemCollection]
     let library: PoemLibraryStore
     let onOpenCollection: (PoemCollection) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "诗单", showsChevron: !collections.isEmpty)
+            SectionTitle(title: title, showsChevron: !collections.isEmpty)
 
             VStack(spacing: 0) {
                 ForEach(collections) { collection in

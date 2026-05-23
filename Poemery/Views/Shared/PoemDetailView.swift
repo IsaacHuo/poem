@@ -4,23 +4,19 @@ struct PoemDetailView: View {
     let poem: Poem
     let library: PoemLibraryStore
     let session: ReadingSessionStore
-    let onStartReading: (Poem) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var visiblePoem: Poem
-    @State private var speechConductor = SpeechConductor()
     @State private var selectedAnnotation: PoemAnnotation?
 
     init(
         poem: Poem,
         library: PoemLibraryStore,
-        session: ReadingSessionStore,
-        onStartReading: @escaping (Poem) -> Void
+        session: ReadingSessionStore
     ) {
         self.poem = poem
         self.library = library
         self.session = session
-        self.onStartReading = onStartReading
         self._visiblePoem = State(initialValue: poem)
     }
 
@@ -29,17 +25,12 @@ struct PoemDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     hero
-                    actionBar
-
-                    Text(visiblePoem.summary)
-                        .font(.body)
-                        .lineSpacing(4)
-                        .foregroundStyle(PoemeryTheme.secondaryText)
-                        .padding(.horizontal, 2)
+                    favoriteBar
+                    summarySection
 
                     PoemTextSection(
                         poem: visiblePoem,
-                        highlightedLineID: speechConductor.highlightedLineID,
+                        highlightedLineID: nil,
                         selectedAnnotation: $selectedAnnotation
                     )
 
@@ -56,17 +47,13 @@ struct PoemDetailView: View {
                         dismiss()
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                    } label: {
-                        Image(systemName: "ellipsis")
-                    }
-                    .accessibilityLabel("更多")
-                }
             }
             .sheet(item: $selectedAnnotation) { annotation in
                 AnnotationDetailSheet(annotation: annotation)
                     .presentationDetents([.medium])
+            }
+            .onAppear {
+                session.markRecent(visiblePoem)
             }
         }
     }
@@ -97,13 +84,12 @@ struct PoemDetailView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var actionBar: some View {
+    private var favoriteBar: some View {
         HStack(spacing: 12) {
             Button {
-                onStartReading(visiblePoem)
-                dismiss()
+                session.toggleFavorite(visiblePoem)
             } label: {
-                Label("诵读", systemImage: "play.fill")
+                Label(session.isFavorite(visiblePoem) ? "已收藏" : "收藏", systemImage: session.isFavorite(visiblePoem) ? "heart.fill" : "heart")
                     .font(.headline.weight(.bold))
                     .frame(maxWidth: .infinity)
                     .frame(height: 42)
@@ -111,33 +97,17 @@ struct PoemDetailView: View {
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
             .controlSize(.regular)
-
-            Button {
-                session.toggleFavorite(visiblePoem)
-            } label: {
-                Image(systemName: session.isFavorite(visiblePoem) ? "heart.fill" : "heart")
-                    .font(.headline.weight(.semibold))
-                    .frame(width: 28, height: 28)
-            }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
-            .controlSize(.regular)
             .tint(session.isFavorite(visiblePoem) ? PoemeryTheme.accent : PoemeryTheme.secondaryText)
             .accessibilityLabel(session.isFavorite(visiblePoem) ? "取消收藏" : "收藏")
-
-            Button {
-                toggleSpeech()
-            } label: {
-                Image(systemName: speechConductor.isSpeaking ? "pause.fill" : "speaker.wave.2.fill")
-                    .font(.headline.weight(.semibold))
-                    .frame(width: 28, height: 28)
-            }
-            .buttonStyle(.bordered)
-            .buttonBorderShape(.circle)
-            .controlSize(.regular)
-            .tint(PoemeryTheme.secondaryText)
-            .accessibilityLabel(speechConductor.isSpeaking ? "暂停朗读" : "朗读")
         }
+    }
+
+    private var summarySection: some View {
+        Text(visiblePoem.summary)
+            .font(.body)
+            .lineSpacing(4)
+            .foregroundStyle(PoemeryTheme.secondaryText)
+            .padding(.horizontal, 2)
     }
 
     private var background: some View {
@@ -158,17 +128,9 @@ struct PoemDetailView: View {
     }
 
     private func showRelatedPoem(_ poem: Poem) {
-        speechConductor.stop()
+        session.markRecent(poem)
         withAnimation(PoemeryTheme.motion) {
             visiblePoem = poem
-        }
-    }
-
-    private func toggleSpeech() {
-        if speechConductor.isSpeaking {
-            speechConductor.stop()
-        } else {
-            speechConductor.speak(poem: visiblePoem, from: 0)
         }
     }
 }
