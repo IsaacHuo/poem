@@ -27,7 +27,6 @@ struct ProfileScreen: View {
             VStack(alignment: .leading, spacing: 28) {
                 ScreenHeader(title: "我的", subtitle: "本地阅读档案")
 
-                metricGrid
                 readingTaste
 
                 PoemListSection(
@@ -57,21 +56,6 @@ struct ProfileScreen: View {
         }
         .scrollIndicators(.hidden)
         .background(PoemeryTheme.background)
-    }
-
-    private var metricGrid: some View {
-        LazyVGrid(
-            columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ],
-            spacing: 12
-        ) {
-            ProfileMetricCard(symbol: "heart.fill", title: "收藏", value: "\(favoritePoems.count)")
-            ProfileMetricCard(symbol: "clock.fill", title: "最近阅读", value: "\(recentPoems.count)")
-            ProfileMetricCard(symbol: "text.book.closed.fill", title: "诗库", value: "\(library.poems.count)")
-            ProfileMetricCard(symbol: "person.2.fill", title: "作者", value: "\(library.authors().count)")
-        }
     }
 
     private var readingTaste: some View {
@@ -104,35 +88,6 @@ struct ProfileScreen: View {
             }
             .prefix(limit)
             .map(\.0)
-    }
-}
-
-private struct ProfileMetricCard: View {
-    let symbol: String
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Image(systemName: symbol)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(PoemeryTheme.accent)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(value)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(PoemeryTheme.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PoemeryTheme.secondaryText)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
