@@ -377,7 +377,7 @@ private struct PoemShareImage: Transferable {
     static func render(poem: Poem) -> PoemShareImage? {
         let renderer = ImageRenderer(
             content: PoemSharePoster(poem: poem)
-                .frame(width: 900, height: 1200)
+                .frame(width: PoemSharePoster.posterWidth, height: PoemSharePoster.posterHeight)
         )
         renderer.scale = 2
 
@@ -392,6 +392,9 @@ private struct PoemShareImage: Transferable {
 }
 
 private struct PoemSharePoster: View {
+    static let posterWidth: CGFloat = 900
+    static let posterHeight: CGFloat = 1500
+
     let poem: Poem
 
     private var style: ArtworkStyle {
@@ -399,12 +402,85 @@ private struct PoemSharePoster: View {
     }
 
     private var posterLines: [String] {
-        let maxLineCount = 10
+        let maxLineCount = 12
         var lines = poem.lines.prefix(maxLineCount).map(\.text)
         if poem.lines.count > maxLineCount, !lines.isEmpty {
             lines[lines.count - 1] += " ……"
         }
         return lines
+    }
+
+    private var poemCharacterCount: Int {
+        posterLines.reduce(0) { $0 + $1.count }
+    }
+
+    private var longestPosterLineCount: Int {
+        max(posterLines.map(\.count).max() ?? 1, 1)
+    }
+
+    private var titleFontSize: CGFloat {
+        let count = poem.title.count
+        if count <= 3 {
+            return 78
+        }
+        if count <= 6 {
+            return 68
+        }
+        if count <= 10 {
+            return 58
+        }
+        return 48
+    }
+
+    private var metadataFontSize: CGFloat {
+        titleFontSize > 60 ? 31 : 28
+    }
+
+    private var poemFontSize: CGFloat {
+        let lineCount = posterLines.count
+        let baseSize: CGFloat
+        if lineCount <= 4 && poemCharacterCount <= 48 {
+            baseSize = 56
+        } else if lineCount <= 6 && poemCharacterCount <= 72 {
+            baseSize = 48
+        } else if lineCount <= 8 && poemCharacterCount <= 112 {
+            baseSize = 40
+        } else if lineCount <= 10 {
+            baseSize = 34
+        } else {
+            baseSize = 30
+        }
+
+        let widthLimitedSize = 600 / CGFloat(longestPosterLineCount)
+        return min(baseSize, max(28, widthLimitedSize))
+    }
+
+    private var poemLineSpacing: CGFloat {
+        if poemFontSize >= 48 {
+            return 22
+        }
+        if poemFontSize >= 40 {
+            return 18
+        }
+        return 14
+    }
+
+    private var posterTitleMarkCharacters: [String] {
+        let maxCharacterCount = 11
+        let characters = poem.title.map(String.init)
+        guard characters.count > maxCharacterCount else {
+            return characters
+        }
+        return Array(characters.prefix(maxCharacterCount - 1)) + ["…"]
+    }
+
+    private var posterTitleMarkFontSize: CGFloat {
+        let count = max(posterTitleMarkCharacters.count, 1)
+        return min(116, max(56, 760 / CGFloat(count)))
+    }
+
+    private var posterTitleMarkSpacing: CGFloat {
+        posterTitleMarkCharacters.count > 7 ? -6 : 2
     }
 
     var body: some View {
@@ -414,59 +490,55 @@ private struct PoemSharePoster: View {
             VStack(alignment: .leading, spacing: 0) {
                 posterSeal
 
-                Spacer(minLength: 120)
-
-                VStack(alignment: .leading, spacing: 18) {
-                    Text(poem.title)
-                        .font(.system(size: 74, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.68)
-
-                    Text("\(poem.displayArtist) · \(poem.form)")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.82))
-                        .lineLimit(1)
-                }
+                Spacer(minLength: 84)
 
                 VStack(alignment: .leading, spacing: 16) {
+                    Text(poem.title)
+                        .font(PoemeryTheme.chineseFont(size: titleFontSize, relativeTo: .largeTitle).weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.76)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text("\(poem.displayArtist) · \(poem.form)")
+                        .font(.system(size: metadataFontSize, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                VStack(alignment: .leading, spacing: poemLineSpacing) {
                     ForEach(posterLines.indices, id: \.self) { index in
                         Text(posterLines[index])
-                            .font(PoemeryTheme.chineseFont(size: 34, relativeTo: .title3))
+                            .font(PoemeryTheme.chineseFont(size: poemFontSize, relativeTo: .title3))
                             .foregroundStyle(.white.opacity(0.92))
                             .lineLimit(1)
-                            .minimumScaleFactor(0.68)
+                            .minimumScaleFactor(0.72)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .padding(.top, 68)
+                .padding(.top, 54)
 
-                Spacer(minLength: 90)
+                Spacer(minLength: 132)
 
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Poemery")
+                        Text("来自诗境 Poemery")
                             .font(.system(size: 24, weight: .bold))
-                        Text("诗从千年远，与你一念近。")
+                        Text("诗意很远，心意很近。")
                             .font(.system(size: 22, weight: .semibold))
                     }
                     .foregroundStyle(.white.opacity(0.78))
 
                     Spacer()
-
-                    Text(style.glyph)
-                        .font(PoemeryTheme.chineseFont(size: 44, relativeTo: .title))
-                        .foregroundStyle(.white.opacity(0.82))
-                        .frame(width: 72, height: 72)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(.white.opacity(0.58), lineWidth: 1.5)
-                        }
                 }
             }
-            .padding(.horizontal, 76)
-            .padding(.vertical, 82)
+            .padding(.leading, 88)
+            .padding(.trailing, 174)
+            .padding(.top, 84)
+            .padding(.bottom, 86)
         }
-        .frame(width: 900, height: 1200)
+        .frame(width: Self.posterWidth, height: Self.posterHeight)
         .clipped()
     }
 
@@ -496,12 +568,23 @@ private struct PoemSharePoster: View {
                 .offset(x: 140)
             }
             .overlay(alignment: .topTrailing) {
-                Text(style.glyph)
-                    .font(PoemeryTheme.chineseFont(size: 360, relativeTo: .largeTitle))
-                    .foregroundStyle(.white.opacity(0.12))
-                    .offset(x: 44, y: -20)
+                posterTitleMark
             }
             .overlay(PaperTexture().opacity(0.18))
+    }
+
+    private var posterTitleMark: some View {
+        VStack(spacing: posterTitleMarkSpacing) {
+            ForEach(posterTitleMarkCharacters.indices, id: \.self) { index in
+                Text(posterTitleMarkCharacters[index])
+                    .font(PoemeryTheme.chineseFont(size: posterTitleMarkFontSize, relativeTo: .largeTitle).weight(.black))
+                    .foregroundStyle(.white.opacity(0.24))
+                    .shadow(color: .black.opacity(0.16), radius: 0, x: 1, y: 1)
+            }
+        }
+        .frame(width: 128, alignment: .center)
+        .padding(.top, 72)
+        .padding(.trailing, 32)
     }
 
     private var posterSeal: some View {

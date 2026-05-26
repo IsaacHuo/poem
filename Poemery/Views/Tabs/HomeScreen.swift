@@ -10,7 +10,7 @@ struct HomeScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                ScreenHeader(title: "主页", subtitle: "诗从千年远，与你一念近。")
+                ScreenHeader(title: "主页", subtitle: "诗意很远，心意很近。")
 
                 FeaturedCarousel(
                     title: "专属精选推荐",
