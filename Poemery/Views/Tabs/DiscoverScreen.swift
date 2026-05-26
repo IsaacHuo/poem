@@ -13,7 +13,7 @@ struct DiscoverScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 32) {
                 ScreenHeader(title: "新发现", subtitle: "诗单与题材入口")
                 discoveryContent
             }
@@ -24,11 +24,12 @@ struct DiscoverScreen: View {
     }
 
     private var discoveryContent: some View {
-        VStack(alignment: .leading, spacing: 28) {
+        VStack(alignment: .leading, spacing: 32) {
             FeaturedCarousel(
                 title: "新诗单",
                 collections: library.collections.filter { [.chart, .mood, .featured].contains($0.kind) },
                 library: library,
+                layout: .narrowPortrait,
                 onOpenCollection: onOpenCollection
             )
 

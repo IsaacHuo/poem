@@ -24,6 +24,24 @@ final class PoemeryTests: XCTestCase {
         XCTAssertEqual(store.popularPoems(limit: 1).first?.title, "静夜思")
     }
 
+    func testDisplayArtworkStyleIsStableForSamePoem() {
+        let poem = Self.sampleCatalog.poems[0]
+
+        XCTAssertEqual(poem.displayArtworkStyle, poem.displayArtworkStyle)
+    }
+
+    func testDisplayArtworkStyleVariesBetweenPoems() {
+        let styles = Set(Self.sampleCatalog.poems.map(\.displayArtworkStyle))
+
+        XCTAssertGreaterThan(styles.count, 1)
+    }
+
+    func testDisplayArtworkStyleUsesTitleGlyph() {
+        let poem = Self.sampleCatalog.poems[0]
+
+        XCTAssertEqual(poem.displayArtworkStyle.glyph, "静")
+    }
+
     func testAuthorsAreAggregatedAndSortedByPopularity() {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
 

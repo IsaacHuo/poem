@@ -10,11 +10,27 @@ struct PoemArtwork: View {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [poem.artworkStyle.primary, poem.artworkStyle.secondary, poem.artworkStyle.tertiary],
+                        colors: [style.primary, style.secondary, style.tertiary],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
+                .overlay {
+                    LinearGradient(
+                        colors: [.white.opacity(0.22), .clear, .black.opacity(0.24)],
+                        startPoint: .topTrailing,
+                        endPoint: .bottomLeading
+                    )
+                }
+                .overlay {
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.12), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .rotationEffect(.degrees(-35))
+                    .offset(x: size * 0.18)
+                }
                 .overlay(PaperTexture().opacity(0.20))
 
             VStack(alignment: .leading) {
@@ -32,5 +48,9 @@ struct PoemArtwork: View {
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(poem.title)，\(poem.author)")
+    }
+
+    private var style: ArtworkStyle {
+        poem.displayArtworkStyle
     }
 }
