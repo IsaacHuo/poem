@@ -46,7 +46,6 @@
 		BD5A83E8B793033D467FCD03 /* CategoryTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = E839657D14CBBE6EAB5023D1 /* CategoryTile.swift */; };
 		DE7D802C2E0CAAB10B909303 /* ViewExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F5C4D56160892C0886E8080 /* ViewExtensions.swift */; };
 		F1FD9A4FA1D2360A22890B29 /* AuthorShelf.swift in Sources */ = {isa = PBXBuildFile; fileRef = B873180A122CCABB01211EDF /* AuthorShelf.swift */; };
-		F8B867F0884735EC79406279 /* SearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F510C9BB0B7FB51613CB9F5 /* SearchField.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,7 +73,6 @@
 		20D8F801DF8F2EF4032022B4 /* RelatedPoemsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RelatedPoemsSection.swift; sourceTree = "<group>"; };
 		21B27E4DD1CFD2101CC3A421 /* PoemTextSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PoemTextSection.swift; sourceTree = "<group>"; };
 		2DECAC45A84355C0EC93FF61 /* HomeScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
-		2F510C9BB0B7FB51613CB9F5 /* SearchField.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchField.swift; sourceTree = "<group>"; };
 		3424D0C258D14623D6AFC8F8 /* PoemShelf.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PoemShelf.swift; sourceTree = "<group>"; };
 		3CA5D3AFA21742A20BAAD14E /* CompactPoemCard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CompactPoemCard.swift; sourceTree = "<group>"; };
 		5A4BBE251278816BCB64043B /* FeaturedCarousel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FeaturedCarousel.swift; sourceTree = "<group>"; };
@@ -169,7 +167,6 @@
 				87D6BAB78A424D3E98C3842E /* ScreenHeader.swift */,
 				B45124D15ECCA5DFBCB9217A /* PoemArtwork.swift */,
 				E839657D14CBBE6EAB5023D1 /* CategoryTile.swift */,
-				2F510C9BB0B7FB51613CB9F5 /* SearchField.swift */,
 				3CA5D3AFA21742A20BAAD14E /* CompactPoemCard.swift */,
 				92BA91CF721BBFF759723A6F /* QuickLibraryGrid.swift */,
 				20D8F801DF8F2EF4032022B4 /* RelatedPoemsSection.swift */,
@@ -306,7 +303,6 @@
 				472598E090EDDD12331C2FC6 /* ScreenHeader.swift in Sources */,
 				75381D38F898785552497076 /* PoemArtwork.swift in Sources */,
 				BD5A83E8B793033D467FCD03 /* CategoryTile.swift in Sources */,
-				F8B867F0884735EC79406279 /* SearchField.swift in Sources */,
 				AEC4BF32178A4DBE37911272 /* CompactPoemCard.swift in Sources */,
 				4D03D6C5BB71CD4B4656A1D7 /* QuickLibraryGrid.swift in Sources */,
 				92B354CACA12D4C647A04F4D /* RelatedPoemsSection.swift in Sources */,

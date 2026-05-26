@@ -15,6 +15,7 @@ struct HomeScreen: View {
                     title: "专属精选推荐",
                     collections: featuredCollections,
                     library: library,
+                    layout: .narrowPortrait,
                     onOpenCollection: onOpenCollection
                 )
 
@@ -28,17 +29,17 @@ struct HomeScreen: View {
 
                 PoemListSection(
                     title: "开始阅读",
-                    poems: Array(library.poems.prefix(4)),
+                    poems: library.popularPoems(limit: 4),
                     onOpenPoem: onOpenPoem
                 )
 
                 PoemShelf(
                     title: "为你推荐",
-                    poems: Array(library.poems.dropFirst(3).prefix(8)),
+                    poems: recommendedPoems,
                     onOpenPoem: onOpenPoem
                 )
 
-                AuthorShelf(authors: Array(library.authors().prefix(6)), onOpenPoem: onOpenPoem)
+                AuthorShelf(authors: library.popularAuthors(limit: 6), onOpenPoem: onOpenPoem)
             }
             .screenContentPadding()
         }
@@ -52,6 +53,10 @@ struct HomeScreen: View {
 
     private var recentPoems: [Poem] {
         let poems = session.recentPoems(in: library)
-        return poems.isEmpty ? Array(library.poems.prefix(3)) : poems
+        return poems.isEmpty ? library.popularPoems(limit: 3) : poems
+    }
+
+    private var recommendedPoems: [Poem] {
+        Array(library.popularPoems(limit: 12).dropFirst(4).prefix(8))
     }
 }

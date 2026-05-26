@@ -6,7 +6,6 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .home
     @State private var lastContentTab: AppTab = .home
     @State private var presentedItem: PresentedLibraryItem?
-    @State private var discoverSearchText = ""
     @State private var tabSearchText = ""
 
     var body: some View {
@@ -53,7 +52,6 @@ struct ContentView: View {
                         onMoveNext: moveToNextPoem
                     )
                 }
-                .tabViewSearchActivation(.searchTabSelection)
                 .tabBarMinimizeBehavior(.onScrollDown)
         } else if #available(iOS 18.0, *) {
             modernTabView
@@ -82,9 +80,9 @@ struct ContentView: View {
             legacyTabScreen(.discover) {
                 DiscoverScreen(
                     library: library,
-                    searchText: $discoverSearchText,
                     onOpenPoem: openPoem,
-                    onOpenCollection: openCollection
+                    onOpenCollection: openCollection,
+                    onStartSearch: startSearch
                 )
             }
 
@@ -136,9 +134,9 @@ struct ContentView: View {
                 tabContent {
                     DiscoverScreen(
                         library: library,
-                        searchText: $discoverSearchText,
                         onOpenPoem: openPoem,
-                        onOpenCollection: openCollection
+                        onOpenCollection: openCollection,
+                        onStartSearch: startSearch
                     )
                 }
             }
@@ -232,6 +230,11 @@ struct ContentView: View {
         presentedItem = .collection(collection)
     }
 
+    private func startSearch(_ query: String) {
+        tabSearchText = query
+        selectedTab = .search
+    }
+
     private func dismissSearchTab() {
         selectedTab = lastContentTab
     }
@@ -314,7 +317,7 @@ private struct SearchScreen: View {
                     } else {
                         PoemListSection(
                             title: "推荐搜索",
-                            poems: Array(library.poems.prefix(6)),
+                            poems: library.popularPoems(limit: 6),
                             onOpenPoem: onOpenPoem
                         )
                     }

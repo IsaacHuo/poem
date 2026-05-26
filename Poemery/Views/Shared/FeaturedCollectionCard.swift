@@ -23,7 +23,7 @@ struct FeaturedCollectionCard: View {
             titleBlock
         }
         .frame(width: size.width, height: size.height)
-        .shadow(color: collection.accent.primary.opacity(0.22), radius: 24, x: 0, y: 14)
+        .shadow(color: collection.accent.primary.opacity(0.22), radius: isCompact ? 20 : 24, x: 0, y: 14)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(collection.title)，\(collection.subtitle)，\(poems.count) 首")
     }
@@ -90,28 +90,28 @@ struct FeaturedCollectionCard: View {
     }
 
     private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: isCompact ? 6 : 8) {
             Text(label)
-                .font(.caption.weight(.bold))
+                .font(.system(size: isCompact ? 11 : 12, weight: .bold))
                 .foregroundStyle(.white.opacity(0.82))
 
             Text(collection.title)
-                .font(.system(size: max(28, size.width * 0.10), weight: .bold))
+                .font(.system(size: titleFontSize, weight: .bold))
                 .foregroundStyle(.white)
                 .lineLimit(2)
                 .minimumScaleFactor(0.78)
 
             Text(collection.subtitle)
-                .font(.subheadline.weight(.semibold))
+                .font(.system(size: isCompact ? 13 : 15, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.88))
                 .lineLimit(2)
 
             Text("\(poems.count) 首作品")
-                .font(.caption.weight(.bold))
+                .font(.system(size: isCompact ? 11 : 12, weight: .bold))
                 .foregroundStyle(.white.opacity(0.76))
                 .padding(.top, 4)
         }
-        .padding(max(18, size.width * 0.06))
+        .padding(max(isCompact ? 16 : 18, size.width * 0.06))
     }
 
     private var label: String {
@@ -122,5 +122,13 @@ struct FeaturedCollectionCard: View {
         case .era: "朝代精选"
         case .chart: "作品合集"
         }
+    }
+
+    private var isCompact: Bool {
+        size.width < 260
+    }
+
+    private var titleFontSize: CGFloat {
+        isCompact ? 23 : max(28, size.width * 0.10)
     }
 }
