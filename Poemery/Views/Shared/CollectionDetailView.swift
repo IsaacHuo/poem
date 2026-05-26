@@ -93,6 +93,124 @@ struct CollectionDetailView: View {
     }
 }
 
+struct AuthorDetailView: View {
+    let author: AuthorResult
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            AuthorDetailContent(author: author, onOpenPoem: onOpenPoem)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("关闭") {
+                            dismiss()
+                        }
+                    }
+                }
+        }
+    }
+}
+
+struct AuthorDetailContent: View {
+    let author: AuthorResult
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                header
+                introductionSection
+                poemList
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 22)
+            .padding(.bottom, 56)
+        }
+        .background(PoemeryTheme.background)
+        .navigationTitle(author.name)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var header: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(PoemeryTheme.groupedBackground)
+
+                Text(String(author.name.prefix(1)))
+                    .font(PoemeryTheme.chineseFont(size: 40, relativeTo: .largeTitle))
+                    .foregroundStyle(PoemeryTheme.accent)
+            }
+            .frame(width: 82, height: 82)
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text(author.name)
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                Text("\(author.dynasty) · \(author.poems.count) 首作品")
+                    .font(.headline)
+                    .foregroundStyle(PoemeryTheme.secondaryText)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    private var introductionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "作者简介")
+
+            Text(author.introduction)
+                .font(.body)
+                .foregroundStyle(PoemeryTheme.secondaryText)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.58), lineWidth: 0.6)
+                }
+        }
+    }
+
+    private var poemList: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "作品")
+
+            if author.poems.isEmpty {
+                EmptyLibraryState(title: "暂无作品", subtitle: "这个诗人暂时没有可阅读的作品。")
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(author.poems) { poem in
+                        Button {
+                            onOpenPoem(poem, ReadingQueue(title: author.name, poems: author.poems))
+                        } label: {
+                            PoemListRow(poem: poem)
+                        }
+                        .buttonStyle(.plain)
+
+                        if poem.id != author.poems.last?.id {
+                            Divider()
+                                .padding(.leading, 74)
+                        }
+                    }
+                }
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.58), lineWidth: 0.6)
+                }
+            }
+        }
+    }
+}
+
 private struct CollectionCover: View {
     let collection: PoemCollection
     let poemCount: Int

@@ -64,6 +64,14 @@ final class PoemLibraryStore {
         authorsCache
     }
 
+    func author(id: AuthorResult.ID) -> AuthorResult? {
+        authorsCache.first { $0.id == id }
+    }
+
+    func author(for poem: Poem) -> AuthorResult? {
+        authorsCache.first { $0.name == poem.author }
+    }
+
     func popularPoems(limit: Int) -> [Poem] {
         Array(popularPoemsCache.prefix(limit))
     }

@@ -29,6 +29,8 @@ struct ContentView: View {
                         poems: library.poems(for: collection),
                         onOpenPoem: openPoem
                     )
+                case .author(let author):
+                    AuthorDetailView(author: author, onOpenPoem: openPoem)
                 }
             }
             .preferredColorScheme(.light)
@@ -73,7 +75,8 @@ struct ContentView: View {
                     library: library,
                     session: session,
                     onOpenPoem: openPoem,
-                    onOpenCollection: openCollection
+                    onOpenCollection: openCollection,
+                    onOpenAuthor: openAuthor
                 )
             }
 
@@ -110,6 +113,7 @@ struct ContentView: View {
                     searchText: $tabSearchText,
                     onOpenPoem: openPoem,
                     onOpenCollection: openCollection,
+                    onOpenAuthor: openAuthor,
                     onDismissSearch: dismissSearchTab
                 )
             }
@@ -125,7 +129,8 @@ struct ContentView: View {
                         library: library,
                         session: session,
                         onOpenPoem: openPoem,
-                        onOpenCollection: openCollection
+                        onOpenCollection: openCollection,
+                        onOpenAuthor: openAuthor
                     )
                 }
             }
@@ -170,6 +175,7 @@ struct ContentView: View {
                         searchText: $tabSearchText,
                         onOpenPoem: openPoem,
                         onOpenCollection: openCollection,
+                        onOpenAuthor: openAuthor,
                         onDismissSearch: dismissSearchTab
                     )
                 }
@@ -230,6 +236,10 @@ struct ContentView: View {
         presentedItem = .collection(collection)
     }
 
+    private func openAuthor(_ author: AuthorResult) {
+        presentedItem = .author(author)
+    }
+
     private func startSearch(_ query: String) {
         tabSearchText = query
         selectedTab = .search
@@ -243,11 +253,13 @@ struct ContentView: View {
 private enum PresentedLibraryItem: Identifiable {
     case poem(Poem.ID, ReadingQueue)
     case collection(PoemCollection)
+    case author(AuthorResult)
 
     var id: String {
         switch self {
         case .poem(let poemID, let queue): "poem-\(queue.id)-\(poemID)"
         case .collection(let collection): "collection-\(collection.id)"
+        case .author(let author): "author-\(author.id)"
         }
     }
 }
@@ -287,6 +299,7 @@ private struct SearchScreen: View {
     @Binding var searchText: String
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
+    let onOpenAuthor: (AuthorResult) -> Void
     let onDismissSearch: () -> Void
 
     @Environment(\.dismissSearch) private var dismissSearch
@@ -311,7 +324,8 @@ private struct SearchScreen: View {
                             SearchResultsView(
                                 results: results,
                                 onOpenPoem: onOpenPoem,
-                                onOpenCollection: onOpenCollection
+                                onOpenCollection: onOpenCollection,
+                                onOpenAuthor: onOpenAuthor
                             )
                         }
                     } else {

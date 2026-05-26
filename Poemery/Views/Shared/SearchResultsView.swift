@@ -4,6 +4,7 @@ struct SearchResultsView: View {
     let results: SearchResults
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
+    let onOpenAuthor: (AuthorResult) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -14,9 +15,7 @@ struct SearchResultsView: View {
                     SectionTitle(title: "作者")
                     ForEach(results.authors) { author in
                         Button {
-                            if let poem = author.poems.first {
-                                onOpenPoem(poem, ReadingQueue(title: author.name, poems: author.poems))
-                            }
+                            onOpenAuthor(author)
                         } label: {
                             HStack {
                                 Text(author.name)

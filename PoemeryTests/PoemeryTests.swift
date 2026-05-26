@@ -51,6 +51,30 @@ final class PoemeryTests: XCTestCase {
         XCTAssertEqual(authors.first?.poems.map(\.title), ["静夜思"])
     }
 
+    func testAuthorLookupFindsAggregatedAuthorForPoem() throws {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+        let poem = store.poems[0]
+
+        let author = try XCTUnwrap(store.author(for: poem))
+
+        XCTAssertEqual(author.name, "李白")
+        XCTAssertEqual(store.author(id: author.id)?.name, "李白")
+    }
+
+    func testAuthorIntroductionUsesKnownAndFallbackText() throws {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+        let knownAuthor = try XCTUnwrap(store.author(for: store.poems[0]))
+        let fallbackAuthor = AuthorResult(
+            id: "唐-测试作者",
+            name: "测试作者",
+            dynasty: "唐",
+            poems: [store.poems[1]]
+        )
+
+        XCTAssertTrue(knownAuthor.introduction.contains("诗仙"))
+        XCTAssertTrue(fallbackAuthor.introduction.contains("当前诗库收录 1 首作品"))
+    }
+
     func testBundledCatalogHasExpectedShape() {
         let store = PoemLibraryStore()
 

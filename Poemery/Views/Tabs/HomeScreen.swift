@@ -5,11 +5,12 @@ struct HomeScreen: View {
     let session: ReadingSessionStore
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
+    let onOpenAuthor: (AuthorResult) -> Void
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32) {
-                ScreenHeader(title: "主页", subtitle: "诗词歌赋，为你继续阅读")
+                ScreenHeader(title: "主页", subtitle: "诗从千年远，与你一念近。")
 
                 FeaturedCarousel(
                     title: "专属精选推荐",
@@ -39,7 +40,7 @@ struct HomeScreen: View {
                     onOpenPoem: onOpenPoem
                 )
 
-                AuthorShelf(authors: library.popularAuthors(limit: 6), onOpenPoem: onOpenPoem)
+                AuthorShelf(authors: library.popularAuthors(limit: 6), onOpenAuthor: onOpenAuthor)
             }
             .screenContentPadding()
         }

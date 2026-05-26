@@ -11,8 +11,10 @@ struct PoemDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var currentPoemID: Poem.ID
+    @State private var authorPath: [AuthorResult.ID] = []
     @State private var selectedAnnotation: PoemAnnotation?
     @State private var shareImage: PoemShareImage?
+    @State private var hasStartedInitialReading = false
 
     init(
         initialPoemID: Poem.ID,
@@ -54,7 +56,7 @@ struct PoemDetailView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $authorPath) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .center, spacing: 22) {
@@ -128,12 +130,25 @@ struct PoemDetailView: View {
                 }
             }
             .toolbarBackground(.hidden, for: .bottomBar)
+            .navigationDestination(for: AuthorResult.ID.self) { authorID in
+                if let author = library.author(id: authorID) {
+                    AuthorDetailContent(author: author, onOpenPoem: showAuthorPoem)
+                } else {
+                    EmptyLibraryState(title: "未找到作者", subtitle: "这个作者条目已经不可用。")
+                        .padding(20)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(PoemeryTheme.background)
+                }
+            }
             .sheet(item: $selectedAnnotation) { annotation in
                 AnnotationDetailSheet(annotation: annotation)
                     .presentationDetents([.medium])
             }
             .onAppear {
-                session.startReading(visiblePoem, in: queue)
+                if !hasStartedInitialReading {
+                    session.startReading(visiblePoem, in: queue)
+                    hasStartedInitialReading = true
+                }
                 refreshShareImage()
             }
         }
@@ -146,21 +161,19 @@ struct PoemDetailView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(visiblePoem.title)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(PoemeryTheme.primaryText)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.72)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.56)
 
-                Text("\(visiblePoem.displayArtist) · \(visiblePoem.form)")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PoemeryTheme.secondaryText)
-                    .lineLimit(2)
+                authorAttribution
 
                 Text(visiblePoem.tags.prefix(3).joined(separator: " · "))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PoemeryTheme.tertiaryText)
                     .lineLimit(1)
             }
+            .layoutPriority(1)
 
             Spacer(minLength: 8)
 
@@ -168,6 +181,35 @@ struct PoemDetailView: View {
         }
         .frame(maxWidth: 680)
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var authorAttribution: some View {
+        if let visibleAuthor {
+            NavigationLink(value: visibleAuthor.id) {
+                authorAttributionLabel(showsChevron: true)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("查看\(visiblePoem.author)的作者介绍")
+        } else {
+            authorAttributionLabel(showsChevron: false)
+        }
+    }
+
+    private func authorAttributionLabel(showsChevron: Bool) -> some View {
+        HStack(spacing: 4) {
+            Text(detailAttributionText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.bold))
+                    .imageScale(.small)
+            }
+        }
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(PoemeryTheme.secondaryText)
     }
 
     private var actionButtons: some View {
@@ -197,7 +239,7 @@ struct PoemDetailView: View {
             ShareLink(
                 item: shareImage,
                 subject: Text(visiblePoem.title),
-                message: Text("\(visiblePoem.displayArtist) · \(visiblePoem.form)"),
+                message: Text(detailAttributionText),
                 preview: SharePreview(visiblePoem.title, image: shareImage.previewImage)
             ) {
                 shareButtonLabel
@@ -240,6 +282,17 @@ struct PoemDetailView: View {
         "\(shortQueueTitle) \(queuePositionText)"
     }
 
+    private var visibleAuthor: AuthorResult? {
+        library.author(for: visiblePoem)
+    }
+
+    private var detailAttributionText: String {
+        if visiblePoem.form == "词" || visiblePoem.tags.contains("宋词") {
+            return "\(visiblePoem.author) · \(visiblePoem.form)"
+        }
+        return "\(visiblePoem.displayArtist) · \(visiblePoem.form)"
+    }
+
     private var shortQueueTitle: String {
         if currentQueue.title.count > 4 {
             return String(currentQueue.title.prefix(4))
@@ -275,6 +328,14 @@ struct PoemDetailView: View {
         session.startReading(poem, in: queue)
         withAnimation(PoemeryTheme.motion) {
             currentPoemID = poem.id
+        }
+    }
+
+    private func showAuthorPoem(_ poem: Poem, queue: ReadingQueue) {
+        session.startReading(poem, in: queue)
+        withAnimation(PoemeryTheme.motion) {
+            currentPoemID = poem.id
+            authorPath = []
         }
     }
 
@@ -385,7 +446,7 @@ private struct PoemSharePoster: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Poemery")
                             .font(.system(size: 24, weight: .bold))
-                        Text("诗词歌赋，为你继续阅读")
+                        Text("诗从千年远，与你一念近。")
                             .font(.system(size: 22, weight: .semibold))
                     }
                     .foregroundStyle(.white.opacity(0.78))
