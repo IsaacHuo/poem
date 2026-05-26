@@ -5,95 +5,110 @@ struct PoemTextSection: View {
     let highlightedLineID: PoemLine.ID?
     @Binding var selectedAnnotation: PoemAnnotation?
 
-    private var displayLines: [DisplayLine] {
-        poem.lines.flatMap { line in
-            formattedTexts(for: line).enumerated().map { index, text in
-                DisplayLine(id: "\(line.id)-\(index)", sourceLine: line, text: text)
-            }
-        }
-    }
-
-    private var isRegulatedPoem: Bool {
-        poem.form.hasPrefix("五言") || poem.form.hasPrefix("七言")
-    }
-
-    private var isCompactPoem: Bool {
-        displayLines.count <= 16 && longestLineLength <= 16
-    }
-
-    private var longestLineLength: Int {
-        displayLines.map { $0.text.count }.max() ?? 0
-    }
-
-    private var textAlignment: TextAlignment {
-        isCompactPoem ? .center : .leading
-    }
-
-    private var horizontalAlignment: HorizontalAlignment {
-        isCompactPoem ? .center : .leading
-    }
-
     var body: some View {
-        VStack(alignment: horizontalAlignment, spacing: 18) {
+        VStack(alignment: .leading, spacing: 18) {
             SectionTitle(title: "正文", showsChevron: false)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: horizontalAlignment, spacing: 12) {
-                ForEach(displayLines) { displayLine in
-                    let annotations = poem.annotations(for: displayLine.sourceLine.id)
-                    VStack(alignment: horizontalAlignment, spacing: 8) {
-                        Text(displayLine.text)
-                            .font(PoemeryTheme.chineseFont(size: 25, relativeTo: .title3))
-                            .foregroundStyle(displayLine.sourceLine.id == highlightedLineID ? PoemeryTheme.accent : PoemeryTheme.primaryText)
-                            .multilineTextAlignment(textAlignment)
-                            .lineSpacing(11)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: isCompactPoem ? .center : .leading)
-
-                        if !annotations.isEmpty {
-                            HStack(spacing: 8) {
-                                ForEach(annotations) { annotation in
-                                    Button {
-                                        selectedAnnotation = annotation
-                                    } label: {
-                                        Text(annotation.term)
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(PoemeryTheme.accent)
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 6)
-                                            .background(PoemeryTheme.accentSoft, in: Capsule())
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: isCompactPoem ? .center : .leading)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: isCompactPoem ? .center : .leading)
+            VStack(alignment: .center, spacing: 12) {
+                ForEach(poem.lines) { line in
+                    PoemLineTextBlock(
+                        line: line,
+                        isHighlighted: line.id == highlightedLineID,
+                        annotations: poem.annotations(for: line.id),
+                        selectedAnnotation: $selectedAnnotation
+                    )
                 }
             }
-            .padding(.horizontal, isCompactPoem ? 18 : 0)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
-        .frame(maxWidth: 680, alignment: isCompactPoem ? .center : .leading)
-    }
-
-    private func formattedTexts(for line: PoemLine) -> [String] {
-        guard isRegulatedPoem else {
-            return [line.text]
-        }
-
-        let pieces = line.text
-            .replacingOccurrences(of: "，", with: "，\n")
-            .replacingOccurrences(of: "、", with: "、\n")
-            .split(separator: "\n", omittingEmptySubsequences: true)
-            .map(String.init)
-
-        return pieces.isEmpty ? [line.text] : pieces
+        .frame(maxWidth: 680, alignment: .leading)
     }
 }
 
-private struct DisplayLine: Identifiable {
-    let id: String
-    let sourceLine: PoemLine
-    let text: String
+private struct PoemLineTextBlock: View {
+    let line: PoemLine
+    let isHighlighted: Bool
+    let annotations: [PoemAnnotation]
+    @Binding var selectedAnnotation: PoemAnnotation?
+
+    var body: some View {
+        VStack(alignment: .center, spacing: 8) {
+            ViewThatFits(in: .horizontal) {
+                poemText(line.text)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+
+                wrappedLine
+            }
+
+            if !annotations.isEmpty {
+                annotationChips
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private var wrappedLine: some View {
+        VStack(alignment: .center, spacing: 10) {
+            ForEach(Array(splitAtReadablePunctuation(line.text).enumerated()), id: \.offset) { _, text in
+                poemText(text)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private var annotationChips: some View {
+        HStack(spacing: 8) {
+            ForEach(annotations) { annotation in
+                Button {
+                    selectedAnnotation = annotation
+                } label: {
+                    Text(annotation.term)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PoemeryTheme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(PoemeryTheme.accentSoft, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private func poemText(_ text: String) -> some View {
+        Text(text)
+            .font(PoemeryTheme.chineseFont(size: 25, relativeTo: .title3))
+            .foregroundStyle(isHighlighted ? PoemeryTheme.accent : PoemeryTheme.primaryText)
+            .multilineTextAlignment(.center)
+            .lineSpacing(11)
+    }
+
+    private func splitAtReadablePunctuation(_ text: String) -> [String] {
+        let punctuation = Set("，。！？；、,.;!?")
+        var pieces: [String] = []
+        var current = ""
+
+        for character in text {
+            current.append(character)
+            if punctuation.contains(character) {
+                let trimmed = current.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    pieces.append(trimmed)
+                }
+                current = ""
+            }
+        }
+
+        let remainder = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !remainder.isEmpty {
+            pieces.append(remainder)
+        }
+
+        return pieces.isEmpty ? [text] : pieces
+    }
 }

@@ -6,7 +6,11 @@ struct ProfileScreen: View {
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
 
+    @AppStorage("poemery.profile.displayName") private var displayName = "诗笺用户"
+    @AppStorage("poemery.profile.signature") private var signature = "把喜欢的诗词留在本机"
+    @AppStorage("poemery.profile.avatarSymbol") private var avatarSymbol = "person.fill"
     @State private var pendingResetAction: ProfileResetAction?
+    @State private var isEditingProfile = false
 
     private var favoritePoems: [Poem] {
         session.favoritePoems(in: library)
@@ -43,14 +47,21 @@ struct ProfileScreen: View {
         } message: { action in
             Text(action.message)
         }
+        .sheet(isPresented: $isEditingProfile) {
+            ProfileEditorSheet(
+                displayName: $displayName,
+                signature: $signature,
+                avatarSymbol: $avatarSymbol
+            )
+        }
     }
 
     private var rootContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                ScreenHeader(title: "我的", subtitle: "本地阅读档案")
+                ScreenHeader(title: "我的", subtitle: "本地账号与阅读档案")
 
-                archiveSummary
+                accountCard
                 settingsEntry
                 readingTaste
                 readingAssets
@@ -77,53 +88,66 @@ struct ProfileScreen: View {
         }
     }
 
-    private var archiveSummary: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    PoemeryTheme.accent.opacity(0.95),
-                                    PoemeryTheme.moon.opacity(0.86)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+    private var accountCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top, spacing: 16) {
+                ProfileAvatar(symbol: avatarSymbol, size: 76)
 
-                    Image(systemName: "text.book.closed.fill")
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: 64, height: 64)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(displayName)
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(PoemeryTheme.primaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("本地诗笺")
-                        .font(.title3.weight(.bold))
-                        .foregroundStyle(PoemeryTheme.primaryText)
+                        Text("免费离线")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(PoemeryTheme.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(PoemeryTheme.accent.opacity(0.12), in: Capsule())
+                    }
 
-                    Text("收藏与阅读记录仅保存在本机")
+                    Text(signature)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoemeryTheme.secondaryText)
+                        .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    Text("本地账号 · 无需登录 · 不上传阅读记录")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PoemeryTheme.tertiaryText)
+                        .lineLimit(2)
                 }
 
-                Spacer(minLength: 12)
-
-                Text("免费离线")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(PoemeryTheme.accent)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(PoemeryTheme.accent.opacity(0.12), in: Capsule())
+                Spacer(minLength: 8)
             }
 
             HStack(spacing: 10) {
-                ArchiveMetricCard(symbol: "heart.fill", title: "收藏", value: "\(favoritePoems.count)")
-                ArchiveMetricCard(symbol: "clock.fill", title: "最近", value: "\(recentPoems.count)")
-                ArchiveMetricCard(symbol: "text.book.closed.fill", title: "诗库", value: "\(library.poems.count)")
+                AccountMetricCard(symbol: "heart.fill", title: "收藏", value: "\(favoritePoems.count)")
+                AccountMetricCard(symbol: "clock.fill", title: "最近", value: "\(recentPoems.count)")
+                AccountMetricCard(symbol: "text.book.closed.fill", title: "诗库", value: "\(library.poems.count)")
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    isEditingProfile = true
+                } label: {
+                    Label("编辑资料", systemImage: "pencil")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(PoemeryTheme.accent)
+
+                NavigationLink(value: ProfileDestination.settings) {
+                    Label("账号设置", systemImage: "gearshape")
+                        .font(.subheadline.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(PoemeryTheme.accent)
             }
         }
         .padding(18)
@@ -136,7 +160,7 @@ struct ProfileScreen: View {
 
     private var settingsEntry: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionTitle(title: "设置与隐私", showsChevron: false)
+            SectionTitle(title: "账号服务", showsChevron: false)
 
             NavigationLink(value: ProfileDestination.settings) {
                 HStack(spacing: 12) {
@@ -146,11 +170,11 @@ struct ProfileScreen: View {
                         .frame(width: 28, height: 28)
 
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("本地设置")
+                        Text("本地账号设置")
                             .font(.headline)
                             .foregroundStyle(PoemeryTheme.primaryText)
 
-                        Text("数据来源、隐私说明与本机记录管理")
+                        Text("资料、数据来源、隐私说明与本机记录管理")
                             .font(.subheadline)
                             .foregroundStyle(PoemeryTheme.secondaryText)
                             .lineLimit(2)
@@ -256,7 +280,35 @@ struct ProfileScreen: View {
     }
 }
 
-private struct ArchiveMetricCard: View {
+private struct ProfileAvatar: View {
+    let symbol: String
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            PoemeryTheme.accent.opacity(0.95),
+                            PoemeryTheme.moon.opacity(0.86)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            Image(systemName: symbol)
+                .font(.system(size: size * 0.36, weight: .bold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: PoemeryTheme.accent.opacity(0.18), radius: 16, x: 0, y: 10)
+        .accessibilityLabel("账号头像")
+    }
+}
+
+private struct AccountMetricCard: View {
     let symbol: String
     let title: String
     let value: String
@@ -279,6 +331,111 @@ private struct ArchiveMetricCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+    }
+}
+
+private struct ProfileEditorSheet: View {
+    @Binding var displayName: String
+    @Binding var signature: String
+    @Binding var avatarSymbol: String
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draftDisplayName: String
+    @State private var draftSignature: String
+    @State private var draftAvatarSymbol: String
+
+    private let avatarOptions = [
+        "person.fill",
+        "text.book.closed.fill",
+        "bookmark.fill",
+        "heart.text.square.fill",
+        "sparkles"
+    ]
+
+    init(
+        displayName: Binding<String>,
+        signature: Binding<String>,
+        avatarSymbol: Binding<String>
+    ) {
+        self._displayName = displayName
+        self._signature = signature
+        self._avatarSymbol = avatarSymbol
+        self._draftDisplayName = State(initialValue: displayName.wrappedValue)
+        self._draftSignature = State(initialValue: signature.wrappedValue)
+        self._draftAvatarSymbol = State(initialValue: avatarSymbol.wrappedValue)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack {
+                        Spacer()
+
+                        ProfileAvatar(symbol: draftAvatarSymbol, size: 88)
+
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                }
+
+                Section("账号资料") {
+                    TextField("昵称", text: $draftDisplayName)
+                        .textInputAutocapitalization(.never)
+
+                    TextField("签名", text: $draftSignature, axis: .vertical)
+                        .lineLimit(2...3)
+                }
+
+                Section("头像") {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5), spacing: 12) {
+                        ForEach(avatarOptions, id: \.self) { symbol in
+                            Button {
+                                draftAvatarSymbol = symbol
+                            } label: {
+                                Image(systemName: symbol)
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(symbol == draftAvatarSymbol ? .white : PoemeryTheme.accent)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        symbol == draftAvatarSymbol ? PoemeryTheme.accent : PoemeryTheme.accent.opacity(0.10),
+                                        in: Circle()
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("头像")
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .navigationTitle("编辑资料")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") {
+                        save()
+                    }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(PoemeryTheme.background)
+        }
+    }
+
+    private func save() {
+        let trimmedName = draftDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedSignature = draftSignature.trimmingCharacters(in: .whitespacesAndNewlines)
+        displayName = trimmedName.isEmpty ? "诗笺用户" : trimmedName
+        signature = trimmedSignature.isEmpty ? "把喜欢的诗词留在本机" : trimmedSignature
+        avatarSymbol = draftAvatarSymbol
+        dismiss()
     }
 }
 

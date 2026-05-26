@@ -78,7 +78,7 @@ struct ProfileSettingsView: View {
                     SettingsLabelRow(symbol: "hand.raised.fill", title: "隐私说明")
                 }
                 SettingsValueRow(symbol: "wifi.slash", title: "网络", value: "离线可用")
-                SettingsValueRow(symbol: "person.crop.circle.badge.xmark", title: "账户", value: "无需登录")
+                SettingsValueRow(symbol: "person.crop.circle.badge.xmark", title: "远程登录", value: "无需")
             }
         }
         .navigationTitle("设置")
@@ -143,7 +143,7 @@ struct PrivacyOverviewView: View {
         List {
             Section("免费离线") {
                 SettingsLabelRow(symbol: "wifi.slash", title: "核心阅读和搜索不需要联网")
-                SettingsLabelRow(symbol: "person.crop.circle.badge.xmark", title: "不需要账号或登录")
+                SettingsLabelRow(symbol: "person.crop.circle.badge.xmark", title: "本地账号不需要远程登录")
             }
 
             Section("本机保存") {
