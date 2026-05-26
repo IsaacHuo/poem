@@ -6,6 +6,8 @@ struct ProfileScreen: View {
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
 
+    @State private var pendingResetAction: ProfileResetAction?
+
     private var favoritePoems: [Poem] {
         session.favoritePoems(in: library)
     }
@@ -23,13 +25,33 @@ struct ProfileScreen: View {
     }
 
     var body: some View {
+        NavigationStack {
+            rootContent
+                .navigationDestination(for: ProfileDestination.self) { destination in
+                    destinationView(for: destination)
+                }
+        }
+        .confirmationDialog(
+            pendingResetAction?.title ?? "清除本机记录",
+            isPresented: resetConfirmationBinding,
+            titleVisibility: .visible,
+            presenting: pendingResetAction
+        ) { action in
+            Button(action.title, role: .destructive) {
+                performReset(action)
+            }
+        } message: { action in
+            Text(action.message)
+        }
+    }
+
+    private var rootContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
-                ScreenHeader(title: "我的", subtitle: "账号、会员与阅读资产")
+                ScreenHeader(title: "我的", subtitle: "本地阅读档案")
 
-                accountSummary
-                membershipCard
-                accountServices
+                archiveSummary
+                settingsEntry
                 readingTaste
                 readingAssets
             }
@@ -39,7 +61,23 @@ struct ProfileScreen: View {
         .background(PoemeryTheme.background)
     }
 
-    private var accountSummary: some View {
+    @ViewBuilder
+    private func destinationView(for destination: ProfileDestination) -> some View {
+        switch destination {
+        case .settings:
+            ProfileSettingsView(
+                library: library,
+                session: session,
+                pendingResetAction: $pendingResetAction
+            )
+        case .dataSource:
+            DataSourceNoticeView()
+        case .privacy:
+            PrivacyOverviewView()
+        }
+    }
+
+    private var archiveSummary: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 14) {
                 ZStack {
@@ -55,25 +93,26 @@ struct ProfileScreen: View {
                             )
                         )
 
-                    Image(systemName: "person.fill")
+                    Image(systemName: "text.book.closed.fill")
                         .font(.title2.weight(.bold))
                         .foregroundStyle(.white)
                 }
                 .frame(width: 64, height: 64)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("诗笺用户")
+                    Text("本地诗笺")
                         .font(.title3.weight(.bold))
                         .foregroundStyle(PoemeryTheme.primaryText)
 
-                    Text("本机资料 · 普通用户")
+                    Text("收藏与阅读记录仅保存在本机")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoemeryTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 12)
 
-                Text("普通用户")
+                Text("免费离线")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(PoemeryTheme.accent)
                     .padding(.horizontal, 10)
@@ -82,9 +121,9 @@ struct ProfileScreen: View {
             }
 
             HStack(spacing: 10) {
-                AccountMetricCard(symbol: "heart.fill", title: "收藏", value: "\(favoritePoems.count)")
-                AccountMetricCard(symbol: "clock.fill", title: "最近", value: "\(recentPoems.count)")
-                AccountMetricCard(symbol: "rectangle.stack.fill", title: "诗单", value: "\(library.collections.count)")
+                ArchiveMetricCard(symbol: "heart.fill", title: "收藏", value: "\(favoritePoems.count)")
+                ArchiveMetricCard(symbol: "clock.fill", title: "最近", value: "\(recentPoems.count)")
+                ArchiveMetricCard(symbol: "text.book.closed.fill", title: "诗库", value: "\(library.poems.count)")
             }
         }
         .padding(18)
@@ -95,65 +134,38 @@ struct ProfileScreen: View {
         }
     }
 
-    private var membershipCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionTitle(title: "会员", showsChevron: false)
+    private var settingsEntry: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionTitle(title: "设置与隐私", showsChevron: false)
 
-            VStack(alignment: .leading, spacing: 14) {
+            NavigationLink(value: ProfileDestination.settings) {
                 HStack(spacing: 12) {
-                    Image(systemName: "crown.fill")
-                        .font(.title2.weight(.bold))
+                    Image(systemName: "gearshape.fill")
+                        .font(.headline.weight(.semibold))
                         .foregroundStyle(PoemeryTheme.accent)
-                        .frame(width: 42, height: 42)
-                        .background(PoemeryTheme.accent.opacity(0.12), in: Circle())
+                        .frame(width: 28, height: 28)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("普通用户")
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("本地设置")
                             .font(.headline)
                             .foregroundStyle(PoemeryTheme.primaryText)
 
-                        Text("会员中心已预留")
-                            .font(.subheadline.weight(.semibold))
+                        Text("数据来源、隐私说明与本机记录管理")
+                            .font(.subheadline)
                             .foregroundStyle(PoemeryTheme.secondaryText)
+                            .lineLimit(2)
                     }
 
                     Spacer(minLength: 12)
 
-                    Text("即将开放")
+                    Image(systemName: "chevron.right")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(PoemeryTheme.secondaryText)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(PoemeryTheme.surface, in: Capsule())
+                        .foregroundStyle(PoemeryTheme.tertiaryText)
                 }
-
-                HStack(spacing: 8) {
-                    MembershipPill(title: "专属内容")
-                    MembershipPill(title: "高级同步")
-                    MembershipPill(title: "个性推荐")
-                }
+                .padding(16)
+                .contentShape(Rectangle())
             }
-            .padding(16)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.58), lineWidth: 0.6)
-            }
-        }
-    }
-
-    private var accountServices: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionTitle(title: "账户服务", showsChevron: false)
-
-            VStack(spacing: 0) {
-                AccountServiceRow(symbol: "person.crop.circle", title: "账号状态", value: "本机资料")
-                Divider().padding(.leading, 50)
-                AccountServiceRow(symbol: "crown", title: "会员权益", value: "未开通")
-                Divider().padding(.leading, 50)
-                AccountServiceRow(symbol: "icloud", title: "数据同步", value: "待接入")
-            }
-            .padding(.vertical, 4)
+            .buttonStyle(.plain)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -209,6 +221,26 @@ struct ProfileScreen: View {
         }
     }
 
+    private var resetConfirmationBinding: Binding<Bool> {
+        Binding {
+            pendingResetAction != nil
+        } set: { isPresented in
+            if !isPresented {
+                pendingResetAction = nil
+            }
+        }
+    }
+
+    private func performReset(_ action: ProfileResetAction) {
+        switch action {
+        case .favorites:
+            session.clearFavorites()
+        case .recents:
+            session.clearRecents()
+        }
+        pendingResetAction = nil
+    }
+
     private func topValues(from values: [String], limit: Int) -> [String] {
         Dictionary(grouping: values, by: { $0 })
             .map { value, matches in (value, matches.count) }
@@ -224,7 +256,7 @@ struct ProfileScreen: View {
     }
 }
 
-private struct AccountMetricCard: View {
+private struct ArchiveMetricCard: View {
     let symbol: String
     let title: String
     let value: String
@@ -247,49 +279,6 @@ private struct AccountMetricCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
-    }
-}
-
-private struct MembershipPill: View {
-    let title: String
-
-    var body: some View {
-        Text(title)
-            .font(.caption.weight(.bold))
-            .foregroundStyle(PoemeryTheme.secondaryText)
-            .lineLimit(1)
-            .minimumScaleFactor(0.82)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .background(PoemeryTheme.surface.opacity(0.76), in: Capsule())
-    }
-}
-
-private struct AccountServiceRow: View {
-    let symbol: String
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: symbol)
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(PoemeryTheme.accent)
-                .frame(width: 28, height: 28)
-
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(PoemeryTheme.primaryText)
-
-            Spacer(minLength: 12)
-
-            Text(value)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(PoemeryTheme.secondaryText)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
     }
 }
 

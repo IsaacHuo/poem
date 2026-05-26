@@ -11,7 +11,6 @@
 - `selectedTab`：当前 tab。
 - `lastContentTab`：最近一次非搜索 tab，用于关闭搜索后返回原页面。
 - `presentedItem`：当前 sheet 展示对象，可能是诗词详情或诗单详情。
-- `discoverSearchText`：新发现页内搜索文本。
 - `tabSearchText`：系统搜索 tab 的搜索文本。
 
 根视图通过 `PresentedLibraryItem` 区分两类 sheet：
@@ -36,7 +35,6 @@ iOS 26：
 - 使用原生 `Tab`。
 - 搜索使用 `role: .search`。
 - 当前阅读条使用 `tabViewBottomAccessory`。
-- 搜索激活使用 `tabViewSearchActivation(.searchTabSelection)`。
 - tabbar 滚动最小化使用 `tabBarMinimizeBehavior(.onScrollDown)`。
 
 iOS 18-25 / iOS 17：
@@ -159,12 +157,11 @@ openCollection(_ collection: PoemCollection)
 
 ## 搜索逻辑
 
-新发现页搜索：
+新发现页到搜索：
 
-- 使用自定义 `SearchField`。
-- 文本绑定到 `discoverSearchText`。
-- 输入为空显示发现内容。
-- 输入非空调用 `library.search(searchText)`。
+- 新发现页不再维护独立搜索框。
+- 点击题材入口时调用 `startSearch(_:)`。
+- 根视图把题材名写入 `tabSearchText`，并切换到搜索 tab。
 
 系统搜索 tab：
 
@@ -192,6 +189,8 @@ openCollection(_ collection: PoemCollection)
 2. 如果不存在，则插入到数组头部。
 3. 写入 `UserDefaults`。
 
+设置页可以调用 `session.clearFavorites()` 清空本机收藏记录。
+
 显示位置：
 
 - 诗词详情页右侧圆形收藏按钮。
@@ -215,6 +214,8 @@ openCollection(_ collection: PoemCollection)
 - 插入数组头部。
 - 最多保留 20 条。
 - 写入 `UserDefaults`。
+
+设置页可以调用 `session.clearRecents()` 清空最近阅读和当前阅读状态。
 
 ## 资料库入口逻辑
 

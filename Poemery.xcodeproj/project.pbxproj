@@ -21,6 +21,9 @@
 		0A0001010000000000000011 /* ChinesePoetryNotice.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000013 /* ChinesePoetryNotice.txt */; };
 		0A0001010000000000000012 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000014 /* CollectionDetailView.swift */; };
 		0A0001010000000000000013 /* ProfileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000015 /* ProfileScreen.swift */; };
+		C0D0F0010000000000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0D0F0040000000000000001 /* PrivacyInfo.xcprivacy */; };
+		C0D0F0020000000000000001 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D0F0050000000000000001 /* ProfileSettingsView.swift */; };
+		C0D0F0030000000000000001 /* PoemeryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D0F0060000000000000001 /* PoemeryTests.swift */; };
 		13984D1CC479C6E32474B273 /* CollectionListSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83BE3902869F772948910F7A /* CollectionListSection.swift */; };
 		1B15A2099817C8BC95A22E41 /* AnnotationDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74CAC4EC4FA0892CC46FD441 /* AnnotationDetailSheet.swift */; };
 		2231F43E636C8450920E289D /* LibraryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEA59D75576B7C3C24A4D58D /* LibraryScreen.swift */; };
@@ -54,12 +57,8 @@
 		0A0002010000000000000003 /* Poem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/Poem.swift; sourceTree = "<group>"; };
 		0A0002010000000000000004 /* PoemeryTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/PoemeryTheme.swift; sourceTree = "<group>"; };
 		0A0002010000000000000005 /* AdaptiveGlassSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/AdaptiveGlassSurface.swift; sourceTree = "<group>"; };
-		0A0002010000000000000006 /* LivingPoemScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scenes/LivingPoemScene.swift; sourceTree = "<group>"; };
-		0A0002010000000000000008 /* AnnotationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/AnnotationPanel.swift; sourceTree = "<group>"; };
-		0A0002010000000000000009 /* PoemCardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/PoemCardSheet.swift; sourceTree = "<group>"; };
 		0A000201000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A000201000000000000000C /* Poemery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Poemery.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		0A000201000000000000000D /* PoemVersePager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/PoemVersePager.swift; sourceTree = "<group>"; };
 		0A000201000000000000000E /* HYWenRunSongYunU.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = HYWenRunSongYunU.ttf; sourceTree = "<group>"; };
 		0A000201000000000000000F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0A0002010000000000000010 /* PoemLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PoemLibraryStore.swift; sourceTree = "<group>"; };
@@ -68,6 +67,10 @@
 		0A0002010000000000000013 /* ChinesePoetryNotice.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ChinesePoetryNotice.txt; sourceTree = "<group>"; };
 		0A0002010000000000000014 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
 		0A0002010000000000000015 /* ProfileScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreen.swift; sourceTree = "<group>"; };
+		C0D0F0040000000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C0D0F0050000000000000001 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
+		C0D0F0060000000000000001 /* PoemeryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoemeryTests.swift; sourceTree = "<group>"; };
+		C0D0F0070000000000000001 /* PoemeryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PoemeryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		16114CCF7DC04597763065C4 /* GlassContainerModifier.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlassContainerModifier.swift; sourceTree = "<group>"; };
 		1DFE055923C1EB72B8AB5B28 /* SearchResultsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchResultsView.swift; sourceTree = "<group>"; };
 		20D8F801DF8F2EF4032022B4 /* RelatedPoemsSection.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RelatedPoemsSection.swift; sourceTree = "<group>"; };
@@ -96,8 +99,25 @@
 		FF037B554636ADFFD33B8117 /* SectionTitle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SectionTitle.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXContainerItemProxy section */
+		C0D0F00E0000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0A000B010000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0A0007010000000000000001;
+			remoteInfo = Poemery;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFrameworksBuildPhase section */
 		0A0005010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0D0F0080000000000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -115,16 +135,13 @@
 				0A0002010000000000000003 /* Poem.swift */,
 				0A0002010000000000000004 /* PoemeryTheme.swift */,
 				0A0002010000000000000005 /* AdaptiveGlassSurface.swift */,
-				0A0002010000000000000006 /* LivingPoemScene.swift */,
-				0A0002010000000000000008 /* AnnotationPanel.swift */,
-				0A0002010000000000000009 /* PoemCardSheet.swift */,
-				0A000201000000000000000D /* PoemVersePager.swift */,
 				0A0002010000000000000010 /* PoemLibraryStore.swift */,
 				0A0002010000000000000011 /* ReadingSessionStore.swift */,
 				0A000201000000000000000B /* Assets.xcassets */,
 				0A000201000000000000000E /* HYWenRunSongYunU.ttf */,
 				0A0002010000000000000012 /* PoemsSeed.json */,
 				0A0002010000000000000013 /* ChinesePoetryNotice.txt */,
+				C0D0F0040000000000000001 /* PrivacyInfo.xcprivacy */,
 				0A000201000000000000000F /* Info.plist */,
 				F6BCD09E682BE94109CCBA2F /* Views */,
 			);
@@ -135,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				0A0004010000000000000001 /* Poemery */,
+				C0D0F00B0000000000000001 /* PoemeryTests */,
 				0A0006010000000000000002 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -143,8 +161,17 @@
 			isa = PBXGroup;
 			children = (
 				0A000201000000000000000C /* Poemery.app */,
+				C0D0F0070000000000000001 /* PoemeryTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		C0D0F00B0000000000000001 /* PoemeryTests */ = {
+			isa = PBXGroup;
+			children = (
+				C0D0F0060000000000000001 /* PoemeryTests.swift */,
+			);
+			path = PoemeryTests;
 			sourceTree = "<group>";
 		};
 		52D99A9D46DDFA9C8479F6E7 /* Shared */ = {
@@ -186,6 +213,7 @@
 				2DECAC45A84355C0EC93FF61 /* HomeScreen.swift */,
 				8D44AE697C312EB4ED9C80B2 /* DiscoverScreen.swift */,
 				0A0002010000000000000015 /* ProfileScreen.swift */,
+				C0D0F0050000000000000001 /* ProfileSettingsView.swift */,
 			);
 			name = Tabs;
 			path = Tabs;
@@ -221,6 +249,23 @@
 			productReference = 0A000201000000000000000C /* Poemery.app */;
 			productType = "com.apple.product-type.application";
 		};
+		C0D0F00C0000000000000001 /* PoemeryTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0D0F0110000000000000001 /* Build configuration list for PBXNativeTarget "PoemeryTests" */;
+			buildPhases = (
+				C0D0F0090000000000000001 /* Sources */,
+				C0D0F0080000000000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C0D0F00D0000000000000001 /* PBXTargetDependency */,
+			);
+			name = PoemeryTests;
+			productName = PoemeryTests;
+			productReference = C0D0F0070000000000000001 /* PoemeryTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -233,6 +278,10 @@
 				TargetAttributes = {
 					0A0007010000000000000001 = {
 						CreatedOnToolsVersion = 26.4.1;
+					};
+					C0D0F00C0000000000000001 = {
+						CreatedOnToolsVersion = 26.4.1;
+						TestTargetID = 0A0007010000000000000001;
 					};
 				};
 			};
@@ -252,6 +301,7 @@
 			projectRoot = "";
 			targets = (
 				0A0007010000000000000001 /* Poemery */,
+				C0D0F00C0000000000000001 /* PoemeryTests */,
 			);
 		};
 /* End PBXProject section */
@@ -265,6 +315,7 @@
 				0A000101000000000000000D /* HYWenRunSongYunU.ttf in Resources */,
 				0A0001010000000000000010 /* PoemsSeed.json in Resources */,
 				0A0001010000000000000011 /* ChinesePoetryNotice.txt in Resources */,
+				C0D0F0010000000000000001 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,6 +336,7 @@
 				2231F43E636C8450920E289D /* LibraryScreen.swift in Sources */,
 				5EBF85137D535CD81C4299A9 /* HomeScreen.swift in Sources */,
 				3775010A808D74167B6F943E /* DiscoverScreen.swift in Sources */,
+				C0D0F0020000000000000001 /* ProfileSettingsView.swift in Sources */,
 				DE7D802C2E0CAAB10B909303 /* ViewExtensions.swift in Sources */,
 				4F117507D19F76764CE2E32A /* PaperTexture.swift in Sources */,
 				F1FD9A4FA1D2360A22890B29 /* AuthorShelf.swift in Sources */,
@@ -313,7 +365,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0D0F0090000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0D0F0030000000000000001 /* PoemeryTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C0D0F00D0000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0A0007010000000000000001 /* Poemery */;
+			targetProxy = C0D0F00E0000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0A000C010000000000000001 /* Debug */ = {
@@ -487,6 +555,58 @@
 			};
 			name = Release;
 		};
+		C0D0F00F0000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G229WP43HH;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.isaachuo.poemery.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Poemery.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Poemery";
+			};
+			name = Debug;
+		};
+		C0D0F0100000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = G229WP43HH;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.isaachuo.poemery.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Poemery.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Poemery";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -504,6 +624,15 @@
 			buildConfigurations = (
 				0A000C010000000000000003 /* Debug */,
 				0A000C010000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0D0F0110000000000000001 /* Build configuration list for PBXNativeTarget "PoemeryTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0D0F00F0000000000000001 /* Debug */,
+				C0D0F0100000000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

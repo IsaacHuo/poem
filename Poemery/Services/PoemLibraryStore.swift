@@ -12,6 +12,9 @@ final class PoemLibraryStore {
     private var poemOrderByID: [Poem.ID: Int]
     private var popularPoemsCache: [Poem]
     private var authorsCache: [AuthorResult]
+    private var poemSearchTextByID: [Poem.ID: String]
+    private var collectionSearchTextByID: [PoemCollection.ID: String]
+    private var authorSearchTextByID: [AuthorResult.ID: String]
 
     init(catalog: PoemSeedCatalog = PoemLibraryStore.loadBundledCatalog()) {
         self.poems = catalog.poems
@@ -23,8 +26,20 @@ final class PoemLibraryStore {
         })
         self.popularPoemsCache = []
         self.authorsCache = []
+        self.poemSearchTextByID = [:]
+        self.collectionSearchTextByID = [:]
+        self.authorSearchTextByID = [:]
         self.popularPoemsCache = popularSortedPoems(catalog.poems)
         self.authorsCache = makeAuthors()
+        self.poemSearchTextByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { poem in
+            (poem.id, Self.searchText(for: poem))
+        })
+        self.collectionSearchTextByID = Dictionary(uniqueKeysWithValues: catalog.collections.map { collection in
+            (collection.id, Self.searchText(for: collection))
+        })
+        self.authorSearchTextByID = Dictionary(uniqueKeysWithValues: authorsCache.map { author in
+            (author.id, Self.searchText(for: author))
+        })
     }
 
     func poem(id: Poem.ID) -> Poem? {
@@ -92,27 +107,23 @@ final class PoemLibraryStore {
         }
 
         let matchedPoems = poems.filter { poem in
-            let searchable = [
-                poem.title,
-                poem.author,
-                poem.dynasty,
-                poem.form,
-                poem.fullText,
-                poem.tags.joined(separator: " ")
-            ]
-            .joined(separator: " ")
-            .lowercased()
-
+            guard let searchable = poemSearchTextByID[poem.id] else {
+                return false
+            }
             return tokens.allSatisfy { searchable.localizedStandardContains($0) }
         }
 
         let matchedCollections = collections.filter { collection in
-            let searchable = "\(collection.title) \(collection.subtitle)".lowercased()
+            guard let searchable = collectionSearchTextByID[collection.id] else {
+                return false
+            }
             return tokens.allSatisfy { searchable.localizedStandardContains($0) }
         }
 
         let matchedAuthors = authors().filter { author in
-            let searchable = "\(author.name) \(author.dynasty)".lowercased()
+            guard let searchable = authorSearchTextByID[author.id] else {
+                return false
+            }
             return tokens.allSatisfy { searchable.localizedStandardContains($0) }
         }
 
@@ -160,6 +171,27 @@ final class PoemLibraryStore {
 
     private func poemOrder(for poem: Poem) -> Int {
         poemOrderByID[poem.id] ?? Int.max
+    }
+
+    private static func searchText(for poem: Poem) -> String {
+        [
+            poem.title,
+            poem.author,
+            poem.dynasty,
+            poem.form,
+            poem.fullText,
+            poem.tags.joined(separator: " ")
+        ]
+        .joined(separator: " ")
+        .lowercased()
+    }
+
+    private static func searchText(for collection: PoemCollection) -> String {
+        "\(collection.title) \(collection.subtitle)".lowercased()
+    }
+
+    private static func searchText(for author: AuthorResult) -> String {
+        "\(author.name) \(author.dynasty)".lowercased()
     }
 
     private static let authorPopularity: [String: Int] = [

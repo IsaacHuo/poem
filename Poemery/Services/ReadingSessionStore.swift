@@ -70,6 +70,11 @@ final class ReadingSessionStore {
         persistFavorites()
     }
 
+    func clearFavorites() {
+        favoritePoemIDs.removeAll()
+        persistFavorites()
+    }
+
     func markRecent(_ poem: Poem) {
         currentPoemID = poem.id
         recentPoemIDs.removeAll { $0 == poem.id }
@@ -77,6 +82,13 @@ final class ReadingSessionStore {
         if recentPoemIDs.count > 20 {
             recentPoemIDs = Array(recentPoemIDs.prefix(20))
         }
+        persistRecents()
+    }
+
+    func clearRecents() {
+        currentPoemID = nil
+        currentQueue = nil
+        recentPoemIDs.removeAll()
         persistRecents()
     }
 
