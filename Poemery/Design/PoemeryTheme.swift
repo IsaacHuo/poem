@@ -1,17 +1,18 @@
 import SwiftUI
+import UIKit
 
 enum PoemeryTheme {
     static let chineseFontName = "HYWenRunSongYun-U"
 
-    static let accent = Color(red: 0.91, green: 0.13, blue: 0.20)
-    static let accentSoft = Color(red: 1.00, green: 0.89, blue: 0.91)
-    static let background = Color(red: 0.98, green: 0.98, blue: 0.97)
-    static let groupedBackground = Color(red: 0.94, green: 0.94, blue: 0.93)
-    static let surface = Color.white
-    static let primaryText = Color(red: 0.04, green: 0.04, blue: 0.05)
-    static let secondaryText = Color(red: 0.36, green: 0.36, blue: 0.39)
-    static let tertiaryText = Color(red: 0.55, green: 0.55, blue: 0.58)
-    static let separator = Color.black.opacity(0.08)
+    static let accent = Color(uiColor: .systemRed)
+    static let accentSoft = Color(uiColor: .systemRed).opacity(0.12)
+    static let background = Color(uiColor: .systemGroupedBackground)
+    static let groupedBackground = Color(uiColor: .secondarySystemGroupedBackground)
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+    static let primaryText = Color(uiColor: .label)
+    static let secondaryText = Color(uiColor: .secondaryLabel)
+    static let tertiaryText = Color(uiColor: .tertiaryLabel)
+    static let separator = Color(uiColor: .separator).opacity(0.32)
 
     static let paper = Color(red: 0.96, green: 0.93, blue: 0.85)
     static let agedPaper = Color(red: 0.72, green: 0.66, blue: 0.54)

@@ -58,16 +58,14 @@ struct ProfileScreen: View {
 
     private var rootContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                ScreenHeader(title: "我的", subtitle: "本地账号与阅读档案")
-
-                accountCard
-                settingsEntry
+            VStack(alignment: .leading, spacing: 24) {
+                accountSummary
                 readingTaste
-                readingAssets
             }
             .screenContentPadding()
         }
+        .navigationTitle("我的")
+        .navigationBarTitleDisplayMode(.large)
         .scrollIndicators(.hidden)
         .background(PoemeryTheme.background)
     }
@@ -88,160 +86,73 @@ struct ProfileScreen: View {
         }
     }
 
-    private var accountCard: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack(alignment: .top, spacing: 16) {
-                ProfileAvatar(symbol: avatarSymbol, size: 76)
+    private var accountSummary: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "账号摘要", showsChevron: false)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(displayName)
-                            .font(.title2.weight(.bold))
-                            .foregroundStyle(PoemeryTheme.primaryText)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.78)
-
-                        Text("免费离线")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(PoemeryTheme.accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(PoemeryTheme.accent.opacity(0.12), in: Capsule())
-                    }
-
-                    Text(signature)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(PoemeryTheme.secondaryText)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("本地账号 · 无需登录 · 不上传阅读记录")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(PoemeryTheme.tertiaryText)
-                        .lineLimit(2)
-                }
-
-                Spacer(minLength: 8)
-            }
-
-            HStack(spacing: 10) {
-                AccountMetricCard(symbol: "heart.fill", title: "收藏", value: "\(favoritePoems.count)")
-                AccountMetricCard(symbol: "clock.fill", title: "最近", value: "\(recentPoems.count)")
-                AccountMetricCard(symbol: "text.book.closed.fill", title: "诗库", value: "\(library.poems.count)")
-            }
-
-            HStack(spacing: 10) {
+            VStack(spacing: 0) {
                 Button {
                     isEditingProfile = true
                 } label: {
-                    Label("编辑资料", systemImage: "pencil")
-                        .font(.subheadline.weight(.bold))
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 12) {
+                        ProfileAvatar(symbol: avatarSymbol, size: 56)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(displayName)
+                                .font(.headline)
+                                .foregroundStyle(PoemeryTheme.primaryText)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.78)
+
+                            Text(signature)
+                                .font(.subheadline)
+                                .foregroundStyle(PoemeryTheme.secondaryText)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer(minLength: 12)
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(PoemeryTheme.tertiaryText)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(PoemeryTheme.accent)
+                .buttonStyle(.plain)
+
+                Divider()
+                    .padding(.leading, 82)
+
+                AccountValueRow(symbol: "heart.fill", title: "收藏", value: "\(favoritePoems.count)")
+                Divider().padding(.leading, 50)
+                AccountValueRow(symbol: "clock.fill", title: "最近阅读", value: "\(recentPoems.count)")
+                Divider().padding(.leading, 50)
 
                 NavigationLink(value: ProfileDestination.settings) {
-                    Label("账号设置", systemImage: "gearshape")
-                        .font(.subheadline.weight(.bold))
-                        .frame(maxWidth: .infinity)
+                    ProfileNavigationRow(
+                        symbol: "gearshape",
+                        title: "本地账号设置"
+                    )
                 }
-                .buttonStyle(.bordered)
-                .tint(PoemeryTheme.accent)
+                .buttonStyle(.plain)
             }
-        }
-        .padding(18)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(.white.opacity(0.58), lineWidth: 0.6)
-        }
-    }
-
-    private var settingsEntry: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionTitle(title: "账号服务", showsChevron: false)
-
-            NavigationLink(value: ProfileDestination.settings) {
-                HStack(spacing: 12) {
-                    Image(systemName: "gearshape.fill")
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(PoemeryTheme.accent)
-                        .frame(width: 28, height: 28)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("本地账号设置")
-                            .font(.headline)
-                            .foregroundStyle(PoemeryTheme.primaryText)
-
-                        Text("资料、数据来源、隐私说明与本机记录管理")
-                            .font(.subheadline)
-                            .foregroundStyle(PoemeryTheme.secondaryText)
-                            .lineLimit(2)
-                    }
-
-                    Spacer(minLength: 12)
-
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(PoemeryTheme.tertiaryText)
-                }
-                .padding(16)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.58), lineWidth: 0.6)
-            }
+            .groupedListBackground()
         }
     }
 
     private var readingTaste: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             SectionTitle(title: "阅读偏好", showsChevron: false)
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
                 PreferenceRow(title: "常读作者", values: topAuthors)
                 Divider()
                 PreferenceRow(title: "常读体裁", values: topForms)
             }
-            .padding(16)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.58), lineWidth: 0.6)
-            }
-        }
-    }
-
-    private var readingAssets: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            SectionTitle(title: "阅读资产", showsChevron: false)
-
-            PoemListSection(
-                title: "收藏",
-                poems: Array(favoritePoems.prefix(8)),
-                emptyTitle: "还没有收藏",
-                emptySubtitle: "打开作品详情后可以把喜欢的诗词加入收藏。",
-                onOpenPoem: onOpenPoem
-            )
-
-            PoemListSection(
-                title: "最近阅读",
-                poems: Array(recentPoems.prefix(8)),
-                emptyTitle: "还没有最近阅读",
-                emptySubtitle: "打开任意作品详情后会出现在这里。",
-                onOpenPoem: onOpenPoem
-            )
-
-            CollectionListSection(
-                title: "常用诗单",
-                collections: Array(library.collections.prefix(4)),
-                library: library,
-                onOpenCollection: onOpenCollection
-            )
+            .groupedListBackground()
         }
     }
 
@@ -287,50 +198,70 @@ private struct ProfileAvatar: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            PoemeryTheme.accent.opacity(0.95),
-                            PoemeryTheme.moon.opacity(0.86)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(PoemeryTheme.groupedBackground)
 
             Image(systemName: symbol)
-                .font(.system(size: size * 0.36, weight: .bold))
-                .foregroundStyle(.white)
+                .font(.system(size: size * 0.40, weight: .semibold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
         }
         .frame(width: size, height: size)
-        .shadow(color: PoemeryTheme.accent.opacity(0.18), radius: 16, x: 0, y: 10)
         .accessibilityLabel("账号头像")
     }
 }
 
-private struct AccountMetricCard: View {
+private struct AccountValueRow: View {
     let symbol: String
     let title: String
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 12) {
             Image(systemName: symbol)
-                .font(.caption.weight(.bold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.accent)
+                .frame(width: 24)
 
-            Text(value)
-                .font(.headline.weight(.bold))
+            Text(title)
+                .font(.body)
                 .foregroundStyle(PoemeryTheme.primaryText)
                 .lineLimit(1)
 
-            Text(title)
-                .font(.caption.weight(.semibold))
+            Spacer(minLength: 12)
+
+            Text(value)
+                .font(.body)
                 .foregroundStyle(PoemeryTheme.secondaryText)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+}
+
+private struct ProfileNavigationRow: View {
+    let symbol: String
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: symbol)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.accent)
+                .frame(width: 24)
+
+            Text(title)
+                .font(.body)
+                .foregroundStyle(PoemeryTheme.primaryText)
+
+            Spacer(minLength: 12)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.tertiaryText)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
     }
 }
 
@@ -424,7 +355,6 @@ private struct ProfileEditorSheet: View {
                     }
                 }
             }
-            .scrollContentBackground(.hidden)
             .background(PoemeryTheme.background)
         }
     }
@@ -446,16 +376,18 @@ private struct PreferenceRow: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.headline)
+                .font(.body)
                 .foregroundStyle(PoemeryTheme.primaryText)
 
             Spacer(minLength: 16)
 
             Text(displayValue)
-                .font(.subheadline.weight(.semibold))
+                .font(.body)
                 .foregroundStyle(PoemeryTheme.secondaryText)
                 .multilineTextAlignment(.trailing)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
     }
 
     private var displayValue: String {

@@ -71,11 +71,7 @@ struct CollectionDetailView: View {
                     }
                 }
             }
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.58), lineWidth: 0.6)
-            }
+            .groupedListBackground()
         }
     }
 
@@ -171,11 +167,7 @@ struct AuthorDetailContent: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(.white.opacity(0.58), lineWidth: 0.6)
-                }
+                .groupedListBackground()
         }
     }
 
@@ -201,11 +193,7 @@ struct AuthorDetailContent: View {
                         }
                     }
                 }
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(.white.opacity(0.58), lineWidth: 0.6)
-                }
+                .groupedListBackground()
             }
         }
     }

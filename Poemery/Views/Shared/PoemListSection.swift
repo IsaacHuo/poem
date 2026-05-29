@@ -30,11 +30,7 @@ struct PoemListSection: View {
                         }
                     }
                 }
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(.white.opacity(0.58), lineWidth: 0.6)
-                }
+                .groupedListBackground()
             }
         }
     }

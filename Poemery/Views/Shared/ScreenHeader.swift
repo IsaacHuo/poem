@@ -7,14 +7,13 @@ struct ScreenHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
-                .font(.system(size: 42, weight: .bold))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.primaryText)
                 .lineLimit(1)
-                .minimumScaleFactor(0.72)
 
             if let subtitle {
                 Text(subtitle)
-                    .font(.subheadline.weight(.medium))
+                    .font(.subheadline)
                     .foregroundStyle(PoemeryTheme.secondaryText)
             }
         }

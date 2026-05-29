@@ -3,9 +3,13 @@ import SwiftUI
 extension View {
     func screenContentPadding() -> some View {
         self
-            .padding(.horizontal, 20)
-            .padding(.top, 18)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
             .padding(.bottom, 40)
+    }
+
+    func groupedListBackground(cornerRadius: CGFloat = 22) -> some View {
+        background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 
     func glassContainer(cornerRadius: CGFloat, tint: Color, namespace: Namespace.ID, glassID: String) -> some View {

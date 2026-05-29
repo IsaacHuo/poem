@@ -30,7 +30,7 @@ struct SearchResultsView: View {
                                     .foregroundStyle(PoemeryTheme.accent)
                             }
                             .padding()
-                            .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .groupedListBackground()
                         }
                         .buttonStyle(.plain)
                     }
@@ -50,11 +50,11 @@ struct SearchResultsView: View {
                                     .foregroundStyle(PoemeryTheme.primaryText)
                                 Spacer()
                                 Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.bold))
+                                    .font(.caption.weight(.semibold))
                                     .foregroundStyle(PoemeryTheme.tertiaryText)
                             }
                             .padding()
-                            .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .groupedListBackground()
                         }
                         .buttonStyle(.plain)
                     }

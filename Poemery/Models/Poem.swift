@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct Poem: Identifiable, Codable, Hashable {
+struct Poem: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let title: String
     let author: String
@@ -33,13 +33,13 @@ struct Poem: Identifiable, Codable, Hashable {
     }
 }
 
-struct PoemLine: Identifiable, Codable, Hashable {
+struct PoemLine: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let order: Int
     let text: String
 }
 
-struct PoemAnnotation: Identifiable, Codable, Hashable {
+struct PoemAnnotation: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let lineID: PoemLine.ID
     let term: String
@@ -48,7 +48,7 @@ struct PoemAnnotation: Identifiable, Codable, Hashable {
     let detail: String
 }
 
-struct PoemCollection: Identifiable, Codable, Hashable {
+struct PoemCollection: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let title: String
     let subtitle: String
@@ -57,7 +57,7 @@ struct PoemCollection: Identifiable, Codable, Hashable {
     let accent: ArtworkStyle
 }
 
-enum CollectionKind: String, Codable, CaseIterable, Hashable {
+enum CollectionKind: String, Codable, CaseIterable, Hashable, Sendable {
     case featured
     case mood
     case author
@@ -65,7 +65,7 @@ enum CollectionKind: String, Codable, CaseIterable, Hashable {
     case chart
 }
 
-struct PoemCategory: Identifiable, Codable, Hashable {
+struct PoemCategory: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let title: String
     let subtitle: String
@@ -74,7 +74,7 @@ struct PoemCategory: Identifiable, Codable, Hashable {
     let symbol: String
 }
 
-struct ArtworkStyle: Codable, Hashable {
+struct ArtworkStyle: Codable, Hashable, Sendable {
     let primaryHex: String
     let secondaryHex: String
     let tertiaryHex: String
@@ -150,13 +150,13 @@ extension ArtworkStyle {
     }
 }
 
-struct PoemSeedCatalog: Codable {
+struct PoemSeedCatalog: Codable, Sendable {
     let poems: [Poem]
     let collections: [PoemCollection]
     let categories: [PoemCategory]
 }
 
-struct SearchResults {
+struct SearchResults: Sendable {
     var poems: [Poem] = []
     var authors: [AuthorResult] = []
     var collections: [PoemCollection] = []
@@ -166,7 +166,7 @@ struct SearchResults {
     }
 }
 
-struct AuthorResult: Identifiable, Hashable {
+struct AuthorResult: Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let dynasty: String

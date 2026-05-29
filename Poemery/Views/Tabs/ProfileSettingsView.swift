@@ -83,7 +83,6 @@ struct ProfileSettingsView: View {
         }
         .navigationTitle("设置")
         .navigationBarTitleDisplayMode(.large)
-        .scrollContentBackground(.hidden)
         .background(PoemeryTheme.background)
     }
 }
@@ -93,7 +92,7 @@ struct DataSourceNoticeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Poemery 使用随 App 打包的离线诗词数据。")
                         .font(.headline)
@@ -105,11 +104,7 @@ struct DataSourceNoticeView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(16)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(.white.opacity(0.58), lineWidth: 0.6)
-                }
+                .groupedListBackground()
 
                 Text(noticeText)
                     .font(.footnote.monospaced())
@@ -117,7 +112,7 @@ struct DataSourceNoticeView: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(16)
-                    .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .groupedListBackground()
             }
             .screenContentPadding()
         }
@@ -160,7 +155,6 @@ struct PrivacyOverviewView: View {
         }
         .navigationTitle("隐私说明")
         .navigationBarTitleDisplayMode(.large)
-        .scrollContentBackground(.hidden)
         .background(PoemeryTheme.background)
     }
 }

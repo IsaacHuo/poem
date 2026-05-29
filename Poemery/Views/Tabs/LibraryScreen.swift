@@ -17,8 +17,8 @@ struct LibraryScreen: View {
 
     private var rootContent: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                ScreenHeader(title: "资料库", subtitle: "收藏、诗单、诗人与最近阅读")
+            VStack(alignment: .leading, spacing: 24) {
+                ScreenHeader(title: "收藏、诗单、诗人与最近阅读", subtitle: nil)
 
                 VStack(spacing: 0) {
                     LibraryNavigationRow(
@@ -52,11 +52,7 @@ struct LibraryScreen: View {
                         destination: .recents
                     )
                 }
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(.white.opacity(0.58), lineWidth: 0.6)
-                }
+                .groupedListBackground()
 
                 PoemShelf(
                     title: "最近添加",
@@ -72,6 +68,8 @@ struct LibraryScreen: View {
             }
             .screenContentPadding()
         }
+        .navigationTitle("资料库")
+        .navigationBarTitleDisplayMode(.large)
         .scrollIndicators(.hidden)
         .background(PoemeryTheme.background)
     }
@@ -192,7 +190,7 @@ private struct LibraryNavigationRow: View {
                     .foregroundStyle(PoemeryTheme.secondaryText)
 
                 Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(PoemeryTheme.tertiaryText)
             }
             .padding(.horizontal, 14)
@@ -317,10 +315,6 @@ private struct PoemDirectoryView: View {
 
 private extension View {
     func libraryListCard() -> some View {
-        background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.58), lineWidth: 0.6)
-            }
+        groupedListBackground()
     }
 }

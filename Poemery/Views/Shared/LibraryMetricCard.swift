@@ -22,6 +22,6 @@ struct LibraryMetricCard: View {
             Spacer()
         }
         .padding(14)
-        .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .groupedListBackground()
     }
 }

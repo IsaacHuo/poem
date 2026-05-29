@@ -25,11 +25,7 @@ struct CollectionListSection: View {
                     }
                 }
             }
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.58), lineWidth: 0.6)
-            }
+            .groupedListBackground()
         }
     }
 }
@@ -69,7 +65,7 @@ private struct CollectionListRow: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.bold))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.tertiaryText)
         }
         .padding(.horizontal, 10)

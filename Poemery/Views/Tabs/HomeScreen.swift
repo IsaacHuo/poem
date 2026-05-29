@@ -8,44 +8,48 @@ struct HomeScreen: View {
     let onOpenAuthor: (AuthorResult) -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
-                ScreenHeader(title: "主页", subtitle: "诗意很远，心意很近。")
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    ScreenHeader(title: "诗意很远，心意很近。", subtitle: nil)
 
-                FeaturedCarousel(
-                    title: "专属精选推荐",
-                    collections: featuredCollections,
-                    library: library,
-                    layout: .narrowPortrait,
-                    onOpenCollection: onOpenCollection
-                )
+                    FeaturedCarousel(
+                        title: "专属精选推荐",
+                        collections: featuredCollections,
+                        library: library,
+                        layout: .narrowPortrait,
+                        onOpenCollection: onOpenCollection
+                    )
 
-                PoemShelf(
-                    title: "最近阅读",
-                    poems: recentPoems,
-                    emptyTitle: "还没有最近阅读",
-                    emptySubtitle: "打开任意一首诗词后会出现在这里。",
-                    onOpenPoem: onOpenPoem
-                )
+                    PoemShelf(
+                        title: "最近阅读",
+                        poems: recentPoems,
+                        emptyTitle: "还没有最近阅读",
+                        emptySubtitle: "打开任意一首诗词后会出现在这里。",
+                        onOpenPoem: onOpenPoem
+                    )
 
-                PoemListSection(
-                    title: "开始阅读",
-                    poems: library.popularPoems(limit: 4),
-                    onOpenPoem: onOpenPoem
-                )
+                    PoemListSection(
+                        title: "开始阅读",
+                        poems: library.popularPoems(limit: 4),
+                        onOpenPoem: onOpenPoem
+                    )
 
-                PoemShelf(
-                    title: "为你推荐",
-                    poems: recommendedPoems,
-                    onOpenPoem: onOpenPoem
-                )
+                    PoemShelf(
+                        title: "为你推荐",
+                        poems: recommendedPoems,
+                        onOpenPoem: onOpenPoem
+                    )
 
-                AuthorShelf(authors: library.popularAuthors(limit: 6), onOpenAuthor: onOpenAuthor)
+                    AuthorShelf(authors: library.popularAuthors(limit: 6), onOpenAuthor: onOpenAuthor)
+                }
+                .screenContentPadding()
             }
-            .screenContentPadding()
+            .navigationTitle("主页")
+            .navigationBarTitleDisplayMode(.large)
+            .scrollIndicators(.hidden)
+            .background(PoemeryTheme.background)
         }
-        .scrollIndicators(.hidden)
-        .background(PoemeryTheme.background)
     }
 
     private var featuredCollections: [PoemCollection] {

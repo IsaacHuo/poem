@@ -75,8 +75,8 @@ final class PoemeryTests: XCTestCase {
         XCTAssertTrue(fallbackAuthor.introduction.contains("当前诗库收录 1 首作品"))
     }
 
-    func testBundledCatalogHasExpectedShape() {
-        let store = PoemLibraryStore()
+    func testBundledCatalogHasExpectedShape() async throws {
+        let store = try await PoemLibraryStore.loadBundled()
 
         XCTAssertEqual(store.poems.count, 11701)
         XCTAssertEqual(store.collections.count, 7)

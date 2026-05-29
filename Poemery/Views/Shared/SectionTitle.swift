@@ -7,14 +7,13 @@ struct SectionTitle: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(title)
-                .font(.system(size: 24, weight: .bold))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.primaryText)
                 .lineLimit(1)
-                .minimumScaleFactor(0.76)
 
             if showsChevron {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoemeryTheme.tertiaryText)
             }
         }

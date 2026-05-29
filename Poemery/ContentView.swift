@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var library = PoemLibraryStore()
+    @State private var libraryLoadState: LibraryLoadState = .loading
     @State private var session = ReadingSessionStore()
     @State private var selectedTab: AppTab = .home
     @State private var lastContentTab: AppTab = .home
@@ -9,29 +9,13 @@ struct ContentView: View {
     @State private var tabSearchText = ""
 
     var body: some View {
-        tabContainer
+        content
             .tint(PoemeryTheme.accent)
             .toolbarBackground(.ultraThinMaterial, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
             .background(PoemeryTheme.background.ignoresSafeArea())
             .sheet(item: $presentedItem) { item in
-                switch item {
-                case .poem(let poemID, let queue):
-                    PoemDetailView(
-                        initialPoemID: poemID,
-                        queue: queue,
-                        library: library,
-                        session: session
-                    )
-                case .collection(let collection):
-                    CollectionDetailView(
-                        collection: collection,
-                        poems: library.poems(for: collection),
-                        onOpenPoem: openPoem
-                    )
-                case .author(let author):
-                    AuthorDetailView(author: author, onOpenPoem: openPoem)
-                }
+                presentedView(for: item)
             }
             .preferredColorScheme(.light)
             .onChange(of: selectedTab) { _, newTab in
@@ -39,12 +23,32 @@ struct ContentView: View {
                     lastContentTab = newTab
                 }
             }
+            .task {
+                await loadLibraryIfNeeded()
+            }
     }
 
     @ViewBuilder
-    private var tabContainer: some View {
+    private var content: some View {
+        switch libraryLoadState {
+        case .loading:
+            LibraryLoadingScreen()
+        case .loaded(let library):
+            tabContainer(library: library)
+        case .failed:
+            LibraryLoadFailedScreen {
+                libraryLoadState = .loading
+                Task {
+                    await loadLibraryIfNeeded()
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func tabContainer(library: PoemLibraryStore) -> some View {
         if #available(iOS 26.0, *) {
-            modernTabView
+            modernTabView(library: library)
                 .tabViewBottomAccessory {
                     ReadingTabAccessory(
                         poem: session.currentPoem(in: library),
@@ -56,19 +60,19 @@ struct ContentView: View {
                 }
                 .tabBarMinimizeBehavior(.onScrollDown)
         } else if #available(iOS 18.0, *) {
-            modernTabView
+            modernTabView(library: library)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    readingFallbackAccessory
+                    readingFallbackAccessory(library: library)
                 }
         } else {
-            legacyTabView
+            legacyTabView(library: library)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    readingFallbackAccessory
+                    readingFallbackAccessory(library: library)
                 }
         }
     }
 
-    private var legacyTabView: some View {
+    private func legacyTabView(library: PoemLibraryStore) -> some View {
         TabView(selection: $selectedTab) {
             legacyTabScreen(.home) {
                 HomeScreen(
@@ -121,7 +125,7 @@ struct ContentView: View {
     }
 
     @available(iOS 18.0, *)
-    private var modernTabView: some View {
+    private func modernTabView(library: PoemLibraryStore) -> some View {
         TabView(selection: $selectedTab) {
             Tab(AppTab.home.title, systemImage: AppTab.home.symbol, value: AppTab.home) {
                 tabContent {
@@ -184,7 +188,7 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private var readingFallbackAccessory: some View {
+    private func readingFallbackAccessory(library: PoemLibraryStore) -> some View {
         ReadingAccessoryContent(
             poem: session.currentPoem(in: library),
             queue: session.currentQueue,
@@ -221,7 +225,8 @@ struct ContentView: View {
     }
 
     private func openCurrentPoem() {
-        guard let poem = session.currentPoem(in: library) else {
+        guard case .loaded(let library) = libraryLoadState,
+              let poem = session.currentPoem(in: library) else {
             return
         }
         let queue = session.currentQueue ?? .singlePoem(poem)
@@ -229,6 +234,9 @@ struct ContentView: View {
     }
 
     private func moveToNextPoem() {
+        guard case .loaded(let library) = libraryLoadState else {
+            return
+        }
         _ = session.moveToNextPoem(in: library)
     }
 
@@ -247,6 +255,147 @@ struct ContentView: View {
 
     private func dismissSearchTab() {
         selectedTab = lastContentTab
+    }
+
+    @ViewBuilder
+    private func presentedView(for item: PresentedLibraryItem) -> some View {
+        if case .loaded(let library) = libraryLoadState {
+            switch item {
+            case .poem(let poemID, let queue):
+                PoemDetailView(
+                    initialPoemID: poemID,
+                    queue: queue,
+                    library: library,
+                    session: session
+                )
+            case .collection(let collection):
+                CollectionDetailView(
+                    collection: collection,
+                    poems: library.poems(for: collection),
+                    onOpenPoem: openPoem
+                )
+            case .author(let author):
+                AuthorDetailView(author: author, onOpenPoem: openPoem)
+            }
+        } else {
+            EmptyView()
+        }
+    }
+
+    private func loadLibraryIfNeeded() async {
+        guard case .loading = libraryLoadState else {
+            return
+        }
+
+        do {
+            let library = try await PoemLibraryStore.loadBundled()
+            libraryLoadState = .loaded(library)
+        } catch {
+            libraryLoadState = .failed
+        }
+    }
+}
+
+private enum LibraryLoadState {
+    case loading
+    case loaded(PoemLibraryStore)
+    case failed
+}
+
+private struct LibraryLoadingScreen: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 28) {
+            Spacer(minLength: 32)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("诗境")
+                    .font(.system(size: 42, weight: .bold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+
+                Text("正在整理离线诗库")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.secondaryText)
+            }
+
+            VStack(alignment: .leading, spacing: 18) {
+                Text("今日推荐")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(PoemeryTheme.accent)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("静夜思")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundStyle(PoemeryTheme.primaryText)
+
+                    Text("唐 · 李白")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(PoemeryTheme.secondaryText)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("床前明月光，")
+                    Text("疑是地上霜。")
+                    Text("举头望明月，")
+                    Text("低头思故乡。")
+                }
+                .font(.title3.weight(.medium))
+                .foregroundStyle(PoemeryTheme.deepInk)
+                .lineSpacing(4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(22)
+            .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(.white.opacity(0.62), lineWidth: 0.6)
+            }
+
+            HStack(spacing: 10) {
+                ProgressView()
+                    .tint(PoemeryTheme.accent)
+
+                Text("加载完整诗库中")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.tertiaryText)
+            }
+
+            Spacer(minLength: 32)
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(PoemeryTheme.background.ignoresSafeArea())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("诗境正在加载完整诗库，今日推荐静夜思")
+    }
+}
+
+private struct LibraryLoadFailedScreen: View {
+    let onRetry: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Spacer()
+
+            Text("诗库暂时没有加载成功")
+                .font(.title2.weight(.bold))
+                .foregroundStyle(PoemeryTheme.primaryText)
+
+            Text("请稍后重试。你的收藏和最近阅读记录仍保存在本机。")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
+
+            Button(action: onRetry) {
+                Label("重新加载", systemImage: "arrow.clockwise")
+                    .font(.subheadline.weight(.bold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PoemeryTheme.accent)
+
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(PoemeryTheme.background.ignoresSafeArea())
     }
 }
 

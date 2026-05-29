@@ -14,7 +14,7 @@ struct EmptyLibraryState: View {
                 .foregroundStyle(PoemeryTheme.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
-        .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(16)
+        .groupedListBackground()
     }
 }

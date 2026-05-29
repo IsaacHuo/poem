@@ -12,15 +12,19 @@ struct DiscoverScreen: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 32) {
-                ScreenHeader(title: "新发现", subtitle: "诗单与题材入口")
-                discoveryContent
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    ScreenHeader(title: "诗单与题材入口", subtitle: nil)
+                    discoveryContent
+                }
+                .screenContentPadding()
             }
-            .screenContentPadding()
+            .navigationTitle("新发现")
+            .navigationBarTitleDisplayMode(.large)
+            .scrollIndicators(.hidden)
+            .background(PoemeryTheme.background)
         }
-        .scrollIndicators(.hidden)
-        .background(PoemeryTheme.background)
     }
 
     private var discoveryContent: some View {

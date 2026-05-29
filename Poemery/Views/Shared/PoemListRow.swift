@@ -20,10 +20,9 @@ struct PoemListRow: View {
 
             Spacer()
 
-            Image(systemName: "ellipsis")
-                .font(.headline.weight(.bold))
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.tertiaryText)
-                .frame(width: 32, height: 32)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 10)

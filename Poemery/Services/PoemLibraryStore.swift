@@ -16,30 +16,33 @@ final class PoemLibraryStore {
     private var collectionSearchTextByID: [PoemCollection.ID: String]
     private var authorSearchTextByID: [AuthorResult.ID: String]
 
-    init(catalog: PoemSeedCatalog = PoemLibraryStore.loadBundledCatalog()) {
+    convenience init(catalog: PoemSeedCatalog = PoemLibraryStore.loadBundledCatalog()) {
+        self.init(catalog: catalog, index: PoemLibraryIndex(catalog: catalog))
+    }
+
+    private init(catalog: PoemSeedCatalog, index: PoemLibraryIndex) {
         self.poems = catalog.poems
         self.collections = catalog.collections
         self.categories = catalog.categories
-        self.poemsByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { ($0.id, $0) })
-        self.poemOrderByID = Dictionary(uniqueKeysWithValues: catalog.poems.enumerated().map { index, poem in
-            (poem.id, index)
-        })
-        self.popularPoemsCache = []
-        self.authorsCache = []
-        self.poemSearchTextByID = [:]
-        self.collectionSearchTextByID = [:]
-        self.authorSearchTextByID = [:]
-        self.popularPoemsCache = popularSortedPoems(catalog.poems)
-        self.authorsCache = makeAuthors()
-        self.poemSearchTextByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { poem in
-            (poem.id, Self.searchText(for: poem))
-        })
-        self.collectionSearchTextByID = Dictionary(uniqueKeysWithValues: catalog.collections.map { collection in
-            (collection.id, Self.searchText(for: collection))
-        })
-        self.authorSearchTextByID = Dictionary(uniqueKeysWithValues: authorsCache.map { author in
-            (author.id, Self.searchText(for: author))
-        })
+        self.poemsByID = index.poemsByID
+        self.poemOrderByID = index.poemOrderByID
+        self.popularPoemsCache = index.popularPoems
+        self.authorsCache = index.authors
+        self.poemSearchTextByID = index.poemSearchTextByID
+        self.collectionSearchTextByID = index.collectionSearchTextByID
+        self.authorSearchTextByID = index.authorSearchTextByID
+    }
+
+    nonisolated static func loadBundled() async throws -> PoemLibraryStore {
+        let url = try bundledCatalogURL()
+        let indexedCatalog = try await Task.detached(priority: .userInitiated) {
+            let catalog = try decodeCatalog(at: url)
+            return IndexedPoemCatalog(catalog: catalog, index: PoemLibraryIndex(catalog: catalog))
+        }.value
+
+        return await MainActor.run {
+            PoemLibraryStore(catalog: indexedCatalog.catalog, index: indexedCatalog.index)
+        }
     }
 
     func poem(id: Poem.ID) -> Poem? {
@@ -78,29 +81,6 @@ final class PoemLibraryStore {
 
     func popularAuthors(limit: Int) -> [AuthorResult] {
         Array(authorsCache.prefix(limit))
-    }
-
-    private func makeAuthors() -> [AuthorResult] {
-        Dictionary(grouping: poems, by: \.author)
-            .map { author, poems in
-                let dynasty = poems.first?.dynasty ?? ""
-                return AuthorResult(
-                    id: "\(dynasty)-\(author)",
-                    name: author,
-                    dynasty: dynasty,
-                    poems: popularSortedPoems(poems)
-                )
-            }
-            .sorted { lhs, rhs in
-                let lhsScore = popularityScore(for: lhs)
-                let rhsScore = popularityScore(for: rhs)
-
-                if lhsScore == rhsScore {
-                    return firstPoemOrder(in: lhs) < firstPoemOrder(in: rhs)
-                }
-
-                return lhsScore > rhsScore
-            }
     }
 
     func search(_ query: String) -> SearchResults {
@@ -143,41 +123,169 @@ final class PoemLibraryStore {
     }
 
     private func popularSortedPoems(_ candidates: [Poem]) -> [Poem] {
+        PoemLibraryIndex.popularSortedPoems(candidates, poemOrderByID: poemOrderByID)
+    }
+
+    private static func loadBundledCatalog() -> PoemSeedCatalog {
+        do {
+            return try decodeCatalog(at: bundledCatalogURL())
+        } catch {
+            assertionFailure("Failed to load PoemsSeed.json: \(error)")
+            return fallbackCatalog
+        }
+    }
+
+    nonisolated private static func bundledCatalogURL() throws -> URL {
+        guard let url = Bundle.main.url(forResource: "PoemsSeed", withExtension: "json") else {
+            throw PoemLibraryLoadError.missingBundledCatalog
+        }
+        return url
+    }
+
+    nonisolated private static func decodeCatalog(at url: URL) throws -> PoemSeedCatalog {
+        do {
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder().decode(PoemSeedCatalog.self, from: data)
+        } catch {
+            throw PoemLibraryLoadError.failedToReadBundledCatalog(String(describing: error))
+        }
+    }
+
+    private static let fallbackCatalog = PoemSeedCatalog(
+        poems: [
+            Poem(
+                id: "fallback-jing-ye-si",
+                title: "静夜思",
+                author: "李白",
+                dynasty: "唐",
+                form: "五言绝句",
+                tags: ["唐诗", "思乡"],
+                summary: "以月光写乡愁。",
+                lines: [
+                    PoemLine(id: "fallback-jing-ye-si-1", order: 0, text: "床前明月光，"),
+                    PoemLine(id: "fallback-jing-ye-si-2", order: 1, text: "疑是地上霜。"),
+                    PoemLine(id: "fallback-jing-ye-si-3", order: 2, text: "举头望明月，"),
+                    PoemLine(id: "fallback-jing-ye-si-4", order: 3, text: "低头思故乡。")
+                ],
+                annotations: [],
+                sourceURL: nil,
+                artworkStyle: .fallback
+            )
+        ],
+        collections: [],
+        categories: []
+    )
+}
+
+enum PoemLibraryLoadError: LocalizedError {
+    case missingBundledCatalog
+    case failedToReadBundledCatalog(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .missingBundledCatalog:
+            "Missing PoemsSeed.json from the app bundle."
+        case .failedToReadBundledCatalog(let reason):
+            "Failed to read PoemsSeed.json: \(reason)"
+        }
+    }
+}
+
+private struct IndexedPoemCatalog: Sendable {
+    let catalog: PoemSeedCatalog
+    let index: PoemLibraryIndex
+}
+
+private struct PoemLibraryIndex: Sendable {
+    let poemsByID: [Poem.ID: Poem]
+    let poemOrderByID: [Poem.ID: Int]
+    let popularPoems: [Poem]
+    let authors: [AuthorResult]
+    let poemSearchTextByID: [Poem.ID: String]
+    let collectionSearchTextByID: [PoemCollection.ID: String]
+    let authorSearchTextByID: [AuthorResult.ID: String]
+
+    init(catalog: PoemSeedCatalog) {
+        let poemOrderByID = Dictionary(uniqueKeysWithValues: catalog.poems.enumerated().map { index, poem in
+            (poem.id, index)
+        })
+        let popularPoems = Self.popularSortedPoems(catalog.poems, poemOrderByID: poemOrderByID)
+        let authors = Self.makeAuthors(poems: catalog.poems, poemOrderByID: poemOrderByID)
+
+        self.poemsByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { ($0.id, $0) })
+        self.poemOrderByID = poemOrderByID
+        self.popularPoems = popularPoems
+        self.authors = authors
+        self.poemSearchTextByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { poem in
+            (poem.id, Self.searchText(for: poem))
+        })
+        self.collectionSearchTextByID = Dictionary(uniqueKeysWithValues: catalog.collections.map { collection in
+            (collection.id, Self.searchText(for: collection))
+        })
+        self.authorSearchTextByID = Dictionary(uniqueKeysWithValues: authors.map { author in
+            (author.id, Self.searchText(for: author))
+        })
+    }
+
+    static func popularSortedPoems(_ candidates: [Poem], poemOrderByID: [Poem.ID: Int]) -> [Poem] {
         candidates.sorted { lhs, rhs in
             let lhsScore = popularityScore(for: lhs)
             let rhsScore = popularityScore(for: rhs)
 
             if lhsScore == rhsScore {
-                return poemOrder(for: lhs) < poemOrder(for: rhs)
+                return poemOrder(for: lhs, poemOrderByID: poemOrderByID) < poemOrder(for: rhs, poemOrderByID: poemOrderByID)
             }
 
             return lhsScore > rhsScore
         }
     }
 
-    private func popularityScore(for author: AuthorResult) -> Int {
+    private static func makeAuthors(poems: [Poem], poemOrderByID: [Poem.ID: Int]) -> [AuthorResult] {
+        Dictionary(grouping: poems, by: \.author)
+            .map { author, poems in
+                let dynasty = poems.first?.dynasty ?? ""
+                return AuthorResult(
+                    id: "\(dynasty)-\(author)",
+                    name: author,
+                    dynasty: dynasty,
+                    poems: popularSortedPoems(poems, poemOrderByID: poemOrderByID)
+                )
+            }
+            .sorted { lhs, rhs in
+                let lhsScore = popularityScore(for: lhs)
+                let rhsScore = popularityScore(for: rhs)
+
+                if lhsScore == rhsScore {
+                    return firstPoemOrder(in: lhs, poemOrderByID: poemOrderByID) < firstPoemOrder(in: rhs, poemOrderByID: poemOrderByID)
+                }
+
+                return lhsScore > rhsScore
+            }
+    }
+
+    private static func popularityScore(for author: AuthorResult) -> Int {
         let poemScore = author.poems.map(popularityScore(for:)).max() ?? 0
-        let authorScore = Self.authorPopularity[author.name] ?? 0
+        let authorScore = authorPopularity[author.name] ?? 0
         return poemScore + authorScore + min(author.poems.count, 60)
     }
 
-    private func popularityScore(for poem: Poem) -> Int {
-        let titleScore = Self.popularTitleKeywords.reduce(0) { score, keyword in
+    private static func popularityScore(for poem: Poem) -> Int {
+        let titleScore = popularTitleKeywords.reduce(0) { score, keyword in
             poem.title.localizedStandardContains(keyword.title) ? max(score, keyword.score) : score
         }
-        let authorScore = Self.authorPopularity[poem.author] ?? 0
+        let authorScore = authorPopularity[poem.author] ?? 0
         let tagScore = poem.tags.reduce(0) { score, tag in
-            score + (Self.classicTagPopularity[tag] ?? 0)
+            score + (classicTagPopularity[tag] ?? 0)
         }
 
         return titleScore + authorScore + min(tagScore, 120)
     }
 
-    private func firstPoemOrder(in author: AuthorResult) -> Int {
-        author.poems.map(poemOrder(for:)).min() ?? Int.max
+    private static func firstPoemOrder(in author: AuthorResult, poemOrderByID: [Poem.ID: Int]) -> Int {
+        author.poems.map { poemOrder(for: $0, poemOrderByID: poemOrderByID) }.min() ?? Int.max
     }
 
-    private func poemOrder(for poem: Poem) -> Int {
+    private static func poemOrder(for poem: Poem, poemOrderByID: [Poem.ID: Int]) -> Int {
         poemOrderByID[poem.id] ?? Int.max
     }
 
@@ -265,44 +373,4 @@ final class PoemLibraryStore {
         "哲理": 24,
         "抒情": 20
     ]
-
-    private static func loadBundledCatalog() -> PoemSeedCatalog {
-        guard let url = Bundle.main.url(forResource: "PoemsSeed", withExtension: "json") else {
-            assertionFailure("Missing PoemsSeed.json from app bundle.")
-            return fallbackCatalog
-        }
-
-        do {
-            let data = try Data(contentsOf: url)
-            return try JSONDecoder().decode(PoemSeedCatalog.self, from: data)
-        } catch {
-            assertionFailure("Failed to decode PoemsSeed.json: \(error)")
-            return fallbackCatalog
-        }
-    }
-
-    private static let fallbackCatalog = PoemSeedCatalog(
-        poems: [
-            Poem(
-                id: "fallback-jing-ye-si",
-                title: "静夜思",
-                author: "李白",
-                dynasty: "唐",
-                form: "五言绝句",
-                tags: ["唐诗", "思乡"],
-                summary: "以月光写乡愁。",
-                lines: [
-                    PoemLine(id: "fallback-jing-ye-si-1", order: 0, text: "床前明月光，"),
-                    PoemLine(id: "fallback-jing-ye-si-2", order: 1, text: "疑是地上霜。"),
-                    PoemLine(id: "fallback-jing-ye-si-3", order: 2, text: "举头望明月，"),
-                    PoemLine(id: "fallback-jing-ye-si-4", order: 3, text: "低头思故乡。")
-                ],
-                annotations: [],
-                sourceURL: nil,
-                artworkStyle: .fallback
-            )
-        ],
-        collections: [],
-        categories: []
-    )
 }
