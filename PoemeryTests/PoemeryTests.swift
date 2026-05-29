@@ -122,6 +122,12 @@ final class PoemeryTests: XCTestCase {
         XCTAssertTrue(store.forms(limit: 2).contains("五言绝句"))
     }
 
+    func testLimitedThemeBrowseStopsAtRequestedLimitInPopularOrder() {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        XCTAssertEqual(store.poems(forTheme: "唐", limit: 1).map(\.title), ["静夜思"])
+    }
+
     func testFavoritesToggleAndClear() {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
         let session = ReadingSessionStore(defaults: makeDefaults())

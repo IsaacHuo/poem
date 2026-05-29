@@ -11,6 +11,7 @@ final class PoemLibraryStore {
     private var poemsByID: [Poem.ID: Poem]
     private var poemOrderByID: [Poem.ID: Int]
     private var poemScoreByID: [Poem.ID: Int]
+    private var poemThemeSearchTextByID: [Poem.ID: String]
     private var popularPoemsCache: [Poem]
     private var authorsCache: [AuthorResult]
     private var poemSearchTextByID: [Poem.ID: String]?
@@ -30,6 +31,7 @@ final class PoemLibraryStore {
         self.poemsByID = index.poemsByID
         self.poemOrderByID = index.poemOrderByID
         self.poemScoreByID = index.poemScoreByID
+        self.poemThemeSearchTextByID = index.poemThemeSearchTextByID
         self.popularPoemsCache = index.popularPoems
         self.authorsCache = index.authors
         self.poemSearchTextByID = nil
@@ -90,19 +92,22 @@ final class PoemLibraryStore {
     }
 
     func poems(forTheme theme: String, limit: Int? = nil) -> [Poem] {
-        let normalizedTheme = Self.normalizedSearchText(theme)
-        let matches = popularSortedPoems(
-            poems.filter { poem in
-                poem.themes.contains { Self.normalizedSearchText($0).localizedStandardContains(normalizedTheme) }
-                    || poem.tags.contains { Self.normalizedSearchText($0).localizedStandardContains(normalizedTheme) }
-                    || Self.normalizedSearchText(poem.dynasty).localizedStandardContains(normalizedTheme)
-                    || Self.normalizedSearchText(poem.form).localizedStandardContains(normalizedTheme)
-            }
-        )
-        guard let limit else {
-            return matches
+        let themeTokenVariants = Self.searchTokenVariants(theme)
+        guard !themeTokenVariants.isEmpty else {
+            return []
         }
-        return Array(matches.prefix(limit))
+
+        var matches: [Poem] = []
+
+        for poem in popularPoemsCache where poemThemeMatches(poem, tokenVariants: themeTokenVariants) {
+            matches.append(poem)
+
+            if let limit, matches.count >= limit {
+                break
+            }
+        }
+
+        return matches
     }
 
     func poems(forDynasty dynasty: String, limit: Int? = nil) -> [Poem] {
@@ -176,6 +181,16 @@ final class PoemLibraryStore {
             return poems
         }
         return Array(poems.prefix(limit))
+    }
+
+    private func poemThemeMatches(_ poem: Poem, tokenVariants: [[String]]) -> Bool {
+        guard let searchable = poemThemeSearchTextByID[poem.id] else {
+            return false
+        }
+
+        return tokenVariants.allSatisfy { variants in
+            variants.contains { searchable.localizedStandardContains($0) }
+        }
     }
 
     private func searchIndex() -> PoemSearchIndex {
@@ -354,6 +369,7 @@ private struct PoemLibraryIndex: Sendable {
     let poemsByID: [Poem.ID: Poem]
     let poemOrderByID: [Poem.ID: Int]
     let poemScoreByID: [Poem.ID: Int]
+    let poemThemeSearchTextByID: [Poem.ID: String]
     let popularPoems: [Poem]
     let authors: [AuthorResult]
     let forms: [String]
@@ -365,6 +381,9 @@ private struct PoemLibraryIndex: Sendable {
         })
         let poemScoreByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { poem in
             (poem.id, Self.popularityScore(for: poem))
+        })
+        let poemThemeSearchTextByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { poem in
+            (poem.id, Self.themeSearchText(for: poem))
         })
         let popularPoems = Self.popularSortedPoems(
             catalog.poems,
@@ -380,6 +399,7 @@ private struct PoemLibraryIndex: Sendable {
         self.poemsByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { ($0.id, $0) })
         self.poemOrderByID = poemOrderByID
         self.poemScoreByID = poemScoreByID
+        self.poemThemeSearchTextByID = poemThemeSearchTextByID
         self.popularPoems = popularPoems
         self.authors = authors
         self.forms = Self.sortedValues(poems: catalog.poems, keyPath: \.form)
@@ -478,6 +498,12 @@ private struct PoemLibraryIndex: Sendable {
         poemOrderByID[poem.id] ?? Int.max
     }
 
+    private static func themeSearchText(for poem: Poem) -> String {
+        PoemLibraryStore.normalizedSearchText(
+            ([poem.dynasty, poem.form] + poem.themes + poem.tags)
+                .joined(separator: " ")
+        )
+    }
 }
 
 private struct PoemSearchIndex {
