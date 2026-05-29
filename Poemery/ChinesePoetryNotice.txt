@@ -2,7 +2,7 @@ Poemery bundled poetry data notice
 
 Data source: https://github.com/chinese-poetry/chinese-poetry
 Pinned commit: 99ebbef7e1345c0985c44b9fd96a3f9e776f117b
-Generated at: 2026-05-23T08:03:48+00:00
+Generated at: 2026-05-29T04:06:30+00:00
 
 Source files:
 - 唐诗三百首: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%85%A8%E5%94%90%E8%AF%97/%E5%94%90%E8%AF%97%E4%B8%89%E7%99%BE%E9%A6%96.json (366 items)

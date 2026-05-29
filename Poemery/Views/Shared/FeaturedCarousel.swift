@@ -29,9 +29,8 @@ struct FeaturedCarousel: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 2)
                 }
-                .padding(.horizontal, -20)
             }
             .frame(height: carouselHeight)
         }
@@ -39,7 +38,7 @@ struct FeaturedCarousel: View {
 
     private var carouselHeight: CGFloat {
         if layout == .narrowPortrait {
-            UIDevice.current.userInterfaceIdiom == .pad ? 410 : 346
+            UIDevice.current.userInterfaceIdiom == .pad ? 372 : 310
         } else if UIDevice.current.userInterfaceIdiom == .pad {
             420
         } else {
@@ -52,10 +51,10 @@ struct FeaturedCarousel: View {
         if layout == .narrowPortrait {
             if UIDevice.current.userInterfaceIdiom == .pad {
                 width = min(max(availableWidth * 0.42, 260), 320)
-                return CGSize(width: width, height: 410)
+                return CGSize(width: width, height: 372)
             } else {
                 width = min(max(availableWidth * 0.58, 208), 248)
-                return CGSize(width: width, height: 346)
+                return CGSize(width: width, height: 310)
             }
         } else if UIDevice.current.userInterfaceIdiom == .pad {
             width = min(availableWidth * 0.58, 380)

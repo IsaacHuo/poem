@@ -68,7 +68,7 @@ struct ContentView: View {
             legacyTabView(library: library)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     readingFallbackAccessory(library: library)
-                }
+            }
         }
     }
 
@@ -197,7 +197,10 @@ struct ContentView: View {
             onOpenPoem: openCurrentPoem,
             onMoveNext: moveToNextPoem
         )
-        .background(.ultraThinMaterial)
+        .background(
+            PoemeryTheme.warmPaper.opacity(0.34)
+                .background(.ultraThinMaterial)
+        )
     }
 
     private func legacyTabScreen<Content: View>(
@@ -231,6 +234,17 @@ struct ContentView: View {
         }
         let queue = session.currentQueue ?? .singlePoem(poem)
         presentedItem = .poem(poem.id, queue)
+    }
+
+    private func openPoemFromPresentedItem(_ poem: Poem, queue: ReadingQueue) {
+        session.startReading(poem, in: queue)
+        let nextItem = PresentedLibraryItem.poem(poem.id, queue)
+        presentedItem = nil
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 180_000_000)
+            presentedItem = nextItem
+        }
     }
 
     private func moveToNextPoem() {
@@ -272,10 +286,10 @@ struct ContentView: View {
                 CollectionDetailView(
                     collection: collection,
                     poems: library.poems(for: collection),
-                    onOpenPoem: openPoem
+                    onOpenPoem: openPoemFromPresentedItem
                 )
             case .author(let author):
-                AuthorDetailView(author: author, onOpenPoem: openPoem)
+                AuthorDetailView(author: author, onOpenPoem: openPoemFromPresentedItem)
             }
         } else {
             EmptyView()
@@ -350,6 +364,18 @@ private struct LibraryLoadingScreen: View {
                     .stroke(.white.opacity(0.62), lineWidth: 0.6)
             }
 
+            VStack(alignment: .leading, spacing: 14) {
+                Text("正在准备书架")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+
+                HStack(spacing: 14) {
+                    LoadingShelfCard(title: "唐诗", color: PoemeryTheme.cinnabar)
+                    LoadingShelfCard(title: "宋词", color: PoemeryTheme.moon)
+                    LoadingShelfCard(title: "元曲", color: PoemeryTheme.agedPaper)
+                }
+            }
+
             HStack(spacing: 10) {
                 ProgressView()
                     .tint(PoemeryTheme.accent)
@@ -366,6 +392,32 @@ private struct LibraryLoadingScreen: View {
         .background(PoemeryTheme.background.ignoresSafeArea())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("诗境正在加载完整诗库，今日推荐静夜思")
+    }
+}
+
+private struct LoadingShelfCard: View {
+    let title: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Spacer()
+
+            Text(title)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.white)
+        }
+        .padding(12)
+        .frame(width: 92, height: 116)
+        .background(
+            LinearGradient(
+                colors: [color.opacity(0.88), color.opacity(0.48), PoemeryTheme.deepInk.opacity(0.82)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
+        .accessibilityHidden(true)
     }
 }
 
@@ -576,10 +628,8 @@ private struct ReadingAccessoryContent: View {
                 } else {
                     expandedPoemRow(poem)
                 }
-            } else if isInline {
-                compactPlaceholder
             } else {
-                expandedPlaceholder
+                compactPlaceholder
             }
         }
         .contentShape(Rectangle())
@@ -611,7 +661,7 @@ private struct ReadingAccessoryContent: View {
             Spacer(minLength: 12)
 
             Button(action: onMoveNext) {
-                Image(systemName: "forward.fill")
+                Image(systemName: "chevron.right")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(canMoveNext ? PoemeryTheme.primaryText : PoemeryTheme.tertiaryText)
                     .frame(width: 44, height: 44)
@@ -640,7 +690,7 @@ private struct ReadingAccessoryContent: View {
             .buttonStyle(.plain)
 
             Button(action: onMoveNext) {
-                Image(systemName: "forward.fill")
+                Image(systemName: "chevron.right")
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(canMoveNext ? PoemeryTheme.primaryText : PoemeryTheme.tertiaryText)
             }
@@ -652,45 +702,12 @@ private struct ReadingAccessoryContent: View {
         .padding(.vertical, 6)
     }
 
-    private var expandedPlaceholder: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("打开一首诗")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(PoemeryTheme.primaryText)
-
-                Text("当前阅读会显示在这里")
-                    .font(.subheadline)
-                    .foregroundStyle(PoemeryTheme.secondaryText)
-            }
-
-            Spacer(minLength: 12)
-
-            Image(systemName: "sparkles")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(PoemeryTheme.tertiaryText)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("打开一首诗，当前阅读会显示在这里")
-    }
-
     private var compactPlaceholder: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "text.book.closed.fill")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(PoemeryTheme.accent)
-
-            Text("开始阅读")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(PoemeryTheme.primaryText)
-                .lineLimit(1)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("开始阅读")
+        Text("开始阅读")
+            .font(.headline.weight(.semibold))
+            .foregroundStyle(PoemeryTheme.primaryText)
+            .lineLimit(1)
+            .accessibilityLabel("开始阅读")
     }
 
     private func subtitle(for poem: Poem) -> String {

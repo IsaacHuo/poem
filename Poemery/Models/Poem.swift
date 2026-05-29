@@ -12,6 +12,111 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
     let annotations: [PoemAnnotation]
     let sourceURL: URL?
     let artworkStyle: ArtworkStyle
+    let sourceName: String
+    let sourceLicense: String
+    let editorialSummary: String
+    let themes: [String]
+    let difficulty: Int
+    let canonicalKey: String
+
+    init(
+        id: String,
+        title: String,
+        author: String,
+        dynasty: String,
+        form: String,
+        tags: [String],
+        summary: String,
+        lines: [PoemLine],
+        annotations: [PoemAnnotation],
+        sourceURL: URL?,
+        artworkStyle: ArtworkStyle,
+        sourceName: String = "chinese-poetry/chinese-poetry",
+        sourceLicense: String = "MIT",
+        editorialSummary: String? = nil,
+        themes: [String]? = nil,
+        difficulty: Int? = nil,
+        canonicalKey: String? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.author = author
+        self.dynasty = dynasty
+        self.form = form
+        self.tags = tags
+        self.summary = summary
+        self.lines = lines
+        self.annotations = annotations
+        self.sourceURL = sourceURL
+        self.artworkStyle = artworkStyle
+        self.sourceName = sourceName.isEmpty ? Self.defaultSourceName(tags: tags, dynasty: dynasty, form: form) : sourceName
+        self.sourceLicense = sourceLicense
+        self.editorialSummary = editorialSummary ?? Self.defaultEditorialSummary(
+            title: title,
+            author: author,
+            form: form,
+            tags: tags,
+            summary: summary
+        )
+        self.themes = themes?.isEmpty == false ? themes ?? [] : Self.defaultThemes(tags: tags, dynasty: dynasty, form: form)
+        self.difficulty = difficulty ?? Self.defaultDifficulty(form: form, lines: lines)
+        self.canonicalKey = canonicalKey ?? Self.defaultCanonicalKey(dynasty: dynasty, author: author, title: title)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case author
+        case dynasty
+        case form
+        case tags
+        case summary
+        case lines
+        case annotations
+        case sourceURL
+        case artworkStyle
+        case sourceName
+        case sourceLicense
+        case editorialSummary
+        case themes
+        case difficulty
+        case canonicalKey
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let id = try container.decode(String.self, forKey: .id)
+        let title = try container.decode(String.self, forKey: .title)
+        let author = try container.decode(String.self, forKey: .author)
+        let dynasty = try container.decode(String.self, forKey: .dynasty)
+        let form = try container.decode(String.self, forKey: .form)
+        let tags = try container.decode([String].self, forKey: .tags)
+        let summary = try container.decode(String.self, forKey: .summary)
+        let lines = try container.decode([PoemLine].self, forKey: .lines)
+        let annotations = try container.decode([PoemAnnotation].self, forKey: .annotations)
+        let sourceURL = try container.decodeIfPresent(URL.self, forKey: .sourceURL)
+        let artworkStyle = try container.decode(ArtworkStyle.self, forKey: .artworkStyle)
+
+        self.init(
+            id: id,
+            title: title,
+            author: author,
+            dynasty: dynasty,
+            form: form,
+            tags: tags,
+            summary: summary,
+            lines: lines,
+            annotations: annotations,
+            sourceURL: sourceURL,
+            artworkStyle: artworkStyle,
+            sourceName: try container.decodeIfPresent(String.self, forKey: .sourceName) ?? Self.defaultSourceName(tags: tags, dynasty: dynasty, form: form),
+            sourceLicense: try container.decodeIfPresent(String.self, forKey: .sourceLicense) ?? "MIT",
+            editorialSummary: try container.decodeIfPresent(String.self, forKey: .editorialSummary),
+            themes: try container.decodeIfPresent([String].self, forKey: .themes),
+            difficulty: try container.decodeIfPresent(Int.self, forKey: .difficulty),
+            canonicalKey: try container.decodeIfPresent(String.self, forKey: .canonicalKey)
+        )
+    }
 
     var fullText: String {
         lines.map(\.text).joined(separator: "\n")
@@ -30,6 +135,54 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
 
     func annotations(for lineID: PoemLine.ID) -> [PoemAnnotation] {
         annotations.filter { $0.lineID == lineID }
+    }
+
+    private static func defaultThemes(tags: [String], dynasty: String, form: String) -> [String] {
+        var values = [dynasty, form]
+        values.append(contentsOf: tags.prefix(4))
+        return Array(NSOrderedSet(array: values).compactMap { $0 as? String }.prefix(6))
+    }
+
+    private static func defaultDifficulty(form: String, lines: [PoemLine]) -> Int {
+        if form == "曲" || lines.count > 12 {
+            return 4
+        }
+        if form == "词" || lines.count > 8 {
+            return 3
+        }
+        return 2
+    }
+
+    private static func defaultCanonicalKey(dynasty: String, author: String, title: String) -> String {
+        "\(dynasty)|\(author)|\(title)"
+    }
+
+    private static func defaultSourceName(tags: [String], dynasty: String, form: String) -> String {
+        if tags.contains("唐诗三百首") {
+            return "chinese-poetry/chinese-poetry · 唐诗三百首"
+        }
+        if tags.contains("宋词三百首") {
+            return "chinese-poetry/chinese-poetry · 宋词三百首"
+        }
+        if tags.contains("元曲") || dynasty == "元" || form == "曲" {
+            return "chinese-poetry/chinese-poetry · 元曲"
+        }
+        return "chinese-poetry/chinese-poetry"
+    }
+
+    private static func defaultEditorialSummary(
+        title: String,
+        author: String,
+        form: String,
+        tags: [String],
+        summary: String
+    ) -> String {
+        let sourceTags = ["唐诗三百首", "宋词三百首", "唐诗", "宋词", "元曲"]
+        let themeText = tags.first { !sourceTags.contains($0) } ?? form
+        if !themeText.isEmpty {
+            return "\(author)《\(title)》可从\(themeText)与\(form)的线索继续阅读。"
+        }
+        return summary
     }
 }
 

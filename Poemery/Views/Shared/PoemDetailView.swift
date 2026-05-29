@@ -93,19 +93,23 @@ struct PoemDetailView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("关闭") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.headline.weight(.semibold))
                     }
+                    .accessibilityLabel("关闭")
                 }
 
                 ToolbarItemGroup(placement: .bottomBar) {
                     Button {
                         movePoem(by: -1)
                     } label: {
-                        Image(systemName: "backward.fill")
+                        Image(systemName: "chevron.left")
                     }
                     .disabled(!canMoveInQueue)
-                    .accessibilityLabel("上一首")
+                    .accessibilityLabel("上一首作品")
 
                     Spacer()
 
@@ -123,10 +127,10 @@ struct PoemDetailView: View {
                     Button {
                         movePoem(by: 1)
                     } label: {
-                        Image(systemName: "forward.fill")
+                        Image(systemName: "chevron.right")
                     }
                     .disabled(!canMoveInQueue)
-                    .accessibilityLabel("下一首")
+                    .accessibilityLabel("下一首作品")
                 }
             }
             .toolbarBackground(.hidden, for: .bottomBar)
@@ -279,7 +283,7 @@ struct PoemDetailView: View {
     }
 
     private var statusBarText: String {
-        "\(shortQueueTitle) \(queuePositionText)"
+        "\(shortQueueTitle) · \(readerPositionText)"
     }
 
     private var visibleAuthor: AuthorResult? {
@@ -298,6 +302,13 @@ struct PoemDetailView: View {
             return String(currentQueue.title.prefix(4))
         }
         return currentQueue.title
+    }
+
+    private var readerPositionText: String {
+        guard let currentQueueIndex else {
+            return "正在阅读"
+        }
+        return "第 \(currentQueueIndex + 1) 首 / 共 \(currentQueue.poemIDs.count) 首"
     }
 
     private var relatedPoems: [Poem] {

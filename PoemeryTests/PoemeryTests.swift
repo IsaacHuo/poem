@@ -18,6 +18,24 @@ final class PoemeryTests: XCTestCase {
         XCTAssertEqual(results.authors.map(\.name), [])
     }
 
+    func testSearchMatchesTraditionalAndAuthorAliases() {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        XCTAssertEqual(store.search("靜夜").poems.first?.title, "静夜思")
+        XCTAssertEqual(store.search("太白 明月").poems.first?.author, "李白")
+    }
+
+    func testPoemMetadataDefaultsAreCompatibleWithOldCatalogs() {
+        let poem = Self.sampleCatalog.poems[0]
+
+        XCTAssertEqual(poem.sourceLicense, "MIT")
+        XCTAssertFalse(poem.sourceName.isEmpty)
+        XCTAssertFalse(poem.editorialSummary.isEmpty)
+        XCTAssertTrue(poem.themes.contains("唐"))
+        XCTAssertGreaterThanOrEqual(poem.difficulty, 1)
+        XCTAssertEqual(poem.canonicalKey, "唐|李白|静夜思")
+    }
+
     func testPopularPoemsPreferClassicTitles() {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
 
@@ -79,11 +97,29 @@ final class PoemeryTests: XCTestCase {
         let store = try await PoemLibraryStore.loadBundled()
 
         XCTAssertEqual(store.poems.count, 11701)
-        XCTAssertEqual(store.collections.count, 7)
-        XCTAssertEqual(store.categories.count, 7)
+        XCTAssertGreaterThanOrEqual(store.collections.count, 18)
+        XCTAssertGreaterThanOrEqual(store.categories.count, 10)
         XCTAssertTrue(store.collections.allSatisfy { collection in
             !store.poems(for: collection).isEmpty
         })
+        XCTAssertTrue(store.poems.allSatisfy { poem in
+            !poem.sourceName.isEmpty
+                && !poem.sourceLicense.isEmpty
+                && !poem.editorialSummary.isEmpty
+                && !poem.themes.isEmpty
+                && (1...5).contains(poem.difficulty)
+                && !poem.canonicalKey.isEmpty
+        })
+    }
+
+    func testLibraryCanBrowseByThemeDynastyAndForm() {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        XCTAssertEqual(store.poems(forTheme: "思乡").map(\.title), ["静夜思"])
+        XCTAssertEqual(store.poems(forDynasty: "唐").count, 2)
+        XCTAssertEqual(store.poems(forForm: "五言绝句").map(\.title), ["静夜思"])
+        XCTAssertTrue(store.dynasties().contains("唐"))
+        XCTAssertTrue(store.forms(limit: 2).contains("五言绝句"))
     }
 
     func testFavoritesToggleAndClear() {

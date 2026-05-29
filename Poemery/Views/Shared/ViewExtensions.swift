@@ -5,7 +5,7 @@ extension View {
         self
             .padding(.horizontal, 16)
             .padding(.top, 8)
-            .padding(.bottom, 40)
+            .padding(.bottom, 132)
     }
 
     func groupedListBackground(cornerRadius: CGFloat = 22) -> some View {

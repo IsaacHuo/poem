@@ -224,6 +224,8 @@ def convert_item(
         "form": form,
         "tags": tags,
         "summary": str(config["summary"]),
+        "themes": themes_for_poem(source_id, author, title, form, tags, paragraphs),
+        "difficulty": difficulty_for_poem(form, paragraphs),
         "sourceURL": f"{BLOB_BASE_URL}/{config['path']}",
         "artworkStyle": artwork_style(source_id, poem_id, title),
         "lines": [
@@ -286,6 +288,49 @@ def infer_form(source_id: str, tags: list[str], fallback: str) -> str:
     return fallback
 
 
+def themes_for_poem(source_id: str, author: str, title: str, form: str, tags: list[str], paragraphs: list[str]) -> list[str]:
+    text = "".join([title, author, form, *tags, *paragraphs])
+    themes = [SOURCES[source_id]["dynasty"], form]
+    theme_keywords = [
+        ("思乡", ["乡", "故园", "故乡", "归", "客", "家"]),
+        ("送别", ["送", "别", "离", "渡", "长亭"]),
+        ("山水", ["山", "水", "江", "河", "湖", "溪", "泉"]),
+        ("月夜", ["月", "夜", "霜", "灯", "星"]),
+        ("边塞", ["塞", "关", "胡", "羌", "戍", "沙场"]),
+        ("春景", ["春", "花", "柳", "莺", "燕"]),
+        ("秋思", ["秋", "落叶", "雁", "寒"]),
+        ("怀古", ["古", "台", "宫", "赤壁", "兴亡"]),
+        ("爱国", ["国", "山河", "中原", "北定", "功名"]),
+        ("哲理", ["道", "理", "心", "梦", "身", "世"]),
+        ("抒情", ["情", "愁", "泪", "恨", "思"]),
+    ]
+    for theme, keywords in theme_keywords:
+        if any(keyword in text for keyword in keywords):
+            themes.append(theme)
+    themes.extend(tags[:4])
+    return dedupe(themes)[:8]
+
+
+def difficulty_for_poem(form: str, paragraphs: list[str]) -> int:
+    character_count = sum(len(paragraph) for paragraph in paragraphs)
+    if form == "曲" or character_count > 180:
+        return 4
+    if form == "词" or character_count > 96:
+        return 3
+    if character_count < 48:
+        return 1
+    return 2
+
+
+def dedupe(values: list[str]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        clean_value = clean_text(value)
+        if clean_value and clean_value not in result:
+            result.append(clean_value)
+    return result
+
+
 def artwork_style(source_id: str, poem_id: str, title: str) -> dict[str, str]:
     palettes = SOURCE_PALETTES[source_id]
     palette = palettes[int(hashlib.sha256(poem_id.encode("utf-8")).hexdigest()[:2], 16) % len(palettes)]
@@ -307,6 +352,9 @@ def first_cjk(value: str) -> str | None:
 def build_collections(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
     by_tag = poems_by_tag(poems)
     by_author = poems_by_author(poems)
+    by_dynasty = poems_by_field(poems, "dynasty")
+    by_form = poems_by_field(poems, "form")
+    by_theme = poems_by_theme(poems)
     collections_data = [
         make_collection(
             "cp-collection-tang-300",
@@ -353,6 +401,62 @@ def build_collections(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 )
             )
 
+    for dynasty, accent in [
+        ("唐", style("#A33A32", "#E8B96F", "#2B2B34", "唐")),
+        ("宋", style("#2F6F73", "#9CC6B8", "#26323A", "宋")),
+        ("元", style("#8E5B2D", "#D8A15D", "#2E2A26", "元")),
+    ]:
+        dynasty_poems = by_dynasty.get(dynasty, [])
+        if dynasty_poems:
+            collections_data.append(
+                make_collection(
+                    f"cp-collection-era-{slug(dynasty)}",
+                    f"{dynasty}代书架",
+                    f"{len(dynasty_poems)} 首/条作品",
+                    "era",
+                    dynasty_poems,
+                    accent,
+                )
+            )
+
+    for form, accent in [
+        ("五言绝句", style("#355B72", "#A9D0CA", "#242E36", "五")),
+        ("七言律诗", style("#584B9C", "#B8A7E8", "#252538", "律")),
+        ("词", style("#2F6F73", "#9CC6B8", "#26323A", "词")),
+        ("曲", style("#8E5B2D", "#D8A15D", "#2E2A26", "曲")),
+    ]:
+        form_poems = by_form.get(form, [])
+        if form_poems:
+            collections_data.append(
+                make_collection(
+                    f"cp-collection-form-{slug(form)}",
+                    form,
+                    f"{len(form_poems)} 首/条作品",
+                    "mood",
+                    form_poems,
+                    accent,
+                )
+            )
+
+    for theme, accent in [
+        ("思乡", style("#355B72", "#A9D0CA", "#242E36", "乡")),
+        ("月夜", style("#3C5E8D", "#AEC8E6", "#242C3A", "月")),
+        ("送别", style("#7E365A", "#D99EB3", "#2C2530", "别")),
+        ("山水", style("#2F6658", "#D3B56D", "#232F2D", "山")),
+    ]:
+        theme_poems = by_theme.get(theme, [])
+        if theme_poems:
+            collections_data.append(
+                make_collection(
+                    f"cp-collection-theme-{slug(theme)}",
+                    f"{theme}诗词",
+                    f"{len(theme_poems)} 首相关作品",
+                    "mood",
+                    theme_poems,
+                    accent,
+                )
+            )
+
     return collections_data
 
 
@@ -361,6 +465,9 @@ def build_categories(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
         ("cp-category-tang", "唐诗", "唐诗三百首", "唐诗", "book.closed.fill", style("#A33A32", "#E8B96F", "#2B2B34", "唐")),
         ("cp-category-song-ci", "宋词", "宋词三百首", "宋词", "music.note", style("#2F6F73", "#9CC6B8", "#26323A", "宋")),
         ("cp-category-yuanqu", "元曲", "杂剧与散曲", "元曲", "theatermasks.fill", style("#8E5B2D", "#D8A15D", "#2E2A26", "曲")),
+        ("cp-category-moon", "月夜", "月色与夜读", "月夜", "moon.stars.fill", style("#3C5E8D", "#AEC8E6", "#242C3A", "月")),
+        ("cp-category-homesick", "思乡", "旅人与故园", "思乡", "house.fill", style("#355B72", "#A9D0CA", "#242E36", "乡")),
+        ("cp-category-landscape", "山水", "山川与江河", "山水", "mountain.2.fill", style("#2F6658", "#D3B56D", "#232F2D", "山")),
         ("cp-category-li-bai", "李白", "唐代诗人", "李白", "person.fill", style("#A33A32", "#F2C078", "#2B2B34", "李")),
         ("cp-category-du-fu", "杜甫", "唐代诗人", "杜甫", "person.fill", style("#6F3D2E", "#D7A85E", "#26323A", "杜")),
         ("cp-category-su-shi", "苏轼", "宋代词人", "苏轼", "person.fill", style("#395C8A", "#B9C7E6", "#2B2B34", "苏")),
@@ -369,7 +476,7 @@ def build_categories(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
     categories = []
     for category in candidates:
         category_id, title, subtitle, tag, symbol, category_style = category
-        if any(tag in poem["tags"] or tag == poem["dynasty"] or tag == poem["form"] or tag == poem["author"] for poem in poems):
+        if any(tag in poem["tags"] or tag in poem.get("themes", []) or tag == poem["dynasty"] or tag == poem["form"] or tag == poem["author"] for poem in poems):
             categories.append(
                 {
                     "id": category_id,
@@ -395,6 +502,21 @@ def poems_by_author(poems: list[dict[str, Any]]) -> dict[str, list[str]]:
     grouped: dict[str, list[str]] = collections.defaultdict(list)
     for poem in poems:
         grouped[poem["author"]].append(poem["id"])
+    return grouped
+
+
+def poems_by_field(poems: list[dict[str, Any]], field: str) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = collections.defaultdict(list)
+    for poem in poems:
+        grouped[clean_text(poem.get(field))].append(poem["id"])
+    return grouped
+
+
+def poems_by_theme(poems: list[dict[str, Any]]) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = collections.defaultdict(list)
+    for poem in poems:
+        for theme in poem.get("themes", []):
+            grouped[theme].append(poem["id"])
     return grouped
 
 
@@ -441,12 +563,27 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
 
     poem_id_set = set(poem_ids)
     for poem in poems:
-        required_fields = ["id", "title", "author", "dynasty", "form", "tags", "summary", "lines", "annotations", "artworkStyle"]
+        required_fields = [
+            "id",
+            "title",
+            "author",
+            "dynasty",
+            "form",
+            "tags",
+            "summary",
+            "lines",
+            "annotations",
+            "artworkStyle",
+            "themes",
+            "difficulty",
+        ]
         missing = [field for field in required_fields if field not in poem]
         if missing:
             raise ValueError(f"{poem.get('id', '<unknown>')} missing {missing}")
         if not poem["title"] or not poem["author"] or not poem["lines"]:
             raise ValueError(f"{poem['id']} has incomplete title, author, or lines")
+        if not poem["themes"] or not (1 <= int(poem["difficulty"]) <= 5):
+            raise ValueError(f"{poem['id']} has invalid themes or difficulty")
         orders = [line["order"] for line in poem["lines"]]
         if orders != list(range(len(orders))):
             raise ValueError(f"{poem['id']} line orders are not contiguous")
@@ -458,7 +595,7 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
 
     for category in catalog["categories"]:
         tag = category["tag"]
-        if not any(tag in poem["tags"] or tag == poem["dynasty"] or tag == poem["form"] or tag == poem["author"] for poem in poems):
+        if not any(tag in poem["tags"] or tag in poem.get("themes", []) or tag == poem["dynasty"] or tag == poem["form"] or tag == poem["author"] for poem in poems):
             raise ValueError(f"{category['id']} does not match any poems")
 
 

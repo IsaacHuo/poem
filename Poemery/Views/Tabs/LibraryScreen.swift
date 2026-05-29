@@ -6,6 +6,9 @@ struct LibraryScreen: View {
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
 
+    @State private var selectedShelf: LibraryShelf = .poems
+    @State private var selectedSort: LibrarySort = .curated
+
     var body: some View {
         NavigationStack {
             rootContent
@@ -18,7 +21,10 @@ struct LibraryScreen: View {
     private var rootContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                ScreenHeader(title: "收藏、诗单、诗人与最近阅读", subtitle: nil)
+                ScreenHeader(title: "你的诗歌书库", subtitle: nil)
+
+                libraryShelfPicker
+                librarySortPicker
 
                 VStack(spacing: 0) {
                     LibraryNavigationRow(
@@ -54,11 +60,7 @@ struct LibraryScreen: View {
                 }
                 .groupedListBackground()
 
-                PoemShelf(
-                    title: "最近添加",
-                    poems: Array(library.poems.prefix(8)),
-                    onOpenPoem: onOpenPoem
-                )
+                shelfPreview
 
                 CollectionListSection(
                     collections: library.collections,
@@ -84,6 +86,76 @@ struct LibraryScreen: View {
 
     private var recentPoems: [Poem] {
         session.recentPoems(in: library)
+    }
+
+    private var libraryShelfPicker: some View {
+        Picker("资料库内容", selection: $selectedShelf) {
+            ForEach(LibraryShelf.allCases) { shelf in
+                Text(shelf.title).tag(shelf)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var librarySortPicker: some View {
+        Picker("排序", selection: $selectedSort) {
+            ForEach(LibrarySort.allCases) { sort in
+                Text(sort.title).tag(sort)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    @ViewBuilder
+    private var shelfPreview: some View {
+        switch selectedShelf {
+        case .poems:
+            PoemListSection(
+                title: selectedSort.title,
+                poems: sortedPoems(Array(library.poems.prefix(80))).prefixArray(8),
+                queueTitle: "诗词",
+                onOpenPoem: onOpenPoem
+            )
+        case .favorites:
+            PoemShelf(
+                title: "收藏",
+                poems: sortedPoems(favoritePoems),
+                emptyTitle: "还没有收藏",
+                emptySubtitle: "打开作品详情后可以把喜欢的诗词加入收藏。",
+                onOpenPoem: onOpenPoem
+            )
+        case .recents:
+            PoemShelf(
+                title: "最近阅读",
+                poems: recentPoems,
+                emptyTitle: "还没有最近阅读",
+                emptySubtitle: "打开任意作品详情后会出现在这里。",
+                onOpenPoem: onOpenPoem
+            )
+        case .authors:
+            AuthorShelf(authors: Array(authors.prefix(8))) { author in
+                if let firstPoem = author.poems.first {
+                    onOpenPoem(firstPoem, ReadingQueue(title: author.name, poems: author.poems))
+                }
+            }
+        }
+    }
+
+    private func sortedPoems(_ poems: [Poem]) -> [Poem] {
+        switch selectedSort {
+        case .curated:
+            poems
+        case .title:
+            poems.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+        case .author:
+            poems.sorted {
+                let authorOrder = $0.author.localizedCompare($1.author)
+                if authorOrder == .orderedSame {
+                    return $0.title.localizedCompare($1.title) == .orderedAscending
+                }
+                return authorOrder == .orderedAscending
+            }
+        }
     }
 
     @ViewBuilder
@@ -163,6 +235,46 @@ private enum LibraryDestination: Hashable {
     case poems
     case favorites
     case recents
+}
+
+private enum LibraryShelf: String, CaseIterable, Identifiable {
+    case poems
+    case favorites
+    case recents
+    case authors
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .poems: "诗词"
+        case .favorites: "收藏"
+        case .recents: "最近"
+        case .authors: "诗人"
+        }
+    }
+}
+
+private enum LibrarySort: String, CaseIterable, Identifiable {
+    case curated
+    case title
+    case author
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .curated: "精选排序"
+        case .title: "按题名"
+        case .author: "按作者"
+        }
+    }
+}
+
+private extension Array {
+    func prefixArray(_ maxLength: Int) -> [Element] {
+        Array(prefix(maxLength))
+    }
 }
 
 private struct LibraryNavigationRow: View {
