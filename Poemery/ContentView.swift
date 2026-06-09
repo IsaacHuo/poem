@@ -496,6 +496,9 @@ private enum AppTab: String, Identifiable {
 }
 
 private struct SearchScreen: View {
+    private static let searchPageSize = 100
+    private static let debounceNanoseconds: UInt64 = 220_000_000
+
     let library: PoemLibraryStore
     @Binding var searchText: String
     let onOpenPoem: (Poem, ReadingQueue) -> Void
@@ -505,13 +508,17 @@ private struct SearchScreen: View {
 
     @Environment(\.dismissSearch) private var dismissSearch
     @State private var isSearchPresented = true
-
-    private var results: SearchResults {
-        library.search(searchText)
-    }
+    @State private var results = SearchResultsPage()
+    @State private var isLoadingFirstPage = false
+    @State private var isLoadingMore = false
+    @State private var searchTask: Task<Void, Never>?
 
     private var isSearching: Bool {
-        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !trimmedSearchText.isEmpty
+    }
+
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     var body: some View {
@@ -519,14 +526,18 @@ private struct SearchScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     if isSearching {
-                        if results.isEmpty {
+                        if isLoadingFirstPage {
+                            SearchLoadingState()
+                        } else if results.isEmpty {
                             EmptyLibraryState(title: "未找到结果", subtitle: "试试诗名、作者、题材或正文里的字句。")
                         } else {
                             SearchResultsView(
                                 results: results,
-                                onOpenPoem: onOpenPoem,
+                                isLoadingMore: isLoadingMore,
+                                onOpenPoem: openSearchResult,
                                 onOpenCollection: onOpenCollection,
-                                onOpenAuthor: onOpenAuthor
+                                onOpenAuthor: onOpenAuthor,
+                                onLoadMore: loadMoreResults
                             )
                         }
                     } else {
@@ -554,6 +565,13 @@ private struct SearchScreen: View {
             .submitLabel(.search)
             .onAppear {
                 isSearchPresented = true
+                scheduleSearch(debounced: false)
+            }
+            .onChange(of: searchText) {
+                scheduleSearch(debounced: true)
+            }
+            .onDisappear {
+                searchTask?.cancel()
             }
             .modifier(SearchToolbarBehaviorModifier())
         }
@@ -576,6 +594,90 @@ private struct SearchScreen: View {
         isSearchPresented = false
         dismissSearch()
         onDismissSearch()
+    }
+
+    private func scheduleSearch(debounced: Bool) {
+        searchTask?.cancel()
+
+        let query = trimmedSearchText
+        guard !query.isEmpty else {
+            results = SearchResultsPage()
+            isLoadingFirstPage = false
+            isLoadingMore = false
+            return
+        }
+
+        results = SearchResultsPage()
+        isLoadingFirstPage = true
+        isLoadingMore = false
+
+        searchTask = Task { @MainActor in
+            if debounced {
+                try? await Task.sleep(nanoseconds: Self.debounceNanoseconds)
+                guard !Task.isCancelled else {
+                    return
+                }
+            }
+
+            let page = await library.searchPage(query, limit: Self.searchPageSize)
+            guard !Task.isCancelled, query == trimmedSearchText else {
+                return
+            }
+
+            results = page
+            isLoadingFirstPage = false
+        }
+    }
+
+    private func loadMoreResults() {
+        guard let nextOffset = results.nextOffset, !isLoadingMore else {
+            return
+        }
+
+        searchTask?.cancel()
+        let query = trimmedSearchText
+        isLoadingMore = true
+
+        searchTask = Task { @MainActor in
+            let page = await library.searchPage(
+                query,
+                offset: nextOffset,
+                limit: Self.searchPageSize
+            )
+            guard !Task.isCancelled, query == trimmedSearchText else {
+                return
+            }
+
+            results = results.appending(page)
+            isLoadingMore = false
+        }
+    }
+
+    private func openSearchResult(_ item: PoemListItem) {
+        guard let poem = library.poem(id: item.id) else {
+            return
+        }
+
+        onOpenPoem(
+            poem,
+            ReadingQueue(title: "搜索结果", poemIDs: results.poemIDs)
+        )
+    }
+}
+
+private struct SearchLoadingState: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            ProgressView()
+                .tint(PoemeryTheme.accent)
+
+            Text("正在搜索诗库")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .groupedListBackground()
     }
 }
 

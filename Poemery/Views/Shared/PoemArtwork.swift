@@ -1,9 +1,27 @@
 import SwiftUI
 
 struct PoemArtwork: View {
-    let poem: Poem
+    let title: String
+    let author: String
+    let displayArtworkStyle: ArtworkStyle
     let size: CGFloat
     let cornerRadius: CGFloat
+
+    init(poem: Poem, size: CGFloat, cornerRadius: CGFloat) {
+        self.title = poem.title
+        self.author = poem.author
+        self.displayArtworkStyle = poem.displayArtworkStyle
+        self.size = size
+        self.cornerRadius = cornerRadius
+    }
+
+    init(item: PoemListItem, size: CGFloat, cornerRadius: CGFloat) {
+        self.title = item.title
+        self.author = item.author
+        self.displayArtworkStyle = item.displayArtworkStyle
+        self.size = size
+        self.cornerRadius = cornerRadius
+    }
 
     var body: some View {
         ZStack {
@@ -35,7 +53,7 @@ struct PoemArtwork: View {
 
             VStack(alignment: .leading) {
                 Spacer()
-                Text(poem.title)
+                Text(title)
                     .font(.system(size: max(13, size * 0.15), weight: .bold))
                     .foregroundStyle(.white)
                     .lineLimit(size < 70 ? 1 : 3)
@@ -47,10 +65,10 @@ struct PoemArtwork: View {
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(poem.title)，\(poem.author)")
+        .accessibilityLabel("\(title)，\(author)")
     }
 
     private var style: ArtworkStyle {
-        poem.displayArtworkStyle
+        displayArtworkStyle
     }
 }

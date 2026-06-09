@@ -25,6 +25,41 @@ final class PoemeryTests: XCTestCase {
         XCTAssertEqual(store.search("太白 明月").poems.first?.author, "李白")
     }
 
+    func testSearchPagePaginatesShortChineseTokenMatches() async {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        let firstPage = await store.searchPage("月", limit: 1)
+        let secondPage = await store.searchPage("月", offset: firstPage.nextOffset ?? 0, limit: 1)
+        let combinedPage = firstPage.appending(secondPage)
+
+        XCTAssertEqual(firstPage.totalPoemCount, 2)
+        XCTAssertEqual(firstPage.poems.map(\.title), ["静夜思"])
+        XCTAssertEqual(firstPage.nextOffset, 1)
+        XCTAssertEqual(secondPage.poems.map(\.title), ["秋日"])
+        XCTAssertNil(secondPage.nextOffset)
+        XCTAssertEqual(combinedPage.poems.map(\.title), ["静夜思", "秋日"])
+        XCTAssertEqual(combinedPage.poemIDs, ["jing-ye-si", "ordinary"])
+    }
+
+    func testSearchPageMatchesPhrasesWithChineseBigrams() async {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        let results = await store.searchPage("床前明月", limit: 10)
+
+        XCTAssertEqual(results.poems.map(\.title), ["静夜思"])
+        XCTAssertEqual(results.totalPoemCount, 1)
+    }
+
+    func testSearchPagePreservesTraditionalAndAliasMatches() async {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        let traditionalResults = await store.searchPage("靜夜", limit: 10)
+        let aliasResults = await store.searchPage("太白 明月", limit: 10)
+
+        XCTAssertEqual(traditionalResults.poems.first?.title, "静夜思")
+        XCTAssertEqual(aliasResults.poems.first?.author, "李白")
+    }
+
     func testPoemMetadataDefaultsAreCompatibleWithOldCatalogs() {
         let poem = Self.sampleCatalog.poems[0]
 

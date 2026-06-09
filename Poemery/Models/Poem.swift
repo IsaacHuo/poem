@@ -243,6 +243,35 @@ struct PoemKeyword: Identifiable, Hashable, Sendable {
     let poemIDs: [Poem.ID]
 }
 
+struct PoemListItem: Identifiable, Hashable, Sendable {
+    let id: Poem.ID
+    let title: String
+    let author: String
+    let dynasty: String
+    let form: String
+    let artworkStyle: ArtworkStyle
+
+    init(poem: Poem) {
+        self.id = poem.id
+        self.title = poem.title
+        self.author = poem.author
+        self.dynasty = poem.dynasty
+        self.form = poem.form
+        self.artworkStyle = poem.artworkStyle
+    }
+
+    var displayArtist: String {
+        "\(dynasty) · \(author)"
+    }
+
+    var displayArtworkStyle: ArtworkStyle {
+        ArtworkStyle.displayStyle(
+            seed: "\(id)|\(title)",
+            baseGlyph: ArtworkStyle.firstCJKGlyph(in: title) ?? artworkStyle.glyph
+        )
+    }
+}
+
 struct ArtworkStyle: Codable, Hashable, Sendable {
     let primaryHex: String
     let secondaryHex: String
@@ -332,6 +361,30 @@ struct SearchResults: Sendable {
 
     var isEmpty: Bool {
         poems.isEmpty && authors.isEmpty && collections.isEmpty
+    }
+}
+
+struct SearchResultsPage: Sendable {
+    var poems: [PoemListItem] = []
+    var authors: [AuthorResult] = []
+    var collections: [PoemCollection] = []
+    var totalPoemCount: Int = 0
+    var nextOffset: Int?
+    var poemIDs: [Poem.ID] = []
+
+    var isEmpty: Bool {
+        poems.isEmpty && authors.isEmpty && collections.isEmpty
+    }
+
+    func appending(_ page: SearchResultsPage) -> SearchResultsPage {
+        SearchResultsPage(
+            poems: poems + page.poems,
+            authors: authors.isEmpty ? page.authors : authors,
+            collections: collections.isEmpty ? page.collections : collections,
+            totalPoemCount: max(totalPoemCount, page.totalPoemCount),
+            nextOffset: page.nextOffset,
+            poemIDs: poemIDs.isEmpty ? page.poemIDs : poemIDs
+        )
     }
 }
 

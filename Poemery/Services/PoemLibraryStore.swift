@@ -15,9 +15,7 @@ final class PoemLibraryStore {
     private var popularPoemsCache: [Poem]
     private var authorsCache: [AuthorResult]
     private var keywordsCache: [PoemKeyword]
-    private var poemSearchTextByID: [Poem.ID: String]?
-    private var collectionSearchTextByID: [PoemCollection.ID: String]?
-    private var authorSearchTextByID: [AuthorResult.ID: String]?
+    private var searchEngine: PoemSearchEngine
     private var formsCache: [String]
     private var dynastiesCache: [String]
 
@@ -36,9 +34,7 @@ final class PoemLibraryStore {
         self.popularPoemsCache = index.popularPoems
         self.authorsCache = index.authors
         self.keywordsCache = index.keywords
-        self.poemSearchTextByID = nil
-        self.collectionSearchTextByID = nil
-        self.authorSearchTextByID = nil
+        self.searchEngine = index.searchEngine
         self.formsCache = index.forms
         self.dynastiesCache = index.dynasties
     }
@@ -141,45 +137,23 @@ final class PoemLibraryStore {
     }
 
     func search(_ query: String) -> SearchResults {
-        let tokenVariants = Self.searchTokenVariants(query)
-
-        guard !tokenVariants.isEmpty else {
-            return SearchResults()
-        }
-
-        let searchIndex = self.searchIndex()
-        let matchedPoems = poems.filter { poem in
-            guard let searchable = searchIndex.poems[poem.id] else {
-                return false
-            }
-            return tokenVariants.allSatisfy { variants in
-                variants.contains { searchable.localizedStandardContains($0) }
-            }
-        }
-
-        let matchedCollections = collections.filter { collection in
-            guard let searchable = searchIndex.collections[collection.id] else {
-                return false
-            }
-            return tokenVariants.allSatisfy { variants in
-                variants.contains { searchable.localizedStandardContains($0) }
-            }
-        }
-
-        let matchedAuthors = authors().filter { author in
-            guard let searchable = searchIndex.authors[author.id] else {
-                return false
-            }
-            return tokenVariants.allSatisfy { variants in
-                variants.contains { searchable.localizedStandardContains($0) }
-            }
-        }
+        let page = searchEngine.search(query, offset: 0, limit: Int.max)
 
         return SearchResults(
-            poems: popularSortedPoems(matchedPoems),
-            authors: matchedAuthors,
-            collections: matchedCollections
+            poems: page.poemIDs.compactMap { poemsByID[$0] },
+            authors: page.authors,
+            collections: page.collections
         )
+    }
+
+    func searchPage(_ query: String, offset: Int = 0, limit: Int = 100) async -> SearchResultsPage {
+        let engine = searchEngine
+        let safeOffset = max(0, offset)
+        let safeLimit = max(1, limit)
+
+        return await Task.detached(priority: .userInitiated) {
+            engine.search(query, offset: safeOffset, limit: safeLimit)
+        }.value
     }
 
     private func popularSortedPoems(_ candidates: [Poem]) -> [Poem] {
@@ -207,24 +181,6 @@ final class PoemLibraryStore {
         }
     }
 
-    private func searchIndex() -> PoemSearchIndex {
-        if let poemSearchTextByID,
-           let collectionSearchTextByID,
-           let authorSearchTextByID {
-            return PoemSearchIndex(
-                poems: poemSearchTextByID,
-                collections: collectionSearchTextByID,
-                authors: authorSearchTextByID
-            )
-        }
-
-        let index = PoemSearchIndex(poems: poems, collections: collections, authors: authorsCache)
-        poemSearchTextByID = index.poems
-        collectionSearchTextByID = index.collections
-        authorSearchTextByID = index.authors
-        return index
-    }
-
     nonisolated static func normalizedSearchText(_ value: String) -> String {
         let lowered = value.lowercased()
         let folded = foldedSearchText(lowered)
@@ -240,7 +196,7 @@ final class PoemLibraryStore {
         String(value.lowercased().map { poemerySearchCharacterMap[$0] ?? $0 })
     }
 
-    nonisolated private static func searchTokenVariants(_ query: String) -> [[String]] {
+    nonisolated static func searchTokenVariants(_ query: String) -> [[String]] {
         query
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
@@ -387,6 +343,7 @@ private struct PoemLibraryIndex: Sendable {
     let popularPoems: [Poem]
     let authors: [AuthorResult]
     let keywords: [PoemKeyword]
+    let searchEngine: PoemSearchEngine
     let forms: [String]
     let dynasties: [String]
 
@@ -415,6 +372,11 @@ private struct PoemLibraryIndex: Sendable {
             poemOrderByID: poemOrderByID,
             poemScoreByID: poemScoreByID
         )
+        let searchEngine = PoemSearchEngine(
+            poems: popularPoems,
+            collections: catalog.collections,
+            authors: authors
+        )
 
         self.poemsByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { ($0.id, $0) })
         self.poemOrderByID = poemOrderByID
@@ -423,6 +385,7 @@ private struct PoemLibraryIndex: Sendable {
         self.popularPoems = popularPoems
         self.authors = authors
         self.keywords = keywords
+        self.searchEngine = searchEngine
         self.forms = Self.sortedValues(poems: catalog.poems, keyPath: \.form)
         self.dynasties = Self.sortedValues(poems: catalog.poems, keyPath: \.dynasty)
     }
@@ -571,27 +534,183 @@ private struct PoemLibraryIndex: Sendable {
     }
 }
 
-private struct PoemSearchIndex {
-    let poems: [Poem.ID: String]
-    let collections: [PoemCollection.ID: String]
-    let authors: [AuthorResult.ID: String]
+private struct PoemSearchEngine: Sendable {
+    private let poemRecords: [PoemSearchRecord]
+    private let collections: [CollectionSearchRecord]
+    private let authors: [AuthorSearchRecord]
+    private let gramIndex: [String: [Int]]
 
     init(poems: [Poem], collections: [PoemCollection], authors: [AuthorResult]) {
-        self.poems = Dictionary(uniqueKeysWithValues: poems.map { poem in
-            (poem.id, Self.searchText(for: poem))
-        })
-        self.collections = Dictionary(uniqueKeysWithValues: collections.map { collection in
-            (collection.id, Self.searchText(for: collection))
-        })
-        self.authors = Dictionary(uniqueKeysWithValues: authors.map { author in
-            (author.id, Self.searchText(for: author))
-        })
+        let poemRecords = poems.map { poem in
+            PoemSearchRecord(
+                id: poem.id,
+                listItem: PoemListItem(poem: poem),
+                searchText: Self.searchText(for: poem)
+            )
+        }
+
+        self.poemRecords = poemRecords
+        self.collections = collections.map { collection in
+            CollectionSearchRecord(
+                collection: collection,
+                searchText: Self.searchText(for: collection)
+            )
+        }
+        self.authors = authors.map { author in
+            AuthorSearchRecord(
+                author: author,
+                searchText: Self.searchText(for: author)
+            )
+        }
+        self.gramIndex = Self.makeGramIndex(records: poemRecords)
     }
 
-    init(poems: [Poem.ID: String], collections: [PoemCollection.ID: String], authors: [AuthorResult.ID: String]) {
-        self.poems = poems
-        self.collections = collections
-        self.authors = authors
+    func search(_ query: String, offset: Int, limit: Int) -> SearchResultsPage {
+        let tokenVariants = PoemLibraryStore.searchTokenVariants(query)
+
+        guard !tokenVariants.isEmpty else {
+            return SearchResultsPage()
+        }
+
+        let matchedPoemIndices = matchedPoemIndices(for: tokenVariants)
+        let totalPoemCount = matchedPoemIndices.count
+        let safeOffset = min(max(0, offset), totalPoemCount)
+        let safeLimit = max(1, limit)
+        let endOffset = min(totalPoemCount, safeOffset + min(safeLimit, totalPoemCount - safeOffset))
+        let pageIndices = matchedPoemIndices[safeOffset..<endOffset]
+        let nextOffset = endOffset < totalPoemCount ? endOffset : nil
+
+        return SearchResultsPage(
+            poems: pageIndices.map { poemRecords[$0].listItem },
+            authors: matchedAuthors(for: tokenVariants),
+            collections: matchedCollections(for: tokenVariants),
+            totalPoemCount: totalPoemCount,
+            nextOffset: nextOffset,
+            poemIDs: matchedPoemIndices.map { poemRecords[$0].id }
+        )
+    }
+
+    private func matchedPoemIndices(for tokenVariants: [[String]]) -> [Int] {
+        var matchedIndices: Set<Int>?
+
+        for variants in tokenVariants {
+            let tokenMatches = variants.reduce(into: Set<Int>()) { result, variant in
+                result.formUnion(candidatePoemIndices(for: variant))
+            }
+
+            guard !tokenMatches.isEmpty else {
+                return []
+            }
+
+            if var currentMatches = matchedIndices {
+                currentMatches.formIntersection(tokenMatches)
+                matchedIndices = currentMatches
+            } else {
+                matchedIndices = tokenMatches
+            }
+        }
+
+        return (matchedIndices ?? [])
+            .filter { index in
+                tokenVariants.allSatisfy { variants in
+                    variants.contains { poemRecords[index].searchText.localizedStandardContains($0) }
+                }
+            }
+            .sorted()
+    }
+
+    private func candidatePoemIndices(for variant: String) -> Set<Int> {
+        let grams = Self.searchGrams(for: variant)
+        guard !grams.isEmpty else {
+            return []
+        }
+
+        var matchedIndices: Set<Int>?
+
+        for gram in grams {
+            guard let postings = gramIndex[gram] else {
+                return []
+            }
+
+            let postingSet = Set(postings)
+            if var currentMatches = matchedIndices {
+                currentMatches.formIntersection(postingSet)
+                matchedIndices = currentMatches
+            } else {
+                matchedIndices = postingSet
+            }
+        }
+
+        return matchedIndices ?? []
+    }
+
+    private func matchedCollections(for tokenVariants: [[String]]) -> [PoemCollection] {
+        collections
+            .filter { record in
+                tokenVariants.allSatisfy { variants in
+                    variants.contains { record.searchText.localizedStandardContains($0) }
+                }
+            }
+            .map(\.collection)
+    }
+
+    private func matchedAuthors(for tokenVariants: [[String]]) -> [AuthorResult] {
+        authors
+            .filter { record in
+                tokenVariants.allSatisfy { variants in
+                    variants.contains { record.searchText.localizedStandardContains($0) }
+                }
+            }
+            .map(\.author)
+    }
+
+    private static func makeGramIndex(records: [PoemSearchRecord]) -> [String: [Int]] {
+        var index: [String: [Int]] = [:]
+
+        for (recordIndex, record) in records.enumerated() {
+            for gram in Set(indexGrams(for: record.searchText)) {
+                index[gram, default: []].append(recordIndex)
+            }
+        }
+
+        return index
+    }
+
+    private static func indexGrams(for value: String) -> [String] {
+        let characters = compactCharacters(value)
+        guard !characters.isEmpty else {
+            return []
+        }
+
+        var grams = characters.map(String.init)
+        if characters.count > 1 {
+            for index in 0..<(characters.count - 1) {
+                grams.append(String(characters[index]) + String(characters[index + 1]))
+            }
+        }
+
+        return grams
+    }
+
+    private static func searchGrams(for value: String) -> [String] {
+        let characters = compactCharacters(value)
+        guard !characters.isEmpty else {
+            return []
+        }
+
+        if characters.count == 1 {
+            return [String(characters[0])]
+        }
+
+        return (0..<(characters.count - 1)).map { index in
+            String(characters[index]) + String(characters[index + 1])
+        }
+    }
+
+    private static func compactCharacters(_ value: String) -> [Character] {
+        value
+            .lowercased()
+            .filter { !$0.isWhitespace }
     }
 
     private static func searchText(for poem: Poem) -> String {
@@ -621,6 +740,22 @@ private struct PoemSearchIndex {
     private static func searchText(for author: AuthorResult) -> String {
         PoemLibraryStore.normalizedSearchText("\(author.name) \(author.dynasty) \(author.introduction)")
     }
+}
+
+private struct PoemSearchRecord: Sendable {
+    let id: Poem.ID
+    let listItem: PoemListItem
+    let searchText: String
+}
+
+private struct CollectionSearchRecord: Sendable {
+    let collection: PoemCollection
+    let searchText: String
+}
+
+private struct AuthorSearchRecord: Sendable {
+    let author: AuthorResult
+    let searchText: String
 }
 
 private extension PoemLibraryIndex {

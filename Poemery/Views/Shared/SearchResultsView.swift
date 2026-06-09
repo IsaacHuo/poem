@@ -1,14 +1,59 @@
 import SwiftUI
 
 struct SearchResultsView: View {
-    let results: SearchResults
-    let onOpenPoem: (Poem, ReadingQueue) -> Void
+    let results: SearchResultsPage
+    let isLoadingMore: Bool
+    let onOpenPoem: (PoemListItem) -> Void
     let onOpenCollection: (PoemCollection) -> Void
     let onOpenAuthor: (AuthorResult) -> Void
+    let onLoadMore: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            PoemListSection(title: "诗词", poems: results.poems, queueTitle: "搜索结果", onOpenPoem: onOpenPoem)
+            if !results.poems.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionTitle(title: poemSectionTitle)
+
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(results.poems.enumerated()), id: \.element.id) { index, poem in
+                            Button {
+                                onOpenPoem(poem)
+                            } label: {
+                                PoemListItemRow(item: poem)
+                            }
+                            .buttonStyle(.plain)
+
+                            if index != results.poems.indices.last {
+                                Divider()
+                                    .padding(.leading, 74)
+                            }
+                        }
+                    }
+                    .groupedListBackground()
+
+                    if results.nextOffset != nil {
+                        Button(action: onLoadMore) {
+                            HStack(spacing: 8) {
+                                if isLoadingMore {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.down.circle")
+                                }
+
+                                Text(isLoadingMore ? "加载中" : "继续加载")
+                                Spacer()
+                                Text("\(results.poems.count) / \(results.totalPoemCount)")
+                                    .foregroundStyle(PoemeryTheme.tertiaryText)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(PoemeryTheme.accent)
+                        .disabled(isLoadingMore)
+                    }
+                }
+            }
 
             if !results.authors.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
@@ -61,5 +106,9 @@ struct SearchResultsView: View {
                 }
             }
         }
+    }
+
+    private var poemSectionTitle: String {
+        results.nextOffset == nil ? "诗词" : "诗词 · \(results.totalPoemCount) 首"
     }
 }
