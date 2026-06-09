@@ -4,24 +4,17 @@ struct PoemTextSection: View {
     let poem: Poem
     let highlightedLineID: PoemLine.ID?
     @Binding var selectedAnnotation: PoemAnnotation?
-    @Binding var selectedLineID: PoemLine.ID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             SectionTitle(title: "正文", showsChevron: false)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .center, spacing: 12) {
-                ForEach(poem.lines) { line in
-                    PoemLineTextBlock(
-                        line: line,
-                        isHighlighted: line.id == highlightedLineID || line.id == selectedLineID,
-                        isSelected: line.id == selectedLineID,
-                        annotations: poem.annotations(for: line.id),
-                        selectedAnnotation: $selectedAnnotation,
-                        onSelectLine: selectLine
-                    )
-                }
+            ViewThatFits(in: .horizontal) {
+                poemLines(using: .whole, allowsTextWrapping: false)
+                    .fixedSize(horizontal: true, vertical: false)
+
+                poemLines(using: .balanced, allowsTextWrapping: true)
             }
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.horizontal, 12)
@@ -30,31 +23,33 @@ struct PoemTextSection: View {
         .frame(maxWidth: 680, alignment: .leading)
     }
 
-    private func selectLine(_ line: PoemLine) {
-        withAnimation(PoemeryTheme.quickMotion) {
-            selectedLineID = selectedLineID == line.id ? nil : line.id
+    private func poemLines(using layout: PoemLineLayout, allowsTextWrapping: Bool) -> some View {
+        VStack(alignment: .center, spacing: 12) {
+            ForEach(poem.lines) { line in
+                PoemLineTextBlock(
+                    line: line,
+                    displayedLines: layout.displayLines(for: line),
+                    allowsTextWrapping: allowsTextWrapping,
+                    isHighlighted: line.id == highlightedLineID,
+                    annotations: poem.annotations(for: line.id),
+                    selectedAnnotation: $selectedAnnotation
+                )
+            }
         }
     }
 }
 
 private struct PoemLineTextBlock: View {
     let line: PoemLine
+    let displayedLines: [String]
+    let allowsTextWrapping: Bool
     let isHighlighted: Bool
-    let isSelected: Bool
     let annotations: [PoemAnnotation]
     @Binding var selectedAnnotation: PoemAnnotation?
-    let onSelectLine: (PoemLine) -> Void
 
     var body: some View {
         VStack(alignment: .center, spacing: 8) {
-            Button {
-                onSelectLine(line)
-            } label: {
-                lineContent
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("选择这句生成分享图片")
-            .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+            lineContent
 
             if !annotations.isEmpty {
                 annotationChips
@@ -63,29 +58,14 @@ private struct PoemLineTextBlock: View {
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background {
-            if isSelected {
-                Capsule()
-                    .fill(PoemeryTheme.accentSoft)
-            }
-        }
     }
 
     private var lineContent: some View {
-        ViewThatFits(in: .horizontal) {
-            poemText(line.text)
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-
-            wrappedLine
-        }
-    }
-
-    private var wrappedLine: some View {
         VStack(alignment: .center, spacing: 10) {
-            ForEach(Array(splitAtReadablePunctuation(line.text).enumerated()), id: \.offset) { _, text in
+            ForEach(Array(displayedLines.enumerated()), id: \.offset) { _, text in
                 poemText(text)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(allowsTextWrapping ? nil : 1)
+                    .fixedSize(horizontal: !allowsTextWrapping, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
@@ -117,15 +97,30 @@ private struct PoemLineTextBlock: View {
             .multilineTextAlignment(.center)
             .lineSpacing(11)
     }
+}
+
+private enum PoemLineLayout {
+    case whole
+    case balanced
+
+    private static let punctuation = Set("，。！？；、,.;!?")
+
+    func displayLines(for line: PoemLine) -> [String] {
+        switch self {
+        case .whole:
+            return [line.text]
+        case .balanced:
+            return splitAtReadablePunctuation(line.text)
+        }
+    }
 
     private func splitAtReadablePunctuation(_ text: String) -> [String] {
-        let punctuation = Set("，。！？；、,.;!?")
         var pieces: [String] = []
         var current = ""
 
         for character in text {
             current.append(character)
-            if punctuation.contains(character) {
+            if Self.punctuation.contains(character) {
                 let trimmed = current.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
                     pieces.append(trimmed)

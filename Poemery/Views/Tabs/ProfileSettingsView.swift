@@ -36,6 +36,7 @@ struct ProfileSettingsView: View {
     let library: PoemLibraryStore
     let session: ReadingSessionStore
     @Binding var pendingResetAction: ProfileResetAction?
+    @AppStorage(ChineseScriptPreference.storageKey) private var chineseScriptRawValue = ChineseScriptPreference.simplified.rawValue
 
     var body: some View {
         List {
@@ -69,6 +70,13 @@ struct ProfileSettingsView: View {
             }
 
             Section("显示") {
+                Picker("繁简体", selection: $chineseScriptRawValue) {
+                    ForEach(ChineseScriptPreference.allCases) { script in
+                        Text(script.title).tag(script.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 SettingsValueRow(symbol: "sun.max.fill", title: "外观", value: "浅色纸感")
                 SettingsValueRow(symbol: "textformat.size", title: "文字", value: "跟随系统动态字体")
             }

@@ -25,6 +25,25 @@ final class PoemeryTests: XCTestCase {
         XCTAssertEqual(store.search("太白 明月").poems.first?.author, "李白")
     }
 
+    func testChineseScriptConverterSwitchesBetweenSimplifiedAndTraditional() {
+        let traditional = ChineseTextConverter.convert("设置 诗词 龙 后", to: .traditional)
+        let simplified = ChineseTextConverter.convert(traditional, to: .simplified)
+
+        XCTAssertEqual(traditional, "設置 詩詞 龍 後")
+        XCTAssertEqual(simplified, "设置 诗词 龙 后")
+    }
+
+    func testCatalogConversionKeepsIDsAndConvertsDisplayedText() {
+        let catalog = Self.sampleCatalog.converted(to: .traditional)
+        let poem = catalog.poems[0]
+
+        XCTAssertEqual(poem.id, "jing-ye-si")
+        XCTAssertEqual(poem.title, "靜夜思")
+        XCTAssertEqual(poem.lines.first?.text, "床前明月光，疑是地上霜。")
+        XCTAssertEqual(catalog.collections.first?.title, "樣本詩單")
+        XCTAssertEqual(catalog.categories.first?.title, "唐詩")
+    }
+
     func testSearchPagePaginatesShortChineseTokenMatches() async {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
 

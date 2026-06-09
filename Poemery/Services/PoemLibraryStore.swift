@@ -39,9 +39,9 @@ final class PoemLibraryStore {
         self.dynastiesCache = index.dynasties
     }
 
-    nonisolated static func loadBundled() async throws -> PoemLibraryStore {
+    nonisolated static func loadBundled(script: ChineseScriptPreference = .simplified) async throws -> PoemLibraryStore {
         let indexedCatalog = try await Task.detached(priority: .userInitiated) {
-            let catalog = try loadAvailableBundledCatalog()
+            let catalog = try loadAvailableBundledCatalog().converted(to: script)
             return IndexedPoemCatalog(catalog: catalog, index: PoemLibraryIndex(catalog: catalog))
         }.value
 
@@ -182,17 +182,28 @@ final class PoemLibraryStore {
 
     nonisolated static func normalizedSearchText(_ value: String) -> String {
         let lowered = value.lowercased()
-        let folded = foldedSearchText(lowered)
+        let scriptVariants = uniqueValues([
+            lowered,
+            ChineseTextConverter.convert(lowered, to: .simplified),
+            ChineseTextConverter.convert(lowered, to: .traditional)
+        ])
+        let foldedVariants = scriptVariants.map(foldedSearchText)
+        let searchVariants = uniqueValues(scriptVariants + foldedVariants)
         let aliases = poemerySearchAliases.reduce(into: [String]()) { result, alias in
-            if lowered.localizedStandardContains(alias.key) || folded.localizedStandardContains(alias.key) {
+            if searchVariants.contains(where: { $0.localizedStandardContains(alias.key) }) {
                 result.append(alias.value)
             }
         }
-        return ([lowered, folded] + aliases).joined(separator: " ")
+        return uniqueValues(searchVariants + aliases).joined(separator: " ")
     }
 
     nonisolated static func foldedSearchText(_ value: String) -> String {
         String(value.lowercased().map { poemerySearchCharacterMap[$0] ?? $0 })
+    }
+
+    nonisolated private static func uniqueValues(_ values: [String]) -> [String] {
+        var seen: Set<String> = []
+        return values.filter { seen.insert($0).inserted }
     }
 
     nonisolated static func searchTokenVariants(_ query: String) -> [[String]] {
@@ -735,7 +746,7 @@ private struct PoemSearchEngine: Sendable {
         .joined(separator: " "))
         return [
             primaryText,
-            poem.fullText.lowercased()
+            PoemLibraryStore.normalizedSearchText(poem.fullText)
         ].joined(separator: " ")
     }
 

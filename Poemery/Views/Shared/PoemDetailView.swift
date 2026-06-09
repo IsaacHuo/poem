@@ -11,9 +11,7 @@ struct PoemDetailView: View {
     @State private var currentPoemID: Poem.ID
     @State private var authorPath: [AuthorResult.ID] = []
     @State private var selectedAnnotation: PoemAnnotation?
-    @State private var selectedLineID: PoemLine.ID?
-    @State private var shareImage: PoemShareImage?
-    @State private var shareSheetItem: PoemShareSheetItem?
+    @State private var shareComposerItem: PoemShareComposerItem?
     @State private var hasStartedInitialReading = false
 
     init(
@@ -69,8 +67,7 @@ struct PoemDetailView: View {
                         PoemTextSection(
                             poem: visiblePoem,
                             highlightedLineID: nil,
-                            selectedAnnotation: $selectedAnnotation,
-                            selectedLineID: $selectedLineID
+                            selectedAnnotation: $selectedAnnotation
                         )
                         .gesture(swipeGesture)
 
@@ -86,14 +83,9 @@ struct PoemDetailView: View {
                 .background(background)
                 .onChange(of: currentPoemID) {
                     selectedAnnotation = nil
-                    selectedLineID = nil
-                    refreshShareImage()
                     withAnimation(PoemeryTheme.motion) {
                         proxy.scrollTo("reader-top", anchor: .top)
                     }
-                }
-                .onChange(of: selectedLineID) {
-                    refreshShareImage()
                 }
             }
             .toolbar {
@@ -153,16 +145,15 @@ struct PoemDetailView: View {
                 AnnotationDetailSheet(annotation: annotation)
                     .presentationDetents([.medium])
             }
-            .sheet(item: $shareSheetItem) { item in
-                PoemShareSheet(item: item)
-                    .presentationDetents([.medium, .large])
+            .sheet(item: $shareComposerItem) { item in
+                PoemShareComposer(poem: item.poem)
+                    .presentationDetents([.large])
             }
             .onAppear {
                 if !hasStartedInitialReading {
                     session.startReading(visiblePoem, in: queue)
                     hasStartedInitialReading = true
                 }
-                refreshShareImage()
             }
         }
     }
@@ -249,12 +240,12 @@ struct PoemDetailView: View {
     @ViewBuilder
     private var shareButton: some View {
         Button {
-            shareCurrentImage()
+            shareComposerItem = PoemShareComposerItem(poem: visiblePoem)
         } label: {
             shareButtonLabel
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(selectedShareLine == nil ? "分享诗歌图片" : "分享选中诗句图片")
+        .accessibilityLabel("制作分享图片")
     }
 
     private var shareButtonLabel: some View {
@@ -364,48 +355,220 @@ struct PoemDetailView: View {
         }
     }
 
-    @MainActor
-    private func refreshShareImage() {
-        shareImage = PoemShareImage.render(poem: visiblePoem, selectedLine: selectedShareLine)
+}
+
+private struct PoemShareComposerItem: Identifiable {
+    let id = UUID()
+    let poem: Poem
+}
+
+private struct PoemShareComposer: View {
+    let poem: Poem
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var selection = PoemShareSelection.whole
+    @State private var shareSheetItem: PoemShareSheetItem?
+    @State private var showsExportError = false
+
+    private var selectedLine: PoemLine? {
+        guard case .line(let lineID) = selection else {
+            return nil
+        }
+        return poem.lines.first { $0.id == lineID }
     }
 
-    private func presentShareSheet(with image: PoemShareImage) {
-        do {
-            shareSheetItem = PoemShareSheetItem(
-                title: visiblePoem.title,
-                url: try image.writeTemporaryFile()
-            )
-        } catch {
-            assertionFailure("Failed to prepare poem share image: \(error)")
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 18) {
+                        PoemSharePosterPreview(poem: poem, selectedLine: selectedLine)
+                            .frame(maxWidth: 420)
+
+                        selectionSection
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 18)
+                    .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollIndicators(.hidden)
+
+                shareFooter
+            }
+            .background(PoemeryTheme.background)
+            .navigationTitle("分享卡片")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.headline.weight(.semibold))
+                    }
+                    .accessibilityLabel("关闭")
+                }
+            }
+            .sheet(item: $shareSheetItem) { item in
+                PoemShareSheet(item: item)
+                    .presentationDetents([.medium, .large])
+            }
+            .alert("无法生成图片", isPresented: $showsExportError) {
+                Button("好", role: .cancel) {}
+            }
         }
     }
 
+    private var selectionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("内容")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.primaryText)
+
+            VStack(spacing: 0) {
+                selectionButton(
+                    title: "全诗",
+                    subtitle: poem.lines.prefix(3).map(\.text).joined(separator: " / "),
+                    isSelected: selection == .whole
+                ) {
+                    selection = .whole
+                }
+
+                ForEach(poem.lines) { line in
+                    Divider()
+                        .padding(.leading, 44)
+
+                    selectionButton(
+                        title: line.text,
+                        subtitle: nil,
+                        isSelected: selection == .line(line.id)
+                    ) {
+                        selection = .line(line.id)
+                    }
+                }
+            }
+            .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+    }
+
+    private func selectionButton(
+        title: String,
+        subtitle: String?,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(isSelected ? PoemeryTheme.accent : PoemeryTheme.tertiaryText)
+                    .frame(width: 24, height: 24)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(PoemeryTheme.chineseFont(size: 18, relativeTo: .body))
+                        .foregroundStyle(PoemeryTheme.primaryText)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(PoemeryTheme.secondaryText)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private var shareFooter: some View {
+        VStack(spacing: 0) {
+            Divider()
+
+            Button {
+                exportSelectedImage()
+            } label: {
+                Label("分享图片", systemImage: "square.and.arrow.up")
+                    .font(.headline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(PoemeryTheme.accent)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
+        }
+        .background(.regularMaterial)
+    }
+
     @MainActor
-    private func shareCurrentImage() {
-        let image = PoemShareImage.render(poem: visiblePoem, selectedLine: selectedShareLine)
-        guard let image else {
+    private func exportSelectedImage() {
+        guard let image = PoemShareImage.render(poem: poem, selectedLine: selectedLine) else {
+            showsExportError = true
             return
         }
 
-        shareImage = image
-        presentShareSheet(with: image)
-    }
-
-    private var selectedShareLine: PoemLine? {
-        selectedLineID.flatMap { id in
-            visiblePoem.lines.first { $0.id == id }
+        do {
+            shareSheetItem = PoemShareSheetItem(
+                title: poem.title,
+                url: try image.writeTemporaryFile()
+            )
+        } catch {
+            showsExportError = true
         }
     }
 }
 
+private enum PoemShareSelection: Hashable {
+    case whole
+    case line(PoemLine.ID)
+}
+
+private struct PoemSharePosterPreview: View {
+    let poem: Poem
+    let selectedLine: PoemLine?
+
+    private var aspectRatio: CGFloat {
+        PoemSharePoster.posterWidth / PoemSharePoster.posterHeight
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let scale = min(
+                proxy.size.width / PoemSharePoster.posterWidth,
+                proxy.size.height / PoemSharePoster.posterHeight
+            )
+
+            PoemSharePoster(poem: poem, selectedLine: selectedLine)
+                .scaleEffect(scale)
+                .frame(
+                    width: PoemSharePoster.posterWidth * scale,
+                    height: PoemSharePoster.posterHeight * scale
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .aspectRatio(aspectRatio, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.16), radius: 22, x: 0, y: 12)
+    }
+}
+
 private struct PoemShareImage {
-    let pngData: Data
+    let jpegData: Data
     let fileName: String
 
     func writeTemporaryFile() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("\(UUID().uuidString)-\(fileName)")
-        try pngData.write(to: url, options: .atomic)
+        try jpegData.write(to: url, options: .atomic)
         return url
     }
 
@@ -415,16 +578,16 @@ private struct PoemShareImage {
             content: PoemSharePoster(poem: poem, selectedLine: selectedLine)
                 .frame(width: PoemSharePoster.posterWidth, height: PoemSharePoster.posterHeight)
         )
-        renderer.scale = 2
+        renderer.scale = 1
 
         guard let uiImage = renderer.uiImage,
-              let pngData = uiImage.pngData()
+              let jpegData = uiImage.jpegData(compressionQuality: 0.82)
         else {
             return nil
         }
 
         return PoemShareImage(
-            pngData: pngData,
+            jpegData: jpegData,
             fileName: imageFileName(poem: poem, selectedLine: selectedLine)
         )
     }
@@ -437,7 +600,7 @@ private struct PoemShareImage {
             .map { allowedCharacters.contains($0) ? String($0) : "-" }
             .joined()
             .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-        return "Poemery-\(sanitized.isEmpty ? poem.id : sanitized).png"
+        return "Poemery-\(sanitized.isEmpty ? poem.id : sanitized).jpg"
     }
 }
 
@@ -464,7 +627,7 @@ private struct PoemShareSheet: UIViewControllerRepresentable {
 
 private struct PoemSharePoster: View {
     static let posterWidth: CGFloat = 900
-    static let posterHeight: CGFloat = 1500
+    static let posterHeight: CGFloat = 1200
 
     let poem: Poem
     let selectedLine: PoemLine?

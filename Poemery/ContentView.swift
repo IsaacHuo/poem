@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage(ChineseScriptPreference.storageKey) private var chineseScriptRawValue = ChineseScriptPreference.simplified.rawValue
     @State private var libraryLoadState: LibraryLoadState = .loading
     @State private var session = ReadingSessionStore()
     @State private var selectedTab: AppTab = .home
@@ -23,9 +24,13 @@ struct ContentView: View {
                     lastContentTab = newTab
                 }
             }
-            .task {
-                await loadLibraryIfNeeded()
+            .task(id: chineseScriptRawValue) {
+                await loadLibrary()
             }
+    }
+
+    private var chineseScriptPreference: ChineseScriptPreference {
+        ChineseScriptPreference(rawValue: chineseScriptRawValue)
     }
 
     @ViewBuilder
@@ -39,7 +44,7 @@ struct ContentView: View {
             LibraryLoadFailedScreen {
                 libraryLoadState = .loading
                 Task {
-                    await loadLibraryIfNeeded()
+                    await loadLibrary()
                 }
             }
         }
@@ -296,15 +301,21 @@ struct ContentView: View {
         }
     }
 
-    private func loadLibraryIfNeeded() async {
-        guard case .loading = libraryLoadState else {
-            return
+    private func loadLibrary() async {
+        if !libraryLoadState.isLoaded {
+            libraryLoadState = .loading
         }
 
         do {
-            let library = try await PoemLibraryStore.loadBundled()
+            let library = try await PoemLibraryStore.loadBundled(script: chineseScriptPreference)
+            guard !Task.isCancelled else {
+                return
+            }
             libraryLoadState = .loaded(library)
         } catch {
+            guard !Task.isCancelled else {
+                return
+            }
             libraryLoadState = .failed
         }
     }
@@ -314,9 +325,18 @@ private enum LibraryLoadState {
     case loading
     case loaded(PoemLibraryStore)
     case failed
+
+    var isLoaded: Bool {
+        if case .loaded = self {
+            return true
+        }
+        return false
+    }
 }
 
 private struct LibraryLoadingScreen: View {
+    @State private var recommendation = LoadingPoemRecommendation.random()
+
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
             Spacer(minLength: 32)
@@ -337,20 +357,19 @@ private struct LibraryLoadingScreen: View {
                     .foregroundStyle(PoemeryTheme.accent)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("静夜思")
+                    Text(recommendation.title)
                         .font(.system(size: 34, weight: .bold))
                         .foregroundStyle(PoemeryTheme.primaryText)
 
-                    Text("唐 · 李白")
+                    Text(recommendation.attribution)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoemeryTheme.secondaryText)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("床前明月光，")
-                    Text("疑是地上霜。")
-                    Text("举头望明月，")
-                    Text("低头思故乡。")
+                    ForEach(recommendation.lines, id: \.self) { line in
+                        Text(line)
+                    }
                 }
                 .font(.title3.weight(.medium))
                 .foregroundStyle(PoemeryTheme.deepInk)
@@ -391,8 +410,41 @@ private struct LibraryLoadingScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(PoemeryTheme.background.ignoresSafeArea())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("诗境正在加载完整诗库，今日推荐静夜思")
+        .accessibilityLabel("诗境正在加载完整诗库，今日推荐\(recommendation.title)")
     }
+}
+
+private struct LoadingPoemRecommendation {
+    let title: String
+    let attribution: String
+    let lines: [String]
+
+    static func random() -> LoadingPoemRecommendation {
+        samples.randomElement() ?? samples[0]
+    }
+
+    private static let samples = [
+        LoadingPoemRecommendation(
+            title: "静夜思",
+            attribution: "唐 · 李白",
+            lines: ["床前明月光，", "疑是地上霜。", "举头望明月，", "低头思故乡。"]
+        ),
+        LoadingPoemRecommendation(
+            title: "春晓",
+            attribution: "唐 · 孟浩然",
+            lines: ["春眠不觉晓，", "处处闻啼鸟。", "夜来风雨声，", "花落知多少。"]
+        ),
+        LoadingPoemRecommendation(
+            title: "登鹳雀楼",
+            attribution: "唐 · 王之涣",
+            lines: ["白日依山尽，", "黄河入海流。", "欲穷千里目，", "更上一层楼。"]
+        ),
+        LoadingPoemRecommendation(
+            title: "相思",
+            attribution: "唐 · 王维",
+            lines: ["红豆生南国，", "春来发几枝。", "愿君多采撷，", "此物最相思。"]
+        )
+    ]
 }
 
 private struct LoadingShelfCard: View {
