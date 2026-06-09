@@ -39,6 +39,8 @@ struct DiscoverScreen: View {
                 onOpenCollection: onOpenCollection
             )
 
+            keywordBlock
+
             browseBlock(title: "按朝代", values: library.dynasties())
             browseBlock(title: "按体裁", values: library.forms(limit: 6))
             themeBlock
@@ -58,6 +60,26 @@ struct DiscoverScreen: View {
                         .buttonStyle(.plain)
                     }
                 }
+            }
+        }
+    }
+
+    private var keywordBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "高频字词")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(library.frequentKeywords(limit: 12)) { keyword in
+                        Button {
+                            onStartSearch(keyword.text)
+                        } label: {
+                            KeywordChip(keyword: keyword)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 2)
             }
         }
     }
@@ -119,6 +141,27 @@ struct DiscoverScreen: View {
         default:
             ArtworkStyle(primaryHex: "#7E365A", secondaryHex: "#D99EB3", tertiaryHex: "#2C2530", glyph: "情")
         }
+    }
+}
+
+private struct KeywordChip: View {
+    let keyword: PoemKeyword
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(keyword.text)
+                .font(PoemeryTheme.chineseFont(size: 24, relativeTo: .title3))
+                .foregroundStyle(PoemeryTheme.accent)
+
+            Text("\(keyword.count)")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
+                .monospacedDigit()
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 42)
+        .background(PoemeryTheme.surface, in: Capsule())
+        .accessibilityLabel("\(keyword.text)，\(keyword.count) 首相关作品")
     }
 }
 

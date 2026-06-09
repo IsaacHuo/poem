@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 enum PoemeryTheme {
-    static let chineseFontName = "HYWenRunSongYun-U"
+    static let chineseFontName = "STKaiti"
 
     static let accent = Color(uiColor: .systemRed)
     static let accentSoft = Color(uiColor: .systemRed).opacity(0.12)

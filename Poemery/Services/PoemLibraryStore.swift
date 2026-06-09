@@ -14,6 +14,7 @@ final class PoemLibraryStore {
     private var poemThemeSearchTextByID: [Poem.ID: String]
     private var popularPoemsCache: [Poem]
     private var authorsCache: [AuthorResult]
+    private var keywordsCache: [PoemKeyword]
     private var poemSearchTextByID: [Poem.ID: String]?
     private var collectionSearchTextByID: [PoemCollection.ID: String]?
     private var authorSearchTextByID: [AuthorResult.ID: String]?
@@ -34,6 +35,7 @@ final class PoemLibraryStore {
         self.poemThemeSearchTextByID = index.poemThemeSearchTextByID
         self.popularPoemsCache = index.popularPoems
         self.authorsCache = index.authors
+        self.keywordsCache = index.keywords
         self.poemSearchTextByID = nil
         self.collectionSearchTextByID = nil
         self.authorSearchTextByID = nil
@@ -89,6 +91,18 @@ final class PoemLibraryStore {
 
     func popularAuthors(limit: Int) -> [AuthorResult] {
         Array(authorsCache.prefix(limit))
+    }
+
+    func frequentKeywords(limit: Int) -> [PoemKeyword] {
+        Array(keywordsCache.prefix(limit))
+    }
+
+    func poems(forKeyword keyword: PoemKeyword, limit: Int? = nil) -> [Poem] {
+        limited(keyword.poemIDs.compactMap { poemsByID[$0] }, limit: limit)
+    }
+
+    func chartPoems(limit: Int? = nil) -> [Poem] {
+        limited(popularPoemsCache, limit: limit)
     }
 
     func poems(forTheme theme: String, limit: Int? = nil) -> [Poem] {
@@ -372,6 +386,7 @@ private struct PoemLibraryIndex: Sendable {
     let poemThemeSearchTextByID: [Poem.ID: String]
     let popularPoems: [Poem]
     let authors: [AuthorResult]
+    let keywords: [PoemKeyword]
     let forms: [String]
     let dynasties: [String]
 
@@ -395,6 +410,11 @@ private struct PoemLibraryIndex: Sendable {
             poemOrderByID: poemOrderByID,
             poemScoreByID: poemScoreByID
         )
+        let keywords = Self.makeKeywords(
+            poems: catalog.poems,
+            poemOrderByID: poemOrderByID,
+            poemScoreByID: poemScoreByID
+        )
 
         self.poemsByID = Dictionary(uniqueKeysWithValues: catalog.poems.map { ($0.id, $0) })
         self.poemOrderByID = poemOrderByID
@@ -402,6 +422,7 @@ private struct PoemLibraryIndex: Sendable {
         self.poemThemeSearchTextByID = poemThemeSearchTextByID
         self.popularPoems = popularPoems
         self.authors = authors
+        self.keywords = keywords
         self.forms = Self.sortedValues(poems: catalog.poems, keyPath: \.form)
         self.dynasties = Self.sortedValues(poems: catalog.poems, keyPath: \.dynasty)
     }
@@ -469,6 +490,50 @@ private struct PoemLibraryIndex: Sendable {
                 return lhs.1 > rhs.1
             }
             .map(\.0)
+    }
+
+    private static func makeKeywords(
+        poems: [Poem],
+        poemOrderByID: [Poem.ID: Int],
+        poemScoreByID: [Poem.ID: Int]
+    ) -> [PoemKeyword] {
+        let buckets = poems.reduce(into: [String: Set<Poem.ID>]()) { result, poem in
+            for keyword in keywords(in: poem) {
+                result[keyword, default: []].insert(poem.id)
+            }
+        }
+
+        return buckets
+            .map { keyword, poemIDs in
+                let sortedPoems = popularSortedPoems(
+                    poems.filter { poemIDs.contains($0.id) },
+                    poemOrderByID: poemOrderByID,
+                    poemScoreByID: poemScoreByID
+                )
+                return PoemKeyword(
+                    id: keyword,
+                    text: keyword,
+                    count: poemIDs.count,
+                    poemIDs: sortedPoems.map(\.id)
+                )
+            }
+            .filter { $0.count >= 2 }
+            .sorted { lhs, rhs in
+                if lhs.count == rhs.count {
+                    return lhs.text.localizedCompare(rhs.text) == .orderedAscending
+                }
+                return lhs.count > rhs.count
+            }
+    }
+
+    private static func keywords(in poem: Poem) -> [String] {
+        let text = poem.fullText + poem.title
+        let rawKeywords = highFrequencyKeywordCandidates.filter { keyword in
+            text.localizedStandardContains(keyword)
+        }
+        return Array(Set(rawKeywords)).sorted {
+            $0.localizedCompare($1) == .orderedAscending
+        }
     }
 
     private static func popularityScore(for author: AuthorResult, poemScoreByID: [Poem.ID: Int]) -> Int {
@@ -614,6 +679,38 @@ private extension PoemLibraryIndex {
         "抒情": 20
     ]
 
+    private static let highFrequencyKeywordCandidates = [
+        "春",
+        "风",
+        "花",
+        "月",
+        "夜",
+        "山",
+        "水",
+        "江",
+        "云",
+        "雨",
+        "秋",
+        "酒",
+        "人",
+        "客",
+        "愁",
+        "梦",
+        "归",
+        "天",
+        "柳",
+        "烟",
+        "雪",
+        "日",
+        "长",
+        "故",
+        "心",
+        "君",
+        "清",
+        "落",
+        "空",
+        "乡"
+    ]
 }
 
 private let poemerySearchAliases: [String: String] = [

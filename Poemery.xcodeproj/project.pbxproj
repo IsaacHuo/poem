@@ -14,7 +14,7 @@
 		0A0001010000000000000004 /* PoemeryTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000004 /* PoemeryTheme.swift */; };
 		0A0001010000000000000005 /* AdaptiveGlassSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000005 /* AdaptiveGlassSurface.swift */; };
 		0A000101000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A000201000000000000000B /* Assets.xcassets */; };
-		0A000101000000000000000D /* HYWenRunSongYunU.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0A000201000000000000000E /* HYWenRunSongYunU.ttf */; };
+		0A000101000000000000000D /* 华文楷体.TTF in Resources */ = {isa = PBXBuildFile; fileRef = 0A000201000000000000000E /* 华文楷体.TTF */; };
 		0A000101000000000000000E /* PoemLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000010 /* PoemLibraryStore.swift */; };
 		0A000101000000000000000F /* ReadingSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000011 /* ReadingSessionStore.swift */; };
 		0A0001010000000000000010 /* PoemsSeed.json in Resources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000012 /* PoemsSeed.json */; };
@@ -59,7 +59,7 @@
 		0A0002010000000000000005 /* AdaptiveGlassSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/AdaptiveGlassSurface.swift; sourceTree = "<group>"; };
 		0A000201000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0A000201000000000000000C /* Poemery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Poemery.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		0A000201000000000000000E /* HYWenRunSongYunU.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = HYWenRunSongYunU.ttf; sourceTree = "<group>"; };
+		0A000201000000000000000E /* 华文楷体.TTF */ = {isa = PBXFileReference; lastKnownFileType = file; path = "华文楷体.TTF"; sourceTree = "<group>"; };
 		0A000201000000000000000F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0A0002010000000000000010 /* PoemLibraryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PoemLibraryStore.swift; sourceTree = "<group>"; };
 		0A0002010000000000000011 /* ReadingSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/ReadingSessionStore.swift; sourceTree = "<group>"; };
@@ -138,7 +138,7 @@
 				0A0002010000000000000010 /* PoemLibraryStore.swift */,
 				0A0002010000000000000011 /* ReadingSessionStore.swift */,
 				0A000201000000000000000B /* Assets.xcassets */,
-				0A000201000000000000000E /* HYWenRunSongYunU.ttf */,
+				0A000201000000000000000E /* 华文楷体.TTF */,
 				0A0002010000000000000012 /* PoemsSeed.json */,
 				0A0002010000000000000013 /* ChinesePoetryNotice.txt */,
 				C0D0F0040000000000000001 /* PrivacyInfo.xcprivacy */,
@@ -312,7 +312,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A000101000000000000000B /* Assets.xcassets in Resources */,
-				0A000101000000000000000D /* HYWenRunSongYunU.ttf in Resources */,
+				0A000101000000000000000D /* 华文楷体.TTF in Resources */,
 				0A0001010000000000000010 /* PoemsSeed.json in Resources */,
 				0A0001010000000000000011 /* ChinesePoetryNotice.txt in Resources */,
 				C0D0F0010000000000000001 /* PrivacyInfo.xcprivacy in Resources */,
@@ -514,7 +514,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.isaachuo.poemery;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -543,7 +543,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.isaachuo.poemery;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -569,7 +569,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.isaachuo.poemery.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -595,7 +595,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.isaachuo.poemery.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

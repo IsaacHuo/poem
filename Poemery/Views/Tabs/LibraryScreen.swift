@@ -46,6 +46,12 @@ struct LibraryScreen: View {
                         destination: .poems
                     )
                     LibraryNavigationRow(
+                        symbol: "chart.bar.fill",
+                        title: "作品榜",
+                        value: "\(library.chartPoems(limit: 100).count)",
+                        destination: .chart
+                    )
+                    LibraryNavigationRow(
                         symbol: "heart.fill",
                         title: "收藏",
                         value: "\(favoritePoems.count)",
@@ -112,8 +118,15 @@ struct LibraryScreen: View {
         case .poems:
             PoemListSection(
                 title: selectedSort.title,
-                poems: sortedPoems(Array(library.poems.prefix(80))).prefixArray(8),
+                poems: sortedPoems(Array(library.poems.prefix(80))).prefixArray(6),
                 queueTitle: "诗词",
+                onOpenPoem: onOpenPoem
+            )
+
+            PoemListSection(
+                title: "作品榜",
+                poems: library.chartPoems(limit: 8),
+                queueTitle: "作品榜",
                 onOpenPoem: onOpenPoem
             )
         case .favorites:
@@ -206,6 +219,15 @@ struct LibraryScreen: View {
                 queueTitle: "诗词",
                 onOpenPoem: onOpenPoem
             )
+        case .chart:
+            PoemDirectoryView(
+                title: "作品榜",
+                poems: library.chartPoems(limit: 100),
+                emptyTitle: "暂无排行",
+                emptySubtitle: "当前诗库暂时无法生成作品榜。",
+                queueTitle: "作品榜",
+                onOpenPoem: onOpenPoem
+            )
         case .favorites:
             PoemDirectoryView(
                 title: "收藏",
@@ -233,6 +255,7 @@ private enum LibraryDestination: Hashable {
     case authors
     case author(AuthorResult.ID)
     case poems
+    case chart
     case favorites
     case recents
 }

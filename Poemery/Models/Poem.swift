@@ -167,6 +167,15 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         if tags.contains("元曲") || dynasty == "元" || form == "曲" {
             return "chinese-poetry/chinese-poetry · 元曲"
         }
+        if tags.contains("论语") {
+            return "chinese-poetry/chinese-poetry · 论语"
+        }
+        if tags.contains("诗经") {
+            return "chinese-poetry/chinese-poetry · 诗经"
+        }
+        if tags.contains("四书五经") {
+            return "chinese-poetry/chinese-poetry · 四书五经"
+        }
         return "chinese-poetry/chinese-poetry"
     }
 
@@ -225,6 +234,13 @@ struct PoemCategory: Identifiable, Codable, Hashable, Sendable {
     let tag: String
     let artworkStyle: ArtworkStyle
     let symbol: String
+}
+
+struct PoemKeyword: Identifiable, Hashable, Sendable {
+    let id: String
+    let text: String
+    let count: Int
+    let poemIDs: [Poem.ID]
 }
 
 struct ArtworkStyle: Codable, Hashable, Sendable {

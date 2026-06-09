@@ -48,6 +48,61 @@ SOURCES = {
         "base_tags": ["元曲"],
         "summary": "来源于 chinese-poetry/chinese-poetry 的《元曲》数据；此处保留上游原文字形。",
     },
+    "lunyu": {
+        "path": "%E8%AE%BA%E8%AF%AD/lunyu.json",
+        "label": "论语",
+        "expected_count": 20,
+        "dynasty": "先秦",
+        "form": "典籍",
+        "author": "孔门弟子",
+        "base_tags": ["论语", "儒家", "经典"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的《论语》数据；此处按篇章保留上游原文字形。",
+        "format": "chaptered",
+    },
+    "shijing": {
+        "path": "%E8%AF%97%E7%BB%8F/shijing.json",
+        "label": "诗经",
+        "expected_count": 305,
+        "dynasty": "先秦",
+        "form": "诗",
+        "author": "佚名",
+        "base_tags": ["诗经", "先秦诗", "经典"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的《诗经》数据；此处保留上游原文字形。",
+        "format": "shijing",
+    },
+    "daxue": {
+        "path": "%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/daxue.json",
+        "label": "大学",
+        "expected_count": 1,
+        "dynasty": "先秦",
+        "form": "典籍",
+        "author": "曾子门人",
+        "base_tags": ["四书五经", "大学", "儒家", "经典"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的《四书五经/大学》数据；此处保留上游原文字形。",
+        "format": "chaptered",
+    },
+    "mengzi": {
+        "path": "%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/mengzi.json",
+        "label": "孟子",
+        "expected_count": 14,
+        "dynasty": "先秦",
+        "form": "典籍",
+        "author": "孟子",
+        "base_tags": ["四书五经", "孟子", "儒家", "经典"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的《四书五经/孟子》数据；此处按篇章保留上游原文字形。",
+        "format": "chaptered",
+    },
+    "zhongyong": {
+        "path": "%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/zhongyong.json",
+        "label": "中庸",
+        "expected_count": 1,
+        "dynasty": "先秦",
+        "form": "典籍",
+        "author": "子思",
+        "base_tags": ["四书五经", "中庸", "儒家", "经典"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的《四书五经/中庸》数据；此处保留上游原文字形。",
+        "format": "chaptered",
+    },
 }
 
 EXPECTED_SKIPPED_EMPTY_TEXT_COUNT = 2
@@ -91,6 +146,43 @@ SOURCE_PALETTES = {
         ("#5B4A32", "#C79D60", "#2C2925"),
         ("#3F527D", "#B9B4D6", "#252B3B"),
     ],
+    "lunyu": [
+        ("#3F5F51", "#D2C488", "#263029"),
+        ("#5C5542", "#CDBB78", "#2E2C25"),
+        ("#465F72", "#AEC8D6", "#242D35"),
+    ],
+    "shijing": [
+        ("#8B3C63", "#D6A5C2", "#2B2632"),
+        ("#3B6B54", "#AFCB9E", "#253228"),
+        ("#7A4231", "#D58E70", "#302827"),
+        ("#355B72", "#A9D0CA", "#242E36"),
+    ],
+    "daxue": [
+        ("#4F5F38", "#D4C989", "#293025"),
+        ("#6F4C35", "#D9A35F", "#2C2925"),
+        ("#46588C", "#BFB7E7", "#252A3A"),
+    ],
+    "mengzi": [
+        ("#6F3D2E", "#D7A85E", "#26323A"),
+        ("#3C5E8D", "#AEC8E6", "#242C3A"),
+        ("#316A74", "#D1C17C", "#243233"),
+    ],
+    "zhongyong": [
+        ("#584B9C", "#B8A7E8", "#252538"),
+        ("#2F6658", "#D3B56D", "#232F2D"),
+        ("#8C4A39", "#DFB28A", "#302A28"),
+    ],
+}
+
+SOURCE_FALLBACK_GLYPHS = {
+    "tang-300": "诗",
+    "song-ci-300": "词",
+    "yuanqu": "曲",
+    "lunyu": "论",
+    "shijing": "经",
+    "daxue": "大",
+    "mengzi": "孟",
+    "zhongyong": "中",
 }
 
 
@@ -144,6 +236,8 @@ def build_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
 
     for source_id, config in SOURCES.items():
         items = fetch_json(config["path"])
+        if not isinstance(items, list) and int(config["expected_count"]) == 1:
+            items = [items]
         if not isinstance(items, list):
             raise ValueError(f"{source_id} did not return a JSON array")
         expected_count = int(config["expected_count"])
@@ -154,7 +248,7 @@ def build_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
         for item in items:
             poem = convert_item(source_id, config, item, base_id_counts)
             if poem is None:
-                skipped_items.append(f"{source_id}/{clean_text(item.get('author')) or '佚名'}/{clean_text(item.get('title')) or clean_text(item.get('rhythmic')) or '无题'}")
+                skipped_items.append(f"{source_id}/{skipped_item_label(item)}")
                 continue
             poems.append(poem)
 
@@ -192,10 +286,21 @@ def convert_item(
     item: dict[str, Any],
     base_id_counts: collections.Counter[str],
 ) -> dict[str, Any] | None:
-    author = clean_text(item.get("author")) or "佚名"
-    title = clean_text(item.get("title")) or clean_text(item.get("rhythmic")) or "无题"
-    paragraphs = [clean_text(paragraph) for paragraph in item.get("paragraphs", [])]
-    paragraphs = [paragraph for paragraph in paragraphs if paragraph]
+    source_format = config.get("format", "poem")
+
+    if source_format == "chaptered":
+        author = str(config.get("author") or "佚名")
+        title = clean_text(item.get("chapter")) or str(config["label"])
+        paragraphs = cleaned_paragraphs(item.get("paragraphs", []))
+    elif source_format == "shijing":
+        author = str(config.get("author") or "佚名")
+        title = clean_text(item.get("title")) or "无题"
+        paragraphs = cleaned_paragraphs(item.get("content", []))
+    else:
+        author = clean_text(item.get("author")) or str(config.get("author") or "佚名")
+        title = clean_text(item.get("title")) or clean_text(item.get("rhythmic")) or "无题"
+        paragraphs = cleaned_paragraphs(item.get("paragraphs", []))
+
     if not paragraphs:
         title, paragraphs = repair_empty_paragraphs(source_id, title)
     if not paragraphs:
@@ -206,7 +311,7 @@ def convert_item(
     occurrence = base_id_counts[base_id]
     poem_id = base_id if occurrence == 1 else f"{base_id}-{occurrence}"
 
-    tags = merged_tags(config["base_tags"], item.get("tags", []))
+    tags = merged_tags(config["base_tags"], item.get("tags", []), shijing_tags(item) if source_format == "shijing" else [])
     if source_id == "song-ci-300":
         rhythmic = clean_text(item.get("rhythmic"))
         if rhythmic:
@@ -240,8 +345,32 @@ def convert_item(
     }
 
 
+def skipped_item_label(item: dict[str, Any]) -> str:
+    return (
+        clean_text(item.get("author"))
+        or clean_text(item.get("chapter"))
+        or clean_text(item.get("title"))
+        or clean_text(item.get("rhythmic"))
+        or "无题"
+    )
+
+
 def clean_text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def cleaned_paragraphs(values: Any) -> list[str]:
+    return [paragraph for paragraph in [clean_text(value) for value in values or []] if paragraph]
+
+
+def shijing_tags(item: dict[str, Any]) -> list[str]:
+    tags = [
+        clean_text(item.get("chapter")),
+        clean_text(item.get("section")),
+    ]
+    if clean_text(item.get("chapter")).endswith("颂"):
+        tags.append("颂")
+    return tags
 
 
 def repair_empty_paragraphs(source_id: str, title: str) -> tuple[str, list[str]]:
@@ -338,7 +467,7 @@ def artwork_style(source_id: str, poem_id: str, title: str) -> dict[str, str]:
         "primaryHex": palette[0],
         "secondaryHex": palette[1],
         "tertiaryHex": palette[2],
-        "glyph": first_cjk(title) or {"tang-300": "诗", "song-ci-300": "词", "yuanqu": "曲"}[source_id],
+        "glyph": first_cjk(title) or SOURCE_FALLBACK_GLYPHS[source_id],
     }
 
 
@@ -381,6 +510,44 @@ def build_collections(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
             style("#8E5B2D", "#D8A15D", "#2E2A26", "曲"),
         ),
     ]
+
+    for tag, title, subtitle, accent in [
+        ("论语", "论语", "20 篇儒家语录", style("#3F5F51", "#D2C488", "#263029", "论")),
+        ("诗经", "诗经", "305 首先秦诗歌", style("#8B3C63", "#D6A5C2", "#2B2632", "经")),
+        ("四书五经", "四书五经", "大学、中庸与孟子", style("#4F5F38", "#D4C989", "#293025", "书")),
+    ]:
+        source_poems = by_tag.get(tag, [])
+        if source_poems:
+            collections_data.append(
+                make_collection(
+                    f"cp-collection-source-{slug(tag)}",
+                    title,
+                    subtitle,
+                    "featured",
+                    source_poems,
+                    accent,
+                )
+            )
+
+    for tag, title, glyph, accent in [
+        ("国风", "诗经·国风", "风", style("#7E365A", "#D99EB3", "#2C2530", "风")),
+        ("小雅", "诗经·小雅", "雅", style("#355B72", "#A9D0CA", "#242E36", "雅")),
+        ("大雅", "诗经·大雅", "雅", style("#46588C", "#BFB7E7", "#252A3A", "雅")),
+        ("颂", "诗经·颂", "颂", style("#8C4A39", "#DFB28A", "#302A28", "颂")),
+        ("孟子", "孟子", "孟", style("#6F3D2E", "#D7A85E", "#26323A", "孟")),
+    ]:
+        source_poems = by_tag.get(tag, [])
+        if source_poems:
+            collections_data.append(
+                make_collection(
+                    f"cp-collection-classic-{slug(tag)}",
+                    title,
+                    f"{len(source_poems)} 篇/首",
+                    "mood",
+                    source_poems,
+                    accent,
+                )
+            )
 
     for author, accent in [
         ("李白", style("#A33A32", "#F2C078", "#2B2B34", "李")),
@@ -465,6 +632,9 @@ def build_categories(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
         ("cp-category-tang", "唐诗", "唐诗三百首", "唐诗", "book.closed.fill", style("#A33A32", "#E8B96F", "#2B2B34", "唐")),
         ("cp-category-song-ci", "宋词", "宋词三百首", "宋词", "music.note", style("#2F6F73", "#9CC6B8", "#26323A", "宋")),
         ("cp-category-yuanqu", "元曲", "杂剧与散曲", "元曲", "theatermasks.fill", style("#8E5B2D", "#D8A15D", "#2E2A26", "曲")),
+        ("cp-category-lunyu", "论语", "孔门语录", "论语", "quote.bubble.fill", style("#3F5F51", "#D2C488", "#263029", "论")),
+        ("cp-category-shijing", "诗经", "风雅颂", "诗经", "scroll.fill", style("#8B3C63", "#D6A5C2", "#2B2632", "经")),
+        ("cp-category-classics", "四书五经", "大学中庸孟子", "四书五经", "books.vertical.fill", style("#4F5F38", "#D4C989", "#293025", "书")),
         ("cp-category-moon", "月夜", "月色与夜读", "月夜", "moon.stars.fill", style("#3C5E8D", "#AEC8E6", "#242C3A", "月")),
         ("cp-category-homesick", "思乡", "旅人与故园", "思乡", "house.fill", style("#355B72", "#A9D0CA", "#242E36", "乡")),
         ("cp-category-landscape", "山水", "山川与江河", "山水", "mountain.2.fill", style("#2F6658", "#D3B56D", "#232F2D", "山")),

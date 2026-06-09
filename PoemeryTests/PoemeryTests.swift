@@ -42,6 +42,21 @@ final class PoemeryTests: XCTestCase {
         XCTAssertEqual(store.popularPoems(limit: 1).first?.title, "静夜思")
     }
 
+    func testFrequentKeywordsAggregateMatchingPoems() throws {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        let keyword = try XCTUnwrap(store.frequentKeywords(limit: 4).first { $0.text == "月" })
+
+        XCTAssertEqual(keyword.count, 2)
+        XCTAssertEqual(store.poems(forKeyword: keyword).map(\.title), ["静夜思", "秋日"])
+    }
+
+    func testChartPoemsUsePopularityOrder() {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        XCTAssertEqual(store.chartPoems(limit: 2).map(\.title), ["静夜思", "秋日"])
+    }
+
     func testDisplayArtworkStyleIsStableForSamePoem() {
         let poem = Self.sampleCatalog.poems[0]
 
@@ -96,9 +111,12 @@ final class PoemeryTests: XCTestCase {
     func testBundledCatalogHasExpectedShape() async throws {
         let store = try await PoemLibraryStore.loadBundled()
 
-        XCTAssertEqual(store.poems.count, 11701)
-        XCTAssertGreaterThanOrEqual(store.collections.count, 18)
-        XCTAssertGreaterThanOrEqual(store.categories.count, 10)
+        XCTAssertEqual(store.poems.count, 12042)
+        XCTAssertGreaterThanOrEqual(store.collections.count, 26)
+        XCTAssertGreaterThanOrEqual(store.categories.count, 13)
+        XCTAssertEqual(store.poems(forTheme: "论语").count, 20)
+        XCTAssertEqual(store.poems(forTheme: "诗经").count, 305)
+        XCTAssertEqual(store.poems(forTheme: "四书五经").count, 16)
         XCTAssertTrue(store.collections.allSatisfy { collection in
             !store.poems(for: collection).isEmpty
         })
@@ -208,7 +226,7 @@ final class PoemeryTests: XCTestCase {
                 author: "佚名",
                 form: "诗",
                 tags: ["唐诗"],
-                text: "秋风起。"
+                text: "秋月起。"
             )
         ],
         collections: [
