@@ -40,9 +40,8 @@ final class PoemLibraryStore {
     }
 
     nonisolated static func loadBundled() async throws -> PoemLibraryStore {
-        let url = try bundledCatalogURL()
         let indexedCatalog = try await Task.detached(priority: .userInitiated) {
-            let catalog = try decodeCatalog(at: url)
+            let catalog = try loadAvailableBundledCatalog()
             return IndexedPoemCatalog(catalog: catalog, index: PoemLibraryIndex(catalog: catalog))
         }.value
 
@@ -213,27 +212,48 @@ final class PoemLibraryStore {
 
     private static func loadBundledCatalog() -> PoemSeedCatalog {
         do {
-            return try decodeCatalog(at: bundledCatalogURL())
+            return try loadAvailableBundledCatalog()
         } catch {
-            assertionFailure("Failed to load PoemsSeed.json: \(error)")
+            assertionFailure("Failed to load bundled poem catalog: \(error)")
             return fallbackCatalog
         }
     }
 
-    nonisolated private static func bundledCatalogURL() throws -> URL {
+    nonisolated private static func loadAvailableBundledCatalog() throws -> PoemSeedCatalog {
+        if let sqliteURL = Bundle.main.url(forResource: "PoemLibrary", withExtension: "sqlite") {
+            do {
+                return try SQLitePoemLibraryRepository(url: sqliteURL).loadCatalog()
+            } catch {
+                if let jsonURL = Bundle.main.url(forResource: "PoemsSeed", withExtension: "json") {
+                    return try JSONPoemLibraryRepository(url: jsonURL).loadCatalog()
+                }
+                throw error
+            }
+        }
+
+        guard let jsonURL = Bundle.main.url(forResource: "PoemsSeed", withExtension: "json") else {
+            throw PoemLibraryRepositoryError.missingBundledCatalog
+        }
+        return try JSONPoemLibraryRepository(url: jsonURL).loadCatalog()
+    }
+
+    nonisolated private static func bundledJSONCatalogURL() throws -> URL {
         guard let url = Bundle.main.url(forResource: "PoemsSeed", withExtension: "json") else {
-            throw PoemLibraryLoadError.missingBundledCatalog
+            throw PoemLibraryRepositoryError.missingBundledJSONCatalog
         }
         return url
     }
 
-    nonisolated private static func decodeCatalog(at url: URL) throws -> PoemSeedCatalog {
-        do {
-            let data = try Data(contentsOf: url)
-            return try JSONDecoder().decode(PoemSeedCatalog.self, from: data)
-        } catch {
-            throw PoemLibraryLoadError.failedToReadBundledCatalog(String(describing: error))
-        }
+    nonisolated static func loadBundledJSONCatalogForTests() throws -> PoemSeedCatalog {
+        try JSONPoemLibraryRepository(url: bundledJSONCatalogURL()).loadCatalog()
+    }
+
+    nonisolated static func loadCatalogForTests(fromSQLiteURL url: URL) throws -> PoemSeedCatalog {
+        try SQLitePoemLibraryRepository(url: url).loadCatalog()
+    }
+
+    nonisolated static func bundledSQLiteCatalogURLForTests() -> URL? {
+        Bundle.main.url(forResource: "PoemLibrary", withExtension: "sqlite")
     }
 
     private static let fallbackCatalog = PoemSeedCatalog(
@@ -314,20 +334,6 @@ final class PoemLibraryStore {
             )
         ]
     )
-}
-
-enum PoemLibraryLoadError: LocalizedError {
-    case missingBundledCatalog
-    case failedToReadBundledCatalog(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .missingBundledCatalog:
-            "Missing PoemsSeed.json from the app bundle."
-        case .failedToReadBundledCatalog(let reason):
-            "Failed to read PoemsSeed.json: \(reason)"
-        }
-    }
 }
 
 private struct IndexedPoemCatalog: Sendable {

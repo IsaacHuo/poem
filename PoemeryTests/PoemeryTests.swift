@@ -165,6 +165,16 @@ final class PoemeryTests: XCTestCase {
         })
     }
 
+    func testBundledSQLiteCatalogMatchesBundledJSONCatalog() throws {
+        let sqliteURL = try XCTUnwrap(PoemLibraryStore.bundledSQLiteCatalogURLForTests())
+        let sqliteCatalog = try PoemLibraryStore.loadCatalogForTests(fromSQLiteURL: sqliteURL)
+        let jsonCatalog = try PoemLibraryStore.loadBundledJSONCatalogForTests()
+
+        XCTAssertEqual(sqliteCatalog.poems, jsonCatalog.poems)
+        XCTAssertEqual(sqliteCatalog.collections, jsonCatalog.collections)
+        XCTAssertEqual(sqliteCatalog.categories, jsonCatalog.categories)
+    }
+
     func testLibraryCanBrowseByThemeDynastyAndForm() {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
 

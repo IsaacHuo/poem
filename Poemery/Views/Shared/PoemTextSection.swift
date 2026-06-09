@@ -4,6 +4,7 @@ struct PoemTextSection: View {
     let poem: Poem
     let highlightedLineID: PoemLine.ID?
     @Binding var selectedAnnotation: PoemAnnotation?
+    @Binding var selectedLineID: PoemLine.ID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -14,9 +15,11 @@ struct PoemTextSection: View {
                 ForEach(poem.lines) { line in
                     PoemLineTextBlock(
                         line: line,
-                        isHighlighted: line.id == highlightedLineID,
+                        isHighlighted: line.id == highlightedLineID || line.id == selectedLineID,
+                        isSelected: line.id == selectedLineID,
                         annotations: poem.annotations(for: line.id),
-                        selectedAnnotation: $selectedAnnotation
+                        selectedAnnotation: $selectedAnnotation,
+                        onSelectLine: selectLine
                     )
                 }
             }
@@ -26,29 +29,56 @@ struct PoemTextSection: View {
         }
         .frame(maxWidth: 680, alignment: .leading)
     }
+
+    private func selectLine(_ line: PoemLine) {
+        withAnimation(PoemeryTheme.quickMotion) {
+            selectedLineID = selectedLineID == line.id ? nil : line.id
+        }
+    }
 }
 
 private struct PoemLineTextBlock: View {
     let line: PoemLine
     let isHighlighted: Bool
+    let isSelected: Bool
     let annotations: [PoemAnnotation]
     @Binding var selectedAnnotation: PoemAnnotation?
+    let onSelectLine: (PoemLine) -> Void
 
     var body: some View {
         VStack(alignment: .center, spacing: 8) {
-            ViewThatFits(in: .horizontal) {
-                poemText(line.text)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-
-                wrappedLine
+            Button {
+                onSelectLine(line)
+            } label: {
+                lineContent
             }
+            .buttonStyle(.plain)
+            .accessibilityHint("选择这句生成分享图片")
+            .accessibilityAddTraits(isSelected ? [.isSelected] : [])
 
             if !annotations.isEmpty {
                 annotationChips
             }
         }
         .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background {
+            if isSelected {
+                Capsule()
+                    .fill(PoemeryTheme.accentSoft)
+            }
+        }
+    }
+
+    private var lineContent: some View {
+        ViewThatFits(in: .horizontal) {
+            poemText(line.text)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+
+            wrappedLine
+        }
     }
 
     private var wrappedLine: some View {

@@ -1,7 +1,5 @@
-import CoreTransferable
 import SwiftUI
 import UIKit
-import UniformTypeIdentifiers
 
 struct PoemDetailView: View {
     let initialPoemID: Poem.ID
@@ -13,7 +11,9 @@ struct PoemDetailView: View {
     @State private var currentPoemID: Poem.ID
     @State private var authorPath: [AuthorResult.ID] = []
     @State private var selectedAnnotation: PoemAnnotation?
+    @State private var selectedLineID: PoemLine.ID?
     @State private var shareImage: PoemShareImage?
+    @State private var shareSheetItem: PoemShareSheetItem?
     @State private var hasStartedInitialReading = false
 
     init(
@@ -69,7 +69,8 @@ struct PoemDetailView: View {
                         PoemTextSection(
                             poem: visiblePoem,
                             highlightedLineID: nil,
-                            selectedAnnotation: $selectedAnnotation
+                            selectedAnnotation: $selectedAnnotation,
+                            selectedLineID: $selectedLineID
                         )
                         .gesture(swipeGesture)
 
@@ -85,10 +86,14 @@ struct PoemDetailView: View {
                 .background(background)
                 .onChange(of: currentPoemID) {
                     selectedAnnotation = nil
+                    selectedLineID = nil
                     refreshShareImage()
                     withAnimation(PoemeryTheme.motion) {
                         proxy.scrollTo("reader-top", anchor: .top)
                     }
+                }
+                .onChange(of: selectedLineID) {
+                    refreshShareImage()
                 }
             }
             .toolbar {
@@ -147,6 +152,10 @@ struct PoemDetailView: View {
             .sheet(item: $selectedAnnotation) { annotation in
                 AnnotationDetailSheet(annotation: annotation)
                     .presentationDetents([.medium])
+            }
+            .sheet(item: $shareSheetItem) { item in
+                PoemShareSheet(item: item)
+                    .presentationDetents([.medium, .large])
             }
             .onAppear {
                 if !hasStartedInitialReading {
@@ -239,26 +248,13 @@ struct PoemDetailView: View {
 
     @ViewBuilder
     private var shareButton: some View {
-        if let shareImage {
-            ShareLink(
-                item: shareImage,
-                subject: Text(visiblePoem.title),
-                message: Text(detailAttributionText),
-                preview: SharePreview(visiblePoem.title, image: shareImage.previewImage)
-            ) {
-                shareButtonLabel
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("分享诗歌图片")
-        } else {
-            Button {
-                refreshShareImage()
-            } label: {
-                shareButtonLabel
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("生成分享图片")
+        Button {
+            shareCurrentImage()
+        } label: {
+            shareButtonLabel
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(selectedShareLine == nil ? "分享诗歌图片" : "分享选中诗句图片")
     }
 
     private var shareButtonLabel: some View {
@@ -370,24 +366,53 @@ struct PoemDetailView: View {
 
     @MainActor
     private func refreshShareImage() {
-        shareImage = PoemShareImage.render(poem: visiblePoem)
+        shareImage = PoemShareImage.render(poem: visiblePoem, selectedLine: selectedShareLine)
     }
-}
 
-private struct PoemShareImage: Transferable {
-    let pngData: Data
-    let previewImage: Image
-
-    static var transferRepresentation: some TransferRepresentation {
-        DataRepresentation(exportedContentType: .png) { image in
-            image.pngData
+    private func presentShareSheet(with image: PoemShareImage) {
+        do {
+            shareSheetItem = PoemShareSheetItem(
+                title: visiblePoem.title,
+                url: try image.writeTemporaryFile()
+            )
+        } catch {
+            assertionFailure("Failed to prepare poem share image: \(error)")
         }
     }
 
     @MainActor
-    static func render(poem: Poem) -> PoemShareImage? {
+    private func shareCurrentImage() {
+        let image = PoemShareImage.render(poem: visiblePoem, selectedLine: selectedShareLine)
+        guard let image else {
+            return
+        }
+
+        shareImage = image
+        presentShareSheet(with: image)
+    }
+
+    private var selectedShareLine: PoemLine? {
+        selectedLineID.flatMap { id in
+            visiblePoem.lines.first { $0.id == id }
+        }
+    }
+}
+
+private struct PoemShareImage {
+    let pngData: Data
+    let fileName: String
+
+    func writeTemporaryFile() throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("\(UUID().uuidString)-\(fileName)")
+        try pngData.write(to: url, options: .atomic)
+        return url
+    }
+
+    @MainActor
+    static func render(poem: Poem, selectedLine: PoemLine? = nil) -> PoemShareImage? {
         let renderer = ImageRenderer(
-            content: PoemSharePoster(poem: poem)
+            content: PoemSharePoster(poem: poem, selectedLine: selectedLine)
                 .frame(width: PoemSharePoster.posterWidth, height: PoemSharePoster.posterHeight)
         )
         renderer.scale = 2
@@ -398,8 +423,43 @@ private struct PoemShareImage: Transferable {
             return nil
         }
 
-        return PoemShareImage(pngData: pngData, previewImage: Image(uiImage: uiImage))
+        return PoemShareImage(
+            pngData: pngData,
+            fileName: imageFileName(poem: poem, selectedLine: selectedLine)
+        )
     }
+
+    private static func imageFileName(poem: Poem, selectedLine: PoemLine?) -> String {
+        let rawName = selectedLine.map { "\(poem.title)-\($0.text)" } ?? poem.title
+        let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+        let sanitized = rawName
+            .unicodeScalars
+            .map { allowedCharacters.contains($0) ? String($0) : "-" }
+            .joined()
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return "Poemery-\(sanitized.isEmpty ? poem.id : sanitized).png"
+    }
+}
+
+private struct PoemShareSheetItem: Identifiable {
+    let id = UUID()
+    let title: String
+    let url: URL
+}
+
+private struct PoemShareSheet: UIViewControllerRepresentable {
+    let item: PoemShareSheetItem
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: [item.url],
+            applicationActivities: nil
+        )
+        controller.setValue(item.title, forKey: "subject")
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 private struct PoemSharePoster: View {
@@ -407,12 +467,17 @@ private struct PoemSharePoster: View {
     static let posterHeight: CGFloat = 1500
 
     let poem: Poem
+    let selectedLine: PoemLine?
 
     private var style: ArtworkStyle {
         poem.displayArtworkStyle
     }
 
     private var posterLines: [String] {
+        if let selectedLine {
+            return [selectedLine.text]
+        }
+
         let maxLineCount = 12
         var lines = poem.lines.prefix(maxLineCount).map(\.text)
         if poem.lines.count > maxLineCount, !lines.isEmpty {
@@ -448,6 +513,10 @@ private struct PoemSharePoster: View {
     }
 
     private var poemFontSize: CGFloat {
+        if selectedLine != nil {
+            return min(76, max(44, 620 / CGFloat(longestPosterLineCount)))
+        }
+
         let lineCount = posterLines.count
         let baseSize: CGFloat
         if lineCount <= 4 && poemCharacterCount <= 48 {
@@ -467,6 +536,10 @@ private struct PoemSharePoster: View {
     }
 
     private var poemLineSpacing: CGFloat {
+        if selectedLine != nil {
+            return 24
+        }
+
         if poemFontSize >= 48 {
             return 22
         }

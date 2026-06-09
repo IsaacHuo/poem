@@ -8,6 +8,7 @@ import collections
 import datetime as dt
 import hashlib
 import json
+import sqlite3
 import sys
 import urllib.request
 from pathlib import Path
@@ -198,7 +199,25 @@ def main() -> int:
         default="Poemery/ChinesePoetryNotice.txt",
         help="Bundled data-source notice output path.",
     )
+    parser.add_argument(
+        "--sqlite-output",
+        default="Poemery/PoemLibrary.sqlite",
+        help="Bundled SQLite catalog output path.",
+    )
+    parser.add_argument(
+        "--sqlite-from-catalog",
+        help="Write SQLite from an existing PoemsSeed.json without fetching upstream sources.",
+    )
     args = parser.parse_args()
+
+    if args.sqlite_from_catalog:
+        catalog = json.loads(Path(args.sqlite_from_catalog).read_text(encoding="utf-8"))
+        validate_catalog(catalog)
+        sqlite_output = Path(args.sqlite_output)
+        write_sqlite_catalog(catalog, sqlite_output)
+        validate_sqlite_catalog(sqlite_output, catalog)
+        print(f"Wrote {sqlite_output}")
+        return 0
 
     catalog, report = build_catalog()
     validate_catalog(catalog)
@@ -214,8 +233,13 @@ def main() -> int:
     notice_output.parent.mkdir(parents=True, exist_ok=True)
     notice_output.write_text(build_notice(report), encoding="utf-8")
 
+    sqlite_output = Path(args.sqlite_output)
+    write_sqlite_catalog(catalog, sqlite_output)
+    validate_sqlite_catalog(sqlite_output, catalog)
+
     print(f"Wrote {output} ({len(catalog['poems'])} poems)")
     print(f"Wrote {notice_output}")
+    print(f"Wrote {sqlite_output}")
     for source_id, count in report["source_counts"].items():
         print(f"{source_id}: {count}")
     if report["duplicate_base_ids"]:
@@ -767,6 +791,392 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         tag = category["tag"]
         if not any(tag in poem["tags"] or tag in poem.get("themes", []) or tag == poem["dynasty"] or tag == poem["form"] or tag == poem["author"] for poem in poems):
             raise ValueError(f"{category['id']} does not match any poems")
+
+
+def write_sqlite_catalog(catalog: dict[str, Any], output: Path) -> None:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if output.exists():
+        output.unlink()
+
+    with sqlite3.connect(output) as connection:
+        connection.execute("PRAGMA foreign_keys = ON")
+        create_sqlite_schema(connection)
+        insert_sqlite_catalog(connection, catalog)
+        connection.execute("PRAGMA user_version = 1")
+        connection.commit()
+
+
+def create_sqlite_schema(connection: sqlite3.Connection) -> None:
+    connection.executescript(
+        """
+        CREATE TABLE metadata (
+            key TEXT PRIMARY KEY NOT NULL,
+            value TEXT NOT NULL
+        ) WITHOUT ROWID;
+
+        CREATE TABLE poems (
+            id TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            author TEXT NOT NULL,
+            dynasty TEXT NOT NULL,
+            form TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            source_url TEXT,
+            source_name TEXT NOT NULL,
+            source_license TEXT NOT NULL,
+            editorial_summary TEXT,
+            difficulty INTEGER NOT NULL,
+            canonical_key TEXT,
+            artwork_primary_hex TEXT NOT NULL,
+            artwork_secondary_hex TEXT NOT NULL,
+            artwork_tertiary_hex TEXT NOT NULL,
+            artwork_glyph TEXT NOT NULL,
+            sort_order INTEGER NOT NULL
+        ) WITHOUT ROWID;
+
+        CREATE TABLE poem_lines (
+            poem_id TEXT NOT NULL REFERENCES poems(id) ON DELETE CASCADE,
+            line_id TEXT NOT NULL,
+            line_order INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            PRIMARY KEY (poem_id, line_order)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE poem_annotations (
+            poem_id TEXT NOT NULL REFERENCES poems(id) ON DELETE CASCADE,
+            annotation_id TEXT NOT NULL,
+            line_id TEXT NOT NULL,
+            term TEXT NOT NULL,
+            reading TEXT NOT NULL,
+            summary TEXT NOT NULL,
+            detail TEXT NOT NULL,
+            annotation_order INTEGER NOT NULL,
+            PRIMARY KEY (poem_id, annotation_id)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE poem_tags (
+            poem_id TEXT NOT NULL REFERENCES poems(id) ON DELETE CASCADE,
+            tag TEXT NOT NULL,
+            tag_order INTEGER NOT NULL,
+            PRIMARY KEY (poem_id, tag_order)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE poem_themes (
+            poem_id TEXT NOT NULL REFERENCES poems(id) ON DELETE CASCADE,
+            theme TEXT NOT NULL,
+            theme_order INTEGER NOT NULL,
+            PRIMARY KEY (poem_id, theme_order)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE collections (
+            id TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            subtitle TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            accent_primary_hex TEXT NOT NULL,
+            accent_secondary_hex TEXT NOT NULL,
+            accent_tertiary_hex TEXT NOT NULL,
+            accent_glyph TEXT NOT NULL,
+            sort_order INTEGER NOT NULL
+        ) WITHOUT ROWID;
+
+        CREATE TABLE collection_poems (
+            collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+            poem_id TEXT NOT NULL REFERENCES poems(id) ON DELETE CASCADE,
+            poem_order INTEGER NOT NULL,
+            PRIMARY KEY (collection_id, poem_order)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE categories (
+            id TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            subtitle TEXT NOT NULL,
+            tag TEXT NOT NULL,
+            symbol TEXT NOT NULL,
+            artwork_primary_hex TEXT NOT NULL,
+            artwork_secondary_hex TEXT NOT NULL,
+            artwork_tertiary_hex TEXT NOT NULL,
+            artwork_glyph TEXT NOT NULL,
+            sort_order INTEGER NOT NULL
+        ) WITHOUT ROWID;
+
+        CREATE TABLE authors (
+            id TEXT PRIMARY KEY NOT NULL,
+            name TEXT NOT NULL,
+            dynasty TEXT NOT NULL,
+            poem_count INTEGER NOT NULL,
+            sort_order INTEGER NOT NULL
+        ) WITHOUT ROWID;
+
+        CREATE TABLE author_poems (
+            author_id TEXT NOT NULL REFERENCES authors(id) ON DELETE CASCADE,
+            poem_id TEXT NOT NULL REFERENCES poems(id) ON DELETE CASCADE,
+            poem_order INTEGER NOT NULL,
+            PRIMARY KEY (author_id, poem_order)
+        ) WITHOUT ROWID;
+
+        CREATE TABLE search_grams (
+            gram TEXT PRIMARY KEY NOT NULL,
+            poem_offsets BLOB NOT NULL
+        ) WITHOUT ROWID;
+
+        CREATE INDEX idx_poem_tags_tag ON poem_tags(tag);
+        CREATE INDEX idx_poem_themes_theme ON poem_themes(theme);
+        CREATE INDEX idx_collection_poems_poem_id ON collection_poems(poem_id);
+        CREATE INDEX idx_author_poems_poem_id ON author_poems(poem_id);
+        """
+    )
+
+
+def insert_sqlite_catalog(connection: sqlite3.Connection, catalog: dict[str, Any]) -> None:
+    generated_at = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
+    connection.executemany(
+        "INSERT INTO metadata(key, value) VALUES (?, ?)",
+        [
+            ("schema_version", "1"),
+            ("repository", REPOSITORY),
+            ("repository_url", REPOSITORY_URL),
+            ("commit", COMMIT),
+            ("generated_at", generated_at),
+            ("poem_count", str(len(catalog["poems"]))),
+        ],
+    )
+
+    gram_postings: dict[str, list[int]] = collections.defaultdict(list)
+
+    for sort_order, poem in enumerate(catalog["poems"]):
+        artwork = poem["artworkStyle"]
+        connection.execute(
+            """
+            INSERT INTO poems(
+                id, title, author, dynasty, form, summary, source_url, source_name,
+                source_license, editorial_summary, difficulty, canonical_key,
+                artwork_primary_hex, artwork_secondary_hex, artwork_tertiary_hex,
+                artwork_glyph, sort_order
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                poem["id"],
+                poem["title"],
+                poem["author"],
+                poem["dynasty"],
+                poem["form"],
+                poem["summary"],
+                poem.get("sourceURL"),
+                poem.get("sourceName", ""),
+                poem.get("sourceLicense", "MIT"),
+                poem.get("editorialSummary"),
+                int(poem.get("difficulty", 2)),
+                poem.get("canonicalKey"),
+                artwork["primaryHex"],
+                artwork["secondaryHex"],
+                artwork["tertiaryHex"],
+                artwork["glyph"],
+                sort_order,
+            ),
+        )
+        connection.executemany(
+            "INSERT INTO poem_lines(poem_id, line_id, line_order, text) VALUES (?, ?, ?, ?)",
+            [
+                (poem["id"], line["id"], int(line["order"]), line["text"])
+                for line in poem["lines"]
+            ],
+        )
+        connection.executemany(
+            """
+            INSERT INTO poem_annotations(
+                poem_id, annotation_id, line_id, term, reading, summary, detail, annotation_order
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            [
+                (
+                    poem["id"],
+                    annotation["id"],
+                    annotation["lineID"],
+                    annotation["term"],
+                    annotation["reading"],
+                    annotation["summary"],
+                    annotation["detail"],
+                    index,
+                )
+                for index, annotation in enumerate(poem.get("annotations", []))
+            ],
+        )
+        connection.executemany(
+            "INSERT INTO poem_tags(poem_id, tag, tag_order) VALUES (?, ?, ?)",
+            [(poem["id"], tag, index) for index, tag in enumerate(poem["tags"])],
+        )
+        connection.executemany(
+            "INSERT INTO poem_themes(poem_id, theme, theme_order) VALUES (?, ?, ?)",
+            [(poem["id"], theme, index) for index, theme in enumerate(poem.get("themes", []))],
+        )
+        for gram in search_grams_for_poem(poem):
+            gram_postings[gram].append(sort_order)
+
+    connection.executemany(
+        "INSERT INTO search_grams(gram, poem_offsets) VALUES (?, ?)",
+        [
+            (gram, sqlite3.Binary(encode_varint_postings(postings)))
+            for gram, postings in sorted(gram_postings.items())
+        ],
+    )
+
+    for sort_order, collection_data in enumerate(catalog["collections"]):
+        accent = collection_data["accent"]
+        connection.execute(
+            """
+            INSERT INTO collections(
+                id, title, subtitle, kind, accent_primary_hex, accent_secondary_hex,
+                accent_tertiary_hex, accent_glyph, sort_order
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                collection_data["id"],
+                collection_data["title"],
+                collection_data["subtitle"],
+                collection_data["kind"],
+                accent["primaryHex"],
+                accent["secondaryHex"],
+                accent["tertiaryHex"],
+                accent["glyph"],
+                sort_order,
+            ),
+        )
+        connection.executemany(
+            "INSERT INTO collection_poems(collection_id, poem_id, poem_order) VALUES (?, ?, ?)",
+            [
+                (collection_data["id"], poem_id, index)
+                for index, poem_id in enumerate(collection_data["poemIDs"])
+            ],
+        )
+
+    for sort_order, category in enumerate(catalog["categories"]):
+        artwork = category["artworkStyle"]
+        connection.execute(
+            """
+            INSERT INTO categories(
+                id, title, subtitle, tag, symbol, artwork_primary_hex,
+                artwork_secondary_hex, artwork_tertiary_hex, artwork_glyph, sort_order
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                category["id"],
+                category["title"],
+                category["subtitle"],
+                category["tag"],
+                category["symbol"],
+                artwork["primaryHex"],
+                artwork["secondaryHex"],
+                artwork["tertiaryHex"],
+                artwork["glyph"],
+                sort_order,
+            ),
+        )
+
+    for sort_order, author in enumerate(sqlite_authors(catalog["poems"])):
+        connection.execute(
+            "INSERT INTO authors(id, name, dynasty, poem_count, sort_order) VALUES (?, ?, ?, ?, ?)",
+            (author["id"], author["name"], author["dynasty"], len(author["poemIDs"]), sort_order),
+        )
+        connection.executemany(
+            "INSERT INTO author_poems(author_id, poem_id, poem_order) VALUES (?, ?, ?)",
+            [
+                (author["id"], poem_id, index)
+                for index, poem_id in enumerate(author["poemIDs"])
+            ],
+        )
+
+
+def sqlite_authors(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    authors: collections.OrderedDict[str, dict[str, Any]] = collections.OrderedDict()
+    for poem in poems:
+        key = f"{poem['dynasty']}|{poem['author']}"
+        author = authors.setdefault(
+            key,
+            {
+                "id": f"cp-author-{slug(key)}",
+                "name": poem["author"],
+                "dynasty": poem["dynasty"],
+                "poemIDs": [],
+            },
+        )
+        author["poemIDs"].append(poem["id"])
+    return list(authors.values())
+
+
+def search_grams_for_poem(poem: dict[str, Any]) -> set[str]:
+    text = " ".join(
+        [
+            poem["title"],
+            poem["author"],
+            poem["dynasty"],
+            poem["form"],
+            " ".join(poem["tags"]),
+            " ".join(poem.get("themes", [])),
+            poem.get("sourceName", ""),
+            poem.get("sourceLicense", "MIT"),
+            poem.get("canonicalKey", ""),
+            " ".join(line["text"] for line in poem["lines"]),
+        ]
+    )
+    characters = [character for character in text.lower() if not character.isspace()]
+    grams = set(characters)
+    grams.update(
+        characters[index] + characters[index + 1]
+        for index in range(max(0, len(characters) - 1))
+    )
+    return {gram for gram in grams if gram}
+
+
+def encode_varint_postings(postings: list[int]) -> bytes:
+    encoded = bytearray()
+    previous = 0
+    for posting in sorted(postings):
+        delta = posting - previous
+        previous = posting
+        while delta >= 0x80:
+            encoded.append((delta & 0x7F) | 0x80)
+            delta >>= 7
+        encoded.append(delta)
+    return bytes(encoded)
+
+
+def validate_sqlite_catalog(output: Path, catalog: dict[str, Any]) -> None:
+    with sqlite3.connect(output) as connection:
+        connection.execute("PRAGMA foreign_keys = ON")
+
+        checks = [
+            ("poems", len(catalog["poems"])),
+            ("poem_lines", sum(len(poem["lines"]) for poem in catalog["poems"])),
+            ("poem_tags", sum(len(poem["tags"]) for poem in catalog["poems"])),
+            ("poem_themes", sum(len(poem.get("themes", [])) for poem in catalog["poems"])),
+            ("collections", len(catalog["collections"])),
+            ("collection_poems", sum(len(collection_data["poemIDs"]) for collection_data in catalog["collections"])),
+            ("categories", len(catalog["categories"])),
+        ]
+        for table, expected_count in checks:
+            count = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            if count != expected_count:
+                raise ValueError(f"{output} table {table} expected {expected_count} rows, got {count}")
+
+        invalid_collection_refs = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM collection_poems
+            LEFT JOIN poems ON poems.id = collection_poems.poem_id
+            WHERE poems.id IS NULL
+            """
+        ).fetchone()[0]
+        if invalid_collection_refs:
+            raise ValueError(f"{output} has {invalid_collection_refs} invalid collection poem references")
+
+        search_gram_count = connection.execute("SELECT COUNT(*) FROM search_grams").fetchone()[0]
+        if search_gram_count == 0:
+            raise ValueError(f"{output} has no search gram coverage")
 
 
 def build_notice(report: dict[str, Any]) -> str:

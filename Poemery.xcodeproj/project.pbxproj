@@ -21,6 +21,9 @@
 		0A0001010000000000000011 /* ChinesePoetryNotice.txt in Resources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000013 /* ChinesePoetryNotice.txt */; };
 		0A0001010000000000000012 /* CollectionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000014 /* CollectionDetailView.swift */; };
 		0A0001010000000000000013 /* ProfileScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000015 /* ProfileScreen.swift */; };
+		B1A0A0010000000000000001 /* PoemLibraryRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1A0B0010000000000000001 /* PoemLibraryRepository.swift */; };
+		B1A0A0020000000000000001 /* PoemLibrary.sqlite in Resources */ = {isa = PBXBuildFile; fileRef = B1A0B0020000000000000001 /* PoemLibrary.sqlite */; };
+		B1A0A0030000000000000001 /* libsqlite3.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B1A0B0030000000000000001 /* libsqlite3.tbd */; };
 		C0D0F0010000000000000001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0D0F0040000000000000001 /* PrivacyInfo.xcprivacy */; };
 		C0D0F0020000000000000001 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D0F0050000000000000001 /* ProfileSettingsView.swift */; };
 		C0D0F0030000000000000001 /* PoemeryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D0F0060000000000000001 /* PoemeryTests.swift */; };
@@ -67,6 +70,9 @@
 		0A0002010000000000000013 /* ChinesePoetryNotice.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ChinesePoetryNotice.txt; sourceTree = "<group>"; };
 		0A0002010000000000000014 /* CollectionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollectionDetailView.swift; sourceTree = "<group>"; };
 		0A0002010000000000000015 /* ProfileScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileScreen.swift; sourceTree = "<group>"; };
+		B1A0B0010000000000000001 /* PoemLibraryRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/PoemLibraryRepository.swift; sourceTree = "<group>"; };
+		B1A0B0020000000000000001 /* PoemLibrary.sqlite */ = {isa = PBXFileReference; lastKnownFileType = file; path = PoemLibrary.sqlite; sourceTree = "<group>"; };
+		B1A0B0030000000000000001 /* libsqlite3.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.tbd; path = usr/lib/libsqlite3.tbd; sourceTree = SDKROOT; };
 		C0D0F0040000000000000001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		C0D0F0050000000000000001 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
 		C0D0F0060000000000000001 /* PoemeryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoemeryTests.swift; sourceTree = "<group>"; };
@@ -114,6 +120,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1A0A0030000000000000001 /* libsqlite3.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,13 +143,16 @@
 				0A0002010000000000000004 /* PoemeryTheme.swift */,
 				0A0002010000000000000005 /* AdaptiveGlassSurface.swift */,
 				0A0002010000000000000010 /* PoemLibraryStore.swift */,
+				B1A0B0010000000000000001 /* PoemLibraryRepository.swift */,
 				0A0002010000000000000011 /* ReadingSessionStore.swift */,
 				0A000201000000000000000B /* Assets.xcassets */,
 				0A000201000000000000000E /* 华文楷体.TTF */,
 				0A0002010000000000000012 /* PoemsSeed.json */,
+				B1A0B0020000000000000001 /* PoemLibrary.sqlite */,
 				0A0002010000000000000013 /* ChinesePoetryNotice.txt */,
 				C0D0F0040000000000000001 /* PrivacyInfo.xcprivacy */,
 				0A000201000000000000000F /* Info.plist */,
+				B1A0B0030000000000000001 /* libsqlite3.tbd */,
 				F6BCD09E682BE94109CCBA2F /* Views */,
 			);
 			path = Poemery;
@@ -314,6 +324,7 @@
 				0A000101000000000000000B /* Assets.xcassets in Resources */,
 				0A000101000000000000000D /* 华文楷体.TTF in Resources */,
 				0A0001010000000000000010 /* PoemsSeed.json in Resources */,
+				B1A0A0020000000000000001 /* PoemLibrary.sqlite in Resources */,
 				0A0001010000000000000011 /* ChinesePoetryNotice.txt in Resources */,
 				C0D0F0010000000000000001 /* PrivacyInfo.xcprivacy in Resources */,
 			);
@@ -332,6 +343,7 @@
 				0A0001010000000000000004 /* PoemeryTheme.swift in Sources */,
 				0A0001010000000000000005 /* AdaptiveGlassSurface.swift in Sources */,
 				0A000101000000000000000E /* PoemLibraryStore.swift in Sources */,
+				B1A0A0010000000000000001 /* PoemLibraryRepository.swift in Sources */,
 				0A000101000000000000000F /* ReadingSessionStore.swift in Sources */,
 				2231F43E636C8450920E289D /* LibraryScreen.swift in Sources */,
 				5EBF85137D535CD81C4299A9 /* HomeScreen.swift in Sources */,
