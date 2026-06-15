@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum ChineseScriptPreference: String, CaseIterable, Identifiable, Sendable {
     case simplified
@@ -46,6 +47,17 @@ enum ChineseTextConverter {
             return text
         }
         return mutableText as String
+    }
+}
+
+private struct ChineseScriptPreferenceKey: EnvironmentKey {
+    static let defaultValue = ChineseScriptPreference.simplified
+}
+
+extension EnvironmentValues {
+    var chineseScriptPreference: ChineseScriptPreference {
+        get { self[ChineseScriptPreferenceKey.self] }
+        set { self[ChineseScriptPreferenceKey.self] = newValue }
     }
 }
 

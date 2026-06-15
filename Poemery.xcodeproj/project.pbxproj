@@ -12,6 +12,7 @@
 		0A0001010000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000002 /* ContentView.swift */; };
 		0A0001010000000000000003 /* Poem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000003 /* Poem.swift */; };
 		0A0001010000000000000014 /* ChineseScriptPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000016 /* ChineseScriptPreference.swift */; };
+		0A0001010000000000000015 /* PoemTextSizePreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000017 /* PoemTextSizePreference.swift */; };
 		0A0001010000000000000004 /* PoemeryTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000004 /* PoemeryTheme.swift */; };
 		0A0001010000000000000005 /* AdaptiveGlassSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0002010000000000000005 /* AdaptiveGlassSurface.swift */; };
 		0A000101000000000000000B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0A000201000000000000000B /* Assets.xcassets */; };
@@ -60,6 +61,7 @@
 		0A0002010000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0A0002010000000000000003 /* Poem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/Poem.swift; sourceTree = "<group>"; };
 		0A0002010000000000000016 /* ChineseScriptPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/ChineseScriptPreference.swift; sourceTree = "<group>"; };
+		0A0002010000000000000017 /* PoemTextSizePreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/PoemTextSizePreference.swift; sourceTree = "<group>"; };
 		0A0002010000000000000004 /* PoemeryTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/PoemeryTheme.swift; sourceTree = "<group>"; };
 		0A0002010000000000000005 /* AdaptiveGlassSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Design/AdaptiveGlassSurface.swift; sourceTree = "<group>"; };
 		0A000201000000000000000B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -143,6 +145,7 @@
 				0A0002010000000000000002 /* ContentView.swift */,
 				0A0002010000000000000003 /* Poem.swift */,
 				0A0002010000000000000016 /* ChineseScriptPreference.swift */,
+				0A0002010000000000000017 /* PoemTextSizePreference.swift */,
 				0A0002010000000000000004 /* PoemeryTheme.swift */,
 				0A0002010000000000000005 /* AdaptiveGlassSurface.swift */,
 				0A0002010000000000000010 /* PoemLibraryStore.swift */,
@@ -344,6 +347,7 @@
 				0A0001010000000000000002 /* ContentView.swift in Sources */,
 				0A0001010000000000000003 /* Poem.swift in Sources */,
 				0A0001010000000000000014 /* ChineseScriptPreference.swift in Sources */,
+				0A0001010000000000000015 /* PoemTextSizePreference.swift in Sources */,
 				0A0001010000000000000004 /* PoemeryTheme.swift in Sources */,
 				0A0001010000000000000005 /* AdaptiveGlassSurface.swift in Sources */,
 				0A000101000000000000000E /* PoemLibraryStore.swift in Sources */,
