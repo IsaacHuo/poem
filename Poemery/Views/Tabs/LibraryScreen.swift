@@ -5,6 +5,7 @@ struct LibraryScreen: View {
     let session: ReadingSessionStore
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
+    let onRefresh: @Sendable () async -> Void
 
     @State private var selectedShelf: LibraryShelf = .poems
     @State private var selectedSort: LibrarySort = .curated
@@ -22,6 +23,7 @@ struct LibraryScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 ScreenHeader(title: "你的诗歌书库", subtitle: nil)
+                localLibraryStatus
 
                 libraryShelfPicker
                 librarySortPicker
@@ -30,19 +32,19 @@ struct LibraryScreen: View {
                     LibraryNavigationRow(
                         symbol: "rectangle.stack.fill",
                         title: "诗单",
-                        value: "\(library.collections.count)",
+                        value: "\(library.totalCollectionCount)",
                         destination: .collections
                     )
                     LibraryNavigationRow(
                         symbol: "person.2.fill",
                         title: "诗人",
-                        value: "\(authors.count)",
+                        value: "\(library.totalAuthorCount)",
                         destination: .authors
                     )
                     LibraryNavigationRow(
                         symbol: "text.book.closed.fill",
                         title: "诗词",
-                        value: "\(library.poems.count)",
+                        value: "\(library.totalPoemCount)",
                         destination: .poems
                     )
                     LibraryNavigationRow(
@@ -76,10 +78,39 @@ struct LibraryScreen: View {
             }
             .screenContentPadding()
         }
+        .refreshable {
+            await onRefresh()
+        }
         .navigationTitle("资料库")
         .navigationBarTitleDisplayMode(.large)
         .scrollIndicators(.hidden)
         .background(PoemeryTheme.background)
+    }
+
+    private var localLibraryStatus: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: "internaldrive.fill")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.accent)
+                .frame(width: 28, height: 28)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("本地诗库已就绪")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+
+                Text("离线收录 \(library.totalPoemCount) 首 · \(library.totalAuthorCount) 位作者")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 8)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .groupedListBackground()
+        .accessibilityElement(children: .combine)
     }
 
     private var authors: [AuthorResult] {
@@ -189,15 +220,18 @@ struct LibraryScreen: View {
             .scrollIndicators(.hidden)
             .background(PoemeryTheme.background)
         case .authors:
-            AuthorDirectoryView(authors: authors)
+            PagedAuthorDirectoryView(library: library)
+        case .authorDetail(let author):
+            PagedAuthorDetailContent(
+                author: author,
+                library: library,
+                onOpenPoem: onOpenPoem
+            )
         case .author(let authorID):
             if let author = authors.first(where: { $0.id == authorID }) {
-                PoemDirectoryView(
-                    title: author.name,
-                    poems: author.poems,
-                    emptyTitle: "暂无作品",
-                    emptySubtitle: "这个诗人暂时没有可阅读的作品。",
-                    queueTitle: author.name,
+                PagedAuthorDetailContent(
+                    author: author,
+                    library: library,
                     onOpenPoem: onOpenPoem
                 )
             } else {
@@ -211,9 +245,9 @@ struct LibraryScreen: View {
                 )
             }
         case .poems:
-            PoemDirectoryView(
+            PagedPoemDirectoryView(
                 title: "诗词",
-                poems: library.poems,
+                library: library,
                 emptyTitle: "暂无诗词",
                 emptySubtitle: "诗库暂时没有可阅读的作品。",
                 queueTitle: "诗词",
@@ -253,6 +287,7 @@ struct LibraryScreen: View {
 private enum LibraryDestination: Hashable {
     case collections
     case authors
+    case authorDetail(AuthorResult)
     case author(AuthorResult.ID)
     case poems
     case chart
@@ -347,7 +382,7 @@ private struct AuthorDirectoryView: View {
             } else {
                 LazyVStack(spacing: 0) {
                     ForEach(authors) { author in
-                        NavigationLink(value: LibraryDestination.author(author.id)) {
+                        NavigationLink(value: LibraryDestination.authorDetail(author)) {
                             AuthorDirectoryRow(author: author)
                         }
                         .buttonStyle(.plain)
@@ -390,7 +425,7 @@ private struct AuthorDirectoryRow: View {
                     .foregroundStyle(PoemeryTheme.primaryText)
                     .lineLimit(1)
 
-                Text("\(author.dynasty) · \(author.poems.count) 首")
+                Text("\(author.dynasty) · \(author.poemCount) 首")
                     .font(.subheadline)
                     .foregroundStyle(PoemeryTheme.secondaryText)
                     .lineLimit(1)
@@ -445,6 +480,266 @@ private struct PoemDirectoryView: View {
         .navigationBarTitleDisplayMode(.large)
         .scrollIndicators(.hidden)
         .background(PoemeryTheme.background)
+    }
+}
+
+private struct PagedPoemDirectoryView: View {
+    let title: String
+    let library: PoemLibraryStore
+    let emptyTitle: String
+    let emptySubtitle: String
+    let queueTitle: String
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    @Environment(\.chineseScriptPreference) private var script
+    @State private var poems: [Poem] = []
+    @State private var nextPage: Int? = 1
+    @State private var total = 0
+    @State private var isLoading = false
+
+    private var displayTotal: Int {
+        max(total, library.totalPoemCount)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                directoryProgress
+
+                if poems.isEmpty && isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 24)
+                        .groupedListBackground()
+                } else if poems.isEmpty {
+                    EmptyLibraryState(title: emptyTitle, subtitle: emptySubtitle)
+                } else {
+                    LazyVStack(spacing: 0) {
+                        ForEach(Array(poems.enumerated()), id: \.element.id) { index, poem in
+                            Button {
+                                onOpenPoem(poem, ReadingQueue(title: queueTitle, poems: poems))
+                            } label: {
+                                PoemListRow(poem: poem)
+                            }
+                            .buttonStyle(.plain)
+                            .task {
+                                await loadNextPageIfNeeded(currentIndex: index)
+                            }
+
+                            if index != poems.indices.last {
+                                Divider()
+                                    .padding(.leading, 74)
+                            }
+                        }
+                    }
+                    .libraryListCard()
+
+                    directoryFooter
+                }
+            }
+            .screenContentPadding()
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.large)
+        .scrollIndicators(.hidden)
+        .background(PoemeryTheme.background)
+        .task(id: script.rawValue) {
+            await reloadFirstPage()
+        }
+    }
+
+    private var directoryProgress: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("本地诗词")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(PoemeryTheme.accent)
+
+            Text("\(poems.count) / \(displayTotal)")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(PoemeryTheme.primaryText)
+                .monospacedDigit()
+
+            Text("向下滚动会继续加载本地诗库。")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .groupedListBackground()
+    }
+
+    @ViewBuilder
+    private var directoryFooter: some View {
+        if nextPage != nil || isLoading {
+            HStack(spacing: 8) {
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Image(systemName: "arrow.down.circle")
+                }
+                Text(isLoading ? "加载中" : "继续向下浏览")
+                Spacer()
+                Text("\(poems.count) / \(displayTotal)")
+                    .foregroundStyle(PoemeryTheme.tertiaryText)
+            }
+            .font(.subheadline.weight(.semibold))
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .groupedListBackground()
+        }
+    }
+
+    private func loadFirstPage() async {
+        guard poems.isEmpty else {
+            return
+        }
+        await loadPage(1)
+    }
+
+    private func reloadFirstPage() async {
+        poems = []
+        nextPage = 1
+        total = 0
+        await loadPage(1)
+    }
+
+    private func loadNextPageIfNeeded(currentIndex: Int) async {
+        guard let nextPage, currentIndex >= poems.count - 8 else {
+            return
+        }
+        await loadPage(nextPage)
+    }
+
+    private func loadPage(_ page: Int) async {
+        guard !isLoading else {
+            return
+        }
+
+        isLoading = true
+        let result = await library.loadPoemsPage(page: page, script: script)
+        if page <= 1 {
+            poems = result.poems
+        } else {
+            poems.append(contentsOf: result.poems)
+        }
+        total = result.total
+        nextPage = result.nextPage
+        isLoading = false
+    }
+}
+
+private struct PagedAuthorDirectoryView: View {
+    let library: PoemLibraryStore
+
+    @Environment(\.chineseScriptPreference) private var script
+    @State private var authors: [AuthorResult] = []
+    @State private var nextPage: Int? = 1
+    @State private var total = 0
+    @State private var isLoading = false
+
+    var body: some View {
+        ScrollView {
+            if authors.isEmpty && isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .screenContentPadding()
+            } else if authors.isEmpty {
+                EmptyLibraryState(title: "暂无诗人", subtitle: "诗库暂时没有可浏览的诗人。")
+                    .screenContentPadding()
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(authors) { author in
+                        NavigationLink(value: LibraryDestination.authorDetail(author)) {
+                            AuthorDirectoryRow(author: author)
+                        }
+                        .buttonStyle(.plain)
+
+                        if author.id != authors.last?.id {
+                            Divider()
+                                .padding(.leading, 72)
+                        }
+                    }
+                }
+                .libraryListCard()
+                .screenContentPadding()
+
+                if nextPage != nil {
+                    VStack {
+                        Button(action: loadMore) {
+                            HStack(spacing: 8) {
+                                if isLoading {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Image(systemName: "arrow.down.circle")
+                                }
+                                Text(isLoading ? "加载中" : "继续加载")
+                                Spacer()
+                                Text("\(authors.count) / \(total)")
+                                    .foregroundStyle(PoemeryTheme.tertiaryText)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(PoemeryTheme.accent)
+                        .disabled(isLoading)
+                    }
+                    .screenContentPadding()
+                }
+            }
+        }
+        .navigationTitle("诗人")
+        .navigationBarTitleDisplayMode(.large)
+        .scrollIndicators(.hidden)
+        .background(PoemeryTheme.background)
+        .task(id: script.rawValue) {
+            await reloadFirstPage()
+        }
+    }
+
+    private func loadFirstPage() async {
+        guard authors.isEmpty else {
+            return
+        }
+        await loadPage(1)
+    }
+
+    private func reloadFirstPage() async {
+        authors = []
+        nextPage = 1
+        total = 0
+        await loadPage(1)
+    }
+
+    private func loadMore() {
+        guard let nextPage else {
+            return
+        }
+
+        Task {
+            await loadPage(nextPage)
+        }
+    }
+
+    private func loadPage(_ page: Int) async {
+        guard !isLoading else {
+            return
+        }
+
+        isLoading = true
+        let result = await library.loadAuthorsPage(page: page, script: script)
+        if page <= 1 {
+            authors = result.authors
+        } else {
+            authors.append(contentsOf: result.authors)
+        }
+        total = result.total
+        nextPage = result.nextPage
+        isLoading = false
     }
 }
 

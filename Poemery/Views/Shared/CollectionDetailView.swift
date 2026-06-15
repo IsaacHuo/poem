@@ -2,10 +2,14 @@ import SwiftUI
 
 struct CollectionDetailView: View {
     let collection: PoemCollection
-    let poems: [Poem]
+    let library: PoemLibraryStore
     let onOpenPoem: (Poem, ReadingQueue) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.chineseScriptPreference) private var script
+    @State private var poems: [Poem] = []
+    @State private var nextPage: Int? = 1
+    @State private var isLoading = false
 
     var body: some View {
         NavigationStack {
@@ -19,6 +23,9 @@ struct CollectionDetailView: View {
                 .padding(.bottom, 56)
             }
             .background(background)
+            .task(id: "\(collection.id)|\(script.rawValue)") {
+                await loadFirstPage()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("关闭") {
@@ -31,7 +38,7 @@ struct CollectionDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 18) {
-            CollectionCover(collection: collection, poemCount: poems.count)
+            CollectionCover(collection: collection, poemCount: collection.poemCount)
                 .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 8) {
@@ -45,7 +52,7 @@ struct CollectionDetailView: View {
                     .font(.headline)
                     .foregroundStyle(PoemeryTheme.secondaryText)
 
-                Text("\(poems.count) 首作品")
+                Text("\(collection.poemCount) 首作品")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(PoemeryTheme.accent)
             }
@@ -56,22 +63,52 @@ struct CollectionDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionTitle(title: "作品")
 
-            LazyVStack(spacing: 0) {
-                ForEach(poems) { poem in
-                    Button {
-                        onOpenPoem(poem, ReadingQueue(title: collection.title, poems: poems))
-                    } label: {
-                        PoemListRow(poem: poem)
-                    }
-                    .buttonStyle(.plain)
+            if poems.isEmpty && isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .groupedListBackground()
+            } else if poems.isEmpty {
+                EmptyLibraryState(title: "暂无作品", subtitle: "这个诗单暂时没有可阅读的作品。")
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(poems) { poem in
+                        Button {
+                            onOpenPoem(poem, ReadingQueue(title: collection.title, poems: poems))
+                        } label: {
+                            PoemListRow(poem: poem)
+                        }
+                        .buttonStyle(.plain)
 
-                    if poem.id != poems.last?.id {
-                        Divider()
-                            .padding(.leading, 74)
+                        if poem.id != poems.last?.id {
+                            Divider()
+                                .padding(.leading, 74)
+                        }
                     }
                 }
+                .groupedListBackground()
+
+                if nextPage != nil {
+                    Button(action: loadMore) {
+                        HStack(spacing: 8) {
+                            if isLoading {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "arrow.down.circle")
+                            }
+                            Text(isLoading ? "加载中" : "继续加载")
+                            Spacer()
+                            Text("\(poems.count) / \(collection.poemCount)")
+                                .foregroundStyle(PoemeryTheme.tertiaryText)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(PoemeryTheme.accent)
+                    .disabled(isLoading)
+                }
             }
-            .groupedListBackground()
         }
     }
 
@@ -87,17 +124,50 @@ struct CollectionDetailView: View {
         )
         .ignoresSafeArea()
     }
+
+    private func loadFirstPage() async {
+        poems = []
+        nextPage = 1
+        await loadPage(1)
+    }
+
+    private func loadMore() {
+        guard let nextPage else {
+            return
+        }
+
+        Task {
+            await loadPage(nextPage)
+        }
+    }
+
+    private func loadPage(_ page: Int) async {
+        guard !isLoading else {
+            return
+        }
+
+        isLoading = true
+        let result = await library.loadCollectionPoems(collection: collection, page: page, script: script)
+        if page <= 1 {
+            poems = result.poems
+        } else {
+            poems.append(contentsOf: result.poems)
+        }
+        nextPage = result.nextPage
+        isLoading = false
+    }
 }
 
 struct AuthorDetailView: View {
     let author: AuthorResult
+    let library: PoemLibraryStore
     let onOpenPoem: (Poem, ReadingQueue) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            AuthorDetailContent(author: author, onOpenPoem: onOpenPoem)
+            PagedAuthorDetailContent(author: author, library: library, onOpenPoem: onOpenPoem)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("关闭") {
@@ -109,15 +179,21 @@ struct AuthorDetailView: View {
     }
 }
 
-struct AuthorDetailContent: View {
+struct PagedAuthorDetailContent: View {
     let author: AuthorResult
+    let library: PoemLibraryStore
     let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    @Environment(\.chineseScriptPreference) private var script
+    @State private var poems: [Poem] = []
+    @State private var nextPage: Int? = 1
+    @State private var isLoading = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                header
-                introductionSection
+                AuthorHeader(author: author)
+                AuthorIntroduction(author: author)
                 poemList
             }
             .padding(.horizontal, 20)
@@ -127,48 +203,122 @@ struct AuthorDetailContent: View {
         .background(PoemeryTheme.background)
         .navigationTitle(author.name)
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var header: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(PoemeryTheme.groupedBackground)
-
-                Text(String(author.name.prefix(1)))
-                    .font(PoemeryTheme.chineseFont(size: 40, relativeTo: .largeTitle))
-                    .foregroundStyle(PoemeryTheme.accent)
-            }
-            .frame(width: 82, height: 82)
-
-            VStack(alignment: .leading, spacing: 7) {
-                Text(author.name)
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(PoemeryTheme.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-
-                Text("\(author.dynasty) · \(author.poems.count) 首作品")
-                    .font(.headline)
-                    .foregroundStyle(PoemeryTheme.secondaryText)
-                    .lineLimit(1)
-            }
+        .task(id: "\(author.id)|\(script.rawValue)") {
+            await reloadFirstPage()
         }
     }
 
-    private var introductionSection: some View {
+    private var poemList: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "作者简介")
+            SectionTitle(title: "作品")
 
-            Text(author.introduction)
-                .font(.body)
-                .foregroundStyle(PoemeryTheme.secondaryText)
-                .lineSpacing(5)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
+            if poems.isEmpty && isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                    .groupedListBackground()
+            } else if poems.isEmpty {
+                EmptyLibraryState(title: "暂无作品", subtitle: "这个诗人暂时没有可阅读的作品。")
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(poems) { poem in
+                        Button {
+                            onOpenPoem(poem, ReadingQueue(title: author.name, poems: poems))
+                        } label: {
+                            PoemListRow(poem: poem)
+                        }
+                        .buttonStyle(.plain)
+
+                        if poem.id != poems.last?.id {
+                            Divider()
+                                .padding(.leading, 74)
+                        }
+                    }
+                }
                 .groupedListBackground()
+
+                if nextPage != nil {
+                    Button(action: loadMore) {
+                        HStack(spacing: 8) {
+                            if isLoading {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(systemName: "arrow.down.circle")
+                            }
+                            Text(isLoading ? "加载中" : "继续加载")
+                            Spacer()
+                            Text("\(poems.count) / \(author.poemCount)")
+                                .foregroundStyle(PoemeryTheme.tertiaryText)
+                        }
+                        .font(.subheadline.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(PoemeryTheme.accent)
+                    .disabled(isLoading)
+                }
+            }
         }
+    }
+
+    private func loadFirstPage() async {
+        guard poems.isEmpty else {
+            return
+        }
+        await loadPage(1)
+    }
+
+    private func reloadFirstPage() async {
+        poems = []
+        nextPage = 1
+        await loadPage(1)
+    }
+
+    private func loadMore() {
+        guard let nextPage else {
+            return
+        }
+
+        Task {
+            await loadPage(nextPage)
+        }
+    }
+
+    private func loadPage(_ page: Int) async {
+        guard !isLoading else {
+            return
+        }
+
+        isLoading = true
+        let result = await library.loadAuthorPoems(author: author, page: page, script: script)
+        if page <= 1 {
+            poems = result.poems
+        } else {
+            poems.append(contentsOf: result.poems)
+        }
+        nextPage = result.nextPage
+        isLoading = false
+    }
+}
+
+struct AuthorDetailContent: View {
+    let author: AuthorResult
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                AuthorHeader(author: author)
+                AuthorIntroduction(author: author)
+                poemList
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 22)
+            .padding(.bottom, 56)
+        }
+        .background(PoemeryTheme.background)
+        .navigationTitle(author.name)
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var poemList: some View {
@@ -195,6 +345,56 @@ struct AuthorDetailContent: View {
                 }
                 .groupedListBackground()
             }
+        }
+    }
+}
+
+struct AuthorHeader: View {
+    let author: AuthorResult
+
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(PoemeryTheme.groupedBackground)
+
+                Text(String(author.name.prefix(1)))
+                    .font(PoemeryTheme.chineseFont(size: 40, relativeTo: .largeTitle))
+                    .foregroundStyle(PoemeryTheme.accent)
+            }
+            .frame(width: 82, height: 82)
+
+            VStack(alignment: .leading, spacing: 7) {
+                Text(author.name)
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                Text("\(author.dynasty) · \(author.poemCount) 首作品")
+                    .font(.headline)
+                    .foregroundStyle(PoemeryTheme.secondaryText)
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
+struct AuthorIntroduction: View {
+    let author: AuthorResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "作者简介")
+
+            Text(author.introduction)
+                .font(.body)
+                .foregroundStyle(PoemeryTheme.secondaryText)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .groupedListBackground()
         }
     }
 }

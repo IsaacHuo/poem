@@ -22,7 +22,7 @@ struct DiscoverScreen: View {
                 }
                 .screenContentPadding()
             }
-            .navigationTitle("新发现")
+            .navigationTitle("资料库")
             .navigationBarTitleDisplayMode(.large)
             .scrollIndicators(.hidden)
             .background(PoemeryTheme.background)

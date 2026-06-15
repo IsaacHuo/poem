@@ -5,9 +5,12 @@ struct PoemTextSection: View {
     let highlightedLineID: PoemLine.ID?
     @Binding var selectedAnnotation: PoemAnnotation?
 
+    @AppStorage(PoemTextSizePreference.storageKey) private var poemTextSize = PoemTextSizePreference.defaultValue
+    @Environment(\.chineseScriptPreference) private var script
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            SectionTitle(title: "正文", showsChevron: false)
+            SectionTitle(title: script.converted("正文"), showsChevron: false)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             ViewThatFits(in: .horizontal) {
@@ -30,6 +33,7 @@ struct PoemTextSection: View {
                     line: line,
                     displayedLines: layout.displayLines(for: line),
                     allowsTextWrapping: allowsTextWrapping,
+                    fontSize: CGFloat(PoemTextSizePreference.clamped(poemTextSize)),
                     isHighlighted: line.id == highlightedLineID,
                     annotations: poem.annotations(for: line.id),
                     selectedAnnotation: $selectedAnnotation
@@ -43,6 +47,7 @@ private struct PoemLineTextBlock: View {
     let line: PoemLine
     let displayedLines: [String]
     let allowsTextWrapping: Bool
+    let fontSize: CGFloat
     let isHighlighted: Bool
     let annotations: [PoemAnnotation]
     @Binding var selectedAnnotation: PoemAnnotation?
@@ -92,10 +97,11 @@ private struct PoemLineTextBlock: View {
 
     private func poemText(_ text: String) -> some View {
         Text(text)
-            .font(PoemeryTheme.chineseFont(size: 25, relativeTo: .title3))
+            .font(PoemeryTheme.chineseFont(size: fontSize, relativeTo: .title3))
             .foregroundStyle(isHighlighted ? PoemeryTheme.accent : PoemeryTheme.primaryText)
             .multilineTextAlignment(.center)
-            .lineSpacing(11)
+            .lineSpacing(max(8, fontSize * 0.42))
+            .textSelection(.enabled)
     }
 }
 

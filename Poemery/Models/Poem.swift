@@ -18,6 +18,7 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
     let themes: [String]
     let difficulty: Int
     let canonicalKey: String
+    let searchMatch: SearchMatchSnippet?
 
     init(
         id: String,
@@ -36,7 +37,8 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         editorialSummary: String? = nil,
         themes: [String]? = nil,
         difficulty: Int? = nil,
-        canonicalKey: String? = nil
+        canonicalKey: String? = nil,
+        searchMatch: SearchMatchSnippet? = nil
     ) {
         self.id = id
         self.title = title
@@ -61,6 +63,7 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         self.themes = themes?.isEmpty == false ? themes ?? [] : Self.defaultThemes(tags: tags, dynasty: dynasty, form: form)
         self.difficulty = difficulty ?? Self.defaultDifficulty(form: form, lines: lines)
         self.canonicalKey = canonicalKey ?? Self.defaultCanonicalKey(dynasty: dynasty, author: author, title: title)
+        self.searchMatch = searchMatch
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -81,6 +84,7 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         case themes
         case difficulty
         case canonicalKey
+        case searchMatch
     }
 
     init(from decoder: Decoder) throws {
@@ -92,8 +96,8 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         let form = try container.decode(String.self, forKey: .form)
         let tags = try container.decode([String].self, forKey: .tags)
         let summary = try container.decode(String.self, forKey: .summary)
-        let lines = try container.decode([PoemLine].self, forKey: .lines)
-        let annotations = try container.decode([PoemAnnotation].self, forKey: .annotations)
+        let lines = try container.decodeIfPresent([PoemLine].self, forKey: .lines) ?? []
+        let annotations = try container.decodeIfPresent([PoemAnnotation].self, forKey: .annotations) ?? []
         let sourceURL = try container.decodeIfPresent(URL.self, forKey: .sourceURL)
         let artworkStyle = try container.decode(ArtworkStyle.self, forKey: .artworkStyle)
 
@@ -114,7 +118,8 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
             editorialSummary: try container.decodeIfPresent(String.self, forKey: .editorialSummary),
             themes: try container.decodeIfPresent([String].self, forKey: .themes),
             difficulty: try container.decodeIfPresent(Int.self, forKey: .difficulty),
-            canonicalKey: try container.decodeIfPresent(String.self, forKey: .canonicalKey)
+            canonicalKey: try container.decodeIfPresent(String.self, forKey: .canonicalKey),
+            searchMatch: try container.decodeIfPresent(SearchMatchSnippet.self, forKey: .searchMatch)
         )
     }
 
@@ -135,6 +140,29 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
 
     func annotations(for lineID: PoemLine.ID) -> [PoemAnnotation] {
         annotations.filter { $0.lineID == lineID }
+    }
+
+    func withSearchMatch(_ searchMatch: SearchMatchSnippet?) -> Poem {
+        Poem(
+            id: id,
+            title: title,
+            author: author,
+            dynasty: dynasty,
+            form: form,
+            tags: tags,
+            summary: summary,
+            lines: lines,
+            annotations: annotations,
+            sourceURL: sourceURL,
+            artworkStyle: artworkStyle,
+            sourceName: sourceName,
+            sourceLicense: sourceLicense,
+            editorialSummary: editorialSummary,
+            themes: themes,
+            difficulty: difficulty,
+            canonicalKey: canonicalKey,
+            searchMatch: searchMatch
+        )
     }
 
     private static func defaultThemes(tags: [String], dynasty: String, form: String) -> [String] {
@@ -215,8 +243,50 @@ struct PoemCollection: Identifiable, Codable, Hashable, Sendable {
     let title: String
     let subtitle: String
     let kind: CollectionKind
+    let poemCount: Int
     let poemIDs: [Poem.ID]
     let accent: ArtworkStyle
+
+    init(
+        id: String,
+        title: String,
+        subtitle: String,
+        kind: CollectionKind,
+        poemCount: Int? = nil,
+        poemIDs: [Poem.ID],
+        accent: ArtworkStyle
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.kind = kind
+        self.poemCount = poemCount ?? poemIDs.count
+        self.poemIDs = poemIDs
+        self.accent = accent
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case subtitle
+        case kind
+        case poemCount
+        case poemIDs
+        case accent
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let poemIDs = try container.decodeIfPresent([Poem.ID].self, forKey: .poemIDs) ?? []
+
+        self.id = try container.decode(String.self, forKey: .id)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.subtitle = try container.decode(String.self, forKey: .subtitle)
+        self.kind = try container.decode(CollectionKind.self, forKey: .kind)
+        self.poemCount = try container.decodeIfPresent(Int.self, forKey: .poemCount) ?? poemIDs.count
+        self.poemIDs = poemIDs
+        self.accent = try container.decode(ArtworkStyle.self, forKey: .accent)
+    }
 }
 
 enum CollectionKind: String, Codable, CaseIterable, Hashable, Sendable {
@@ -250,14 +320,34 @@ struct PoemListItem: Identifiable, Hashable, Sendable {
     let dynasty: String
     let form: String
     let artworkStyle: ArtworkStyle
+    let searchMatch: SearchMatchSnippet?
 
-    init(poem: Poem) {
+    init(
+        id: Poem.ID,
+        title: String,
+        author: String,
+        dynasty: String,
+        form: String,
+        artworkStyle: ArtworkStyle,
+        searchMatch: SearchMatchSnippet? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.author = author
+        self.dynasty = dynasty
+        self.form = form
+        self.artworkStyle = artworkStyle
+        self.searchMatch = searchMatch
+    }
+
+    init(poem: Poem, searchMatch: SearchMatchSnippet? = nil) {
         self.id = poem.id
         self.title = poem.title
         self.author = poem.author
         self.dynasty = poem.dynasty
         self.form = poem.form
         self.artworkStyle = poem.artworkStyle
+        self.searchMatch = searchMatch ?? poem.searchMatch
     }
 
     var displayArtist: String {
@@ -270,6 +360,31 @@ struct PoemListItem: Identifiable, Hashable, Sendable {
             baseGlyph: ArtworkStyle.firstCJKGlyph(in: title) ?? artworkStyle.glyph
         )
     }
+
+    func withSearchMatch(_ searchMatch: SearchMatchSnippet?) -> PoemListItem {
+        PoemListItem(
+            id: id,
+            title: title,
+            author: author,
+            dynasty: dynasty,
+            form: form,
+            artworkStyle: artworkStyle,
+            searchMatch: searchMatch
+        )
+    }
+}
+
+enum SearchMatchKind: String, Codable, Hashable, Sendable {
+    case title
+    case author
+    case content
+    case metadata
+}
+
+struct SearchMatchSnippet: Codable, Hashable, Sendable {
+    let kind: SearchMatchKind
+    let text: String
+    let highlightedQuery: String
 }
 
 struct ArtworkStyle: Codable, Hashable, Sendable {
@@ -354,6 +469,18 @@ struct PoemSeedCatalog: Codable, Sendable {
     let categories: [PoemCategory]
 }
 
+struct PoemeryStats: Codable, Sendable {
+    let totalPoems: Int
+    let totalAuthors: Int
+    let totalCollections: Int
+    let totalCategories: Int
+}
+
+struct PoemeryBootstrapSnapshot: Sendable {
+    let stats: PoemeryStats
+    let catalog: PoemSeedCatalog
+}
+
 struct SearchResults: Sendable {
     var poems: [Poem] = []
     var authors: [AuthorResult] = []
@@ -377,22 +504,87 @@ struct SearchResultsPage: Sendable {
     }
 
     func appending(_ page: SearchResultsPage) -> SearchResultsPage {
-        SearchResultsPage(
+        let combinedPoemIDs: [Poem.ID]
+        if poemIDs.count == poems.count {
+            combinedPoemIDs = poemIDs + page.poemIDs
+        } else {
+            combinedPoemIDs = poemIDs.isEmpty ? page.poemIDs : poemIDs
+        }
+
+        return SearchResultsPage(
             poems: poems + page.poems,
             authors: authors.isEmpty ? page.authors : authors,
             collections: collections.isEmpty ? page.collections : collections,
             totalPoemCount: max(totalPoemCount, page.totalPoemCount),
             nextOffset: page.nextOffset,
-            poemIDs: poemIDs.isEmpty ? page.poemIDs : poemIDs
+            poemIDs: combinedPoemIDs
         )
     }
 }
 
-struct AuthorResult: Identifiable, Hashable, Sendable {
+struct PagedPoems: Sendable {
+    let poems: [Poem]
+    let page: Int
+    let totalPages: Int
+    let total: Int
+
+    var hasNextPage: Bool {
+        page < totalPages
+    }
+
+    var nextPage: Int? {
+        hasNextPage ? page + 1 : nil
+    }
+}
+
+struct PagedAuthors: Sendable {
+    let authors: [AuthorResult]
+    let page: Int
+    let totalPages: Int
+    let total: Int
+
+    var hasNextPage: Bool {
+        page < totalPages
+    }
+
+    var nextPage: Int? {
+        hasNextPage ? page + 1 : nil
+    }
+}
+
+struct AuthorResult: Identifiable, Codable, Hashable, Sendable {
     let id: String
     let name: String
     let dynasty: String
+    let poemCount: Int
     let poems: [Poem]
+
+    init(id: String, name: String, dynasty: String, poemCount: Int? = nil, poems: [Poem]) {
+        self.id = id
+        self.name = name
+        self.dynasty = dynasty
+        self.poemCount = poemCount ?? poems.count
+        self.poems = poems
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case dynasty
+        case poemCount
+        case poems
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let poems = try container.decodeIfPresent([Poem].self, forKey: .poems) ?? []
+
+        self.id = try container.decode(String.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.dynasty = try container.decode(String.self, forKey: .dynasty)
+        self.poemCount = try container.decodeIfPresent(Int.self, forKey: .poemCount) ?? poems.count
+        self.poems = poems
+    }
 
     var introduction: String {
         if let introduction = Self.introductions[name] {
@@ -404,7 +596,7 @@ struct AuthorResult: Identifiable, Hashable, Sendable {
         }
 
         let era = dynasty.isEmpty ? "" : "\(dynasty)代"
-        let countText = poems.isEmpty ? "暂无收录作品" : "当前诗库收录 \(poems.count) 首作品"
+        let countText = poemCount == 0 ? "暂无收录作品" : "当前诗库收录 \(poemCount) 首作品"
         return "\(era)作者。\(countText)，可从作品列表继续阅读相关作品。"
     }
 

@@ -11,6 +11,7 @@ struct ContentView: View {
 
     var body: some View {
         content
+            .environment(\.chineseScriptPreference, chineseScriptPreference)
             .tint(PoemeryTheme.accent)
             .toolbarBackground(.ultraThinMaterial, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
@@ -73,7 +74,7 @@ struct ContentView: View {
             legacyTabView(library: library)
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     readingFallbackAccessory(library: library)
-            }
+                }
         }
     }
 
@@ -98,21 +99,13 @@ struct ContentView: View {
                 )
             }
 
-            legacyTabScreen(.library) {
-                LibraryScreen(
-                    library: library,
-                    session: session,
-                    onOpenPoem: openPoem,
-                    onOpenCollection: openCollection
-                )
-            }
-
             legacyTabScreen(.profile) {
                 ProfileScreen(
                     library: library,
                     session: session,
                     onOpenPoem: openPoem,
-                    onOpenCollection: openCollection
+                    onOpenCollection: openCollection,
+                    onRefresh: { await refreshLibrary(library) }
                 )
             }
 
@@ -132,7 +125,7 @@ struct ContentView: View {
     @available(iOS 18.0, *)
     private func modernTabView(library: PoemLibraryStore) -> some View {
         TabView(selection: $selectedTab) {
-            Tab(AppTab.home.title, systemImage: AppTab.home.symbol, value: AppTab.home) {
+            Tab(chineseScriptPreference.converted(AppTab.home.title), systemImage: AppTab.home.symbol, value: AppTab.home) {
                 tabContent {
                     HomeScreen(
                         library: library,
@@ -144,7 +137,7 @@ struct ContentView: View {
                 }
             }
 
-            Tab(AppTab.discover.title, systemImage: AppTab.discover.symbol, value: AppTab.discover) {
+            Tab(chineseScriptPreference.converted(AppTab.discover.title), systemImage: AppTab.discover.symbol, value: AppTab.discover) {
                 tabContent {
                     DiscoverScreen(
                         library: library,
@@ -155,29 +148,19 @@ struct ContentView: View {
                 }
             }
 
-            Tab(AppTab.library.title, systemImage: AppTab.library.symbol, value: AppTab.library) {
-                tabContent {
-                    LibraryScreen(
-                        library: library,
-                        session: session,
-                        onOpenPoem: openPoem,
-                        onOpenCollection: openCollection
-                    )
-                }
-            }
-
-            Tab(AppTab.profile.title, systemImage: AppTab.profile.symbol, value: AppTab.profile) {
+            Tab(chineseScriptPreference.converted(AppTab.profile.title), systemImage: AppTab.profile.symbol, value: AppTab.profile) {
                 tabContent {
                     ProfileScreen(
                         library: library,
                         session: session,
                         onOpenPoem: openPoem,
-                        onOpenCollection: openCollection
+                        onOpenCollection: openCollection,
+                        onRefresh: { await refreshLibrary(library) }
                     )
                 }
             }
 
-            Tab(AppTab.search.title, systemImage: AppTab.search.symbol, value: AppTab.search, role: .search) {
+            Tab(chineseScriptPreference.converted(AppTab.search.title), systemImage: AppTab.search.symbol, value: AppTab.search, role: .search) {
                 tabContent {
                     SearchScreen(
                         library: library,
@@ -217,7 +200,7 @@ struct ContentView: View {
         }
         .tag(tab)
         .tabItem {
-            Label(tab.title, systemImage: tab.symbol)
+            Label(chineseScriptPreference.converted(tab.title), systemImage: tab.symbol)
         }
     }
 
@@ -260,11 +243,11 @@ struct ContentView: View {
     }
 
     private func openCollection(_ collection: PoemCollection) {
-        presentedItem = .collection(collection)
+        presentedItem = .collection(collection.id)
     }
 
     private func openAuthor(_ author: AuthorResult) {
-        presentedItem = .author(author)
+        presentedItem = .author(author.id)
     }
 
     private func startSearch(_ query: String) {
@@ -287,14 +270,28 @@ struct ContentView: View {
                     library: library,
                     session: session
                 )
-            case .collection(let collection):
-                CollectionDetailView(
-                    collection: collection,
-                    poems: library.poems(for: collection),
-                    onOpenPoem: openPoemFromPresentedItem
-                )
-            case .author(let author):
-                AuthorDetailView(author: author, onOpenPoem: openPoemFromPresentedItem)
+            case .collection(let collectionID):
+                if let collection = library.collection(id: collectionID) {
+                    CollectionDetailView(
+                        collection: collection,
+                        library: library,
+                        onOpenPoem: openPoemFromPresentedItem
+                    )
+                } else {
+                    EmptyLibraryState(
+                        title: chineseScriptPreference.converted("未找到诗单"),
+                        subtitle: chineseScriptPreference.converted("这个诗单条目已经不可用。")
+                    )
+                }
+            case .author(let authorID):
+                if let author = library.author(id: authorID) {
+                    AuthorDetailView(author: author, library: library, onOpenPoem: openPoemFromPresentedItem)
+                } else {
+                    EmptyLibraryState(
+                        title: chineseScriptPreference.converted("未找到作者"),
+                        subtitle: chineseScriptPreference.converted("这个作者条目已经不可用。")
+                    )
+                }
             }
         } else {
             EmptyView()
@@ -319,6 +316,10 @@ struct ContentView: View {
             libraryLoadState = .failed
         }
     }
+
+    private func refreshLibrary(_ library: PoemLibraryStore) async {
+        await loadLibrary()
+    }
 }
 
 private enum LibraryLoadState {
@@ -335,6 +336,7 @@ private enum LibraryLoadState {
 }
 
 private struct LibraryLoadingScreen: View {
+    @Environment(\.chineseScriptPreference) private var script
     @State private var recommendation = LoadingPoemRecommendation.random()
 
     var body: some View {
@@ -342,33 +344,33 @@ private struct LibraryLoadingScreen: View {
             Spacer(minLength: 32)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("诗境")
+                Text(script.converted("诗境"))
                     .font(.system(size: 42, weight: .bold))
                     .foregroundStyle(PoemeryTheme.primaryText)
 
-                Text("正在整理离线诗库")
+                Text(script.converted("正在连接诗库"))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PoemeryTheme.secondaryText)
             }
 
             VStack(alignment: .leading, spacing: 18) {
-                Text("今日推荐")
+                Text(script.converted("今日推荐"))
                     .font(.caption.weight(.bold))
                     .foregroundStyle(PoemeryTheme.accent)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(recommendation.title)
+                    Text(script.converted(recommendation.title))
                         .font(.system(size: 34, weight: .bold))
                         .foregroundStyle(PoemeryTheme.primaryText)
 
-                    Text(recommendation.attribution)
+                    Text(script.converted(recommendation.attribution))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(PoemeryTheme.secondaryText)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(recommendation.lines, id: \.self) { line in
-                        Text(line)
+                        Text(script.converted(line))
                     }
                 }
                 .font(.title3.weight(.medium))
@@ -384,14 +386,14 @@ private struct LibraryLoadingScreen: View {
             }
 
             VStack(alignment: .leading, spacing: 14) {
-                Text("正在准备书架")
+                Text(script.converted("正在准备书架"))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(PoemeryTheme.primaryText)
 
                 HStack(spacing: 14) {
-                    LoadingShelfCard(title: "唐诗", color: PoemeryTheme.cinnabar)
-                    LoadingShelfCard(title: "宋词", color: PoemeryTheme.moon)
-                    LoadingShelfCard(title: "元曲", color: PoemeryTheme.agedPaper)
+                    LoadingShelfCard(title: script.converted("唐诗"), color: PoemeryTheme.cinnabar)
+                    LoadingShelfCard(title: script.converted("宋词"), color: PoemeryTheme.moon)
+                    LoadingShelfCard(title: script.converted("元曲"), color: PoemeryTheme.agedPaper)
                 }
             }
 
@@ -399,7 +401,7 @@ private struct LibraryLoadingScreen: View {
                 ProgressView()
                     .tint(PoemeryTheme.accent)
 
-                Text("加载完整诗库中")
+                Text(script.converted("加载本地诗库中"))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(PoemeryTheme.tertiaryText)
             }
@@ -410,7 +412,7 @@ private struct LibraryLoadingScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(PoemeryTheme.background.ignoresSafeArea())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("诗境正在加载完整诗库，今日推荐\(recommendation.title)")
+        .accessibilityLabel(script.converted("诗境正在加载本地诗库，今日推荐\(recommendation.title)"))
     }
 }
 
@@ -475,21 +477,22 @@ private struct LoadingShelfCard: View {
 
 private struct LibraryLoadFailedScreen: View {
     let onRetry: () -> Void
+    @Environment(\.chineseScriptPreference) private var script
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Spacer()
 
-            Text("诗库暂时没有加载成功")
+            Text(script.converted("诗库暂时没有加载成功"))
                 .font(.title2.weight(.bold))
                 .foregroundStyle(PoemeryTheme.primaryText)
 
-            Text("请稍后重试。你的收藏和最近阅读记录仍保存在本机。")
+            Text(script.converted("请稍后重试。你的收藏和最近阅读记录仍保存在本机。"))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.secondaryText)
 
             Button(action: onRetry) {
-                Label("重新加载", systemImage: "arrow.clockwise")
+                Label(script.converted("重新加载"), systemImage: "arrow.clockwise")
                     .font(.subheadline.weight(.bold))
             }
             .buttonStyle(.borderedProminent)
@@ -505,14 +508,14 @@ private struct LibraryLoadFailedScreen: View {
 
 private enum PresentedLibraryItem: Identifiable {
     case poem(Poem.ID, ReadingQueue)
-    case collection(PoemCollection)
-    case author(AuthorResult)
+    case collection(PoemCollection.ID)
+    case author(AuthorResult.ID)
 
     var id: String {
         switch self {
         case .poem(let poemID, let queue): "poem-\(queue.id)-\(poemID)"
-        case .collection(let collection): "collection-\(collection.id)"
-        case .author(let author): "author-\(author.id)"
+        case .collection(let collectionID): "collection-\(collectionID)"
+        case .author(let authorID): "author-\(authorID)"
         }
     }
 }
@@ -520,7 +523,6 @@ private enum PresentedLibraryItem: Identifiable {
 private enum AppTab: String, Identifiable {
     case home
     case discover
-    case library
     case profile
     case search
 
@@ -529,8 +531,7 @@ private enum AppTab: String, Identifiable {
     var title: String {
         switch self {
         case .home: "主页"
-        case .discover: "新发现"
-        case .library: "资料库"
+        case .discover: "资料库"
         case .profile: "我的"
         case .search: "搜索"
         }
@@ -539,8 +540,7 @@ private enum AppTab: String, Identifiable {
     var symbol: String {
         switch self {
         case .home: "house.fill"
-        case .discover: "square.grid.2x2.fill"
-        case .library: "books.vertical.fill"
+        case .discover: "books.vertical.fill"
         case .profile: "person.crop.circle.fill"
         case .search: "magnifyingglass"
         }
@@ -558,6 +558,7 @@ private struct SearchScreen: View {
     let onOpenAuthor: (AuthorResult) -> Void
     let onDismissSearch: () -> Void
 
+    @Environment(\.chineseScriptPreference) private var script
     @Environment(\.dismissSearch) private var dismissSearch
     @State private var isSearchPresented = true
     @State private var results = SearchResultsPage()
@@ -581,7 +582,10 @@ private struct SearchScreen: View {
                         if isLoadingFirstPage {
                             SearchLoadingState()
                         } else if results.isEmpty {
-                            EmptyLibraryState(title: "未找到结果", subtitle: "试试诗名、作者、题材或正文里的字句。")
+                            EmptyLibraryState(
+                                title: script.converted("未找到结果"),
+                                subtitle: script.converted("试试诗名、作者、题材或正文里的字句。")
+                            )
                         } else {
                             SearchResultsView(
                                 results: results,
@@ -594,7 +598,7 @@ private struct SearchScreen: View {
                         }
                     } else {
                         PoemListSection(
-                            title: "推荐搜索",
+                            title: script.converted("推荐搜索"),
                             poems: library.popularPoems(limit: 6),
                             onOpenPoem: onOpenPoem
                         )
@@ -606,13 +610,13 @@ private struct SearchScreen: View {
             .simultaneousGesture(dismissSearchDrag)
             .scrollIndicators(.hidden)
             .background(PoemeryTheme.background)
-            .navigationTitle("搜索")
+            .navigationTitle(script.converted("搜索"))
             .navigationBarTitleDisplayMode(.large)
             .searchable(
                 text: $searchText,
                 isPresented: $isSearchPresented,
                 placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "诗人、诗词、句子、题材"
+                prompt: Text(script.converted("诗人、诗词、句子、题材"))
             )
             .submitLabel(.search)
             .onAppear {
@@ -621,6 +625,9 @@ private struct SearchScreen: View {
             }
             .onChange(of: searchText) {
                 scheduleSearch(debounced: true)
+            }
+            .onChange(of: script) {
+                scheduleSearch(debounced: false)
             }
             .onDisappear {
                 searchTask?.cancel()
@@ -671,7 +678,7 @@ private struct SearchScreen: View {
                 }
             }
 
-            let page = await library.searchPage(query, limit: Self.searchPageSize)
+            let page = await library.searchPage(query, limit: Self.searchPageSize, script: script)
             guard !Task.isCancelled, query == trimmedSearchText else {
                 return
             }
@@ -694,7 +701,8 @@ private struct SearchScreen: View {
             let page = await library.searchPage(
                 query,
                 offset: nextOffset,
-                limit: Self.searchPageSize
+                limit: Self.searchPageSize,
+                script: script
             )
             guard !Task.isCancelled, query == trimmedSearchText else {
                 return
@@ -718,12 +726,14 @@ private struct SearchScreen: View {
 }
 
 private struct SearchLoadingState: View {
+    @Environment(\.chineseScriptPreference) private var script
+
     var body: some View {
         HStack(spacing: 10) {
             ProgressView()
                 .tint(PoemeryTheme.accent)
 
-            Text("正在搜索诗库")
+            Text(script.converted("正在搜索诗库"))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.secondaryText)
         }
@@ -774,6 +784,8 @@ private struct ReadingAccessoryContent: View {
     let onOpenPoem: () -> Void
     let onMoveNext: () -> Void
 
+    @Environment(\.chineseScriptPreference) private var script
+
     var body: some View {
         Group {
             if let poem {
@@ -810,7 +822,7 @@ private struct ReadingAccessoryContent: View {
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("当前阅读，\(poem.title)，\(subtitle(for: poem))")
+            .accessibilityLabel(script.converted("当前阅读，\(poem.title)，\(subtitle(for: poem))"))
 
             Spacer(minLength: 12)
 
@@ -822,7 +834,7 @@ private struct ReadingAccessoryContent: View {
             }
             .buttonStyle(.plain)
             .disabled(!canMoveNext)
-            .accessibilityLabel("下一首")
+            .accessibilityLabel(script.converted("下一首"))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -850,23 +862,23 @@ private struct ReadingAccessoryContent: View {
             }
             .buttonStyle(.plain)
             .disabled(!canMoveNext)
-            .accessibilityLabel("下一首")
+            .accessibilityLabel(script.converted("下一首"))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
     }
 
     private var compactPlaceholder: some View {
-        Text("开始阅读")
+        Text(script.converted("开始阅读"))
             .font(.headline.weight(.semibold))
             .foregroundStyle(PoemeryTheme.primaryText)
             .lineLimit(1)
-            .accessibilityLabel("开始阅读")
+            .accessibilityLabel(script.converted("开始阅读"))
     }
 
     private func subtitle(for poem: Poem) -> String {
         if let queue {
-            return "\(queue.title) · \(poem.displayArtist)"
+            return "\(script.converted(queue.title)) · \(poem.displayArtist)"
         }
         return poem.displayArtist
     }

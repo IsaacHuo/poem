@@ -5,10 +5,14 @@ struct ProfileScreen: View {
     let session: ReadingSessionStore
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
+    let onRefresh: @Sendable () async -> Void
 
     @AppStorage("poemery.profile.displayName") private var displayName = "诗笺用户"
     @AppStorage("poemery.profile.signature") private var signature = "把喜欢的诗词留在本机"
     @AppStorage("poemery.profile.avatarSymbol") private var avatarSymbol = "person.fill"
+    @AppStorage(ChineseScriptPreference.storageKey) private var chineseScriptRawValue = ChineseScriptPreference.simplified.rawValue
+    @AppStorage(PoemTextSizePreference.storageKey) private var poemTextSize = PoemTextSizePreference.defaultValue
+    @Environment(\.chineseScriptPreference) private var script
     @State private var pendingResetAction: ProfileResetAction?
     @State private var isEditingProfile = false
 
@@ -36,16 +40,16 @@ struct ProfileScreen: View {
                 }
         }
         .confirmationDialog(
-            pendingResetAction?.title ?? "清除本机记录",
+            script.converted(pendingResetAction?.title ?? "清除本机记录"),
             isPresented: resetConfirmationBinding,
             titleVisibility: .visible,
             presenting: pendingResetAction
         ) { action in
-            Button(action.title, role: .destructive) {
+            Button(script.converted(action.title), role: .destructive) {
                 performReset(action)
             }
         } message: { action in
-            Text(action.message)
+            Text(script.converted(action.message))
         }
         .sheet(isPresented: $isEditingProfile) {
             ProfileEditorSheet(
@@ -60,11 +64,16 @@ struct ProfileScreen: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 accountSummary
+                librarySettings
+                localDataSettings
+                displaySettings
+                privacySummary
                 readingTaste
             }
             .screenContentPadding()
+            .padding(.bottom, 52)
         }
-        .navigationTitle("我的")
+        .navigationTitle(script.converted("我的"))
         .navigationBarTitleDisplayMode(.large)
         .scrollIndicators(.hidden)
         .background(PoemeryTheme.background)
@@ -73,11 +82,13 @@ struct ProfileScreen: View {
     @ViewBuilder
     private func destinationView(for destination: ProfileDestination) -> some View {
         switch destination {
-        case .settings:
-            ProfileSettingsView(
+        case .library:
+            LibraryScreen(
                 library: library,
                 session: session,
-                pendingResetAction: $pendingResetAction
+                onOpenPoem: onOpenPoem,
+                onOpenCollection: onOpenCollection,
+                onRefresh: onRefresh
             )
         case .dataSource:
             DataSourceNoticeView()
@@ -88,7 +99,7 @@ struct ProfileScreen: View {
 
     private var accountSummary: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "账号摘要", showsChevron: false)
+            SectionTitle(title: script.converted("账号摘要"), showsChevron: false)
 
             VStack(spacing: 0) {
                 Button {
@@ -98,13 +109,13 @@ struct ProfileScreen: View {
                         ProfileAvatar(symbol: avatarSymbol, size: 56)
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(displayName)
+                            Text(script.converted(displayName))
                                 .font(.headline)
                                 .foregroundStyle(PoemeryTheme.primaryText)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.78)
 
-                            Text(signature)
+                            Text(script.converted(signature))
                                 .font(.subheadline)
                                 .foregroundStyle(PoemeryTheme.secondaryText)
                                 .lineLimit(2)
@@ -126,16 +137,151 @@ struct ProfileScreen: View {
                 Divider()
                     .padding(.leading, 82)
 
-                AccountValueRow(symbol: "heart.fill", title: "收藏", value: "\(favoritePoems.count)")
+                AccountValueRow(symbol: "heart.fill", title: script.converted("收藏"), value: "\(favoritePoems.count)")
                 Divider().padding(.leading, 50)
-                AccountValueRow(symbol: "clock.fill", title: "最近阅读", value: "\(recentPoems.count)")
+                AccountValueRow(symbol: "clock.fill", title: script.converted("最近阅读"), value: "\(recentPoems.count)")
+            }
+            .groupedListBackground()
+        }
+    }
+
+    private var librarySettings: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: script.converted("本地诗库"), showsChevron: false)
+
+            VStack(spacing: 0) {
+                NavigationLink(value: ProfileDestination.library) {
+                    ProfileNavigationRow(symbol: "books.vertical.fill", title: script.converted("打开诗库"))
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "text.book.closed.fill", title: script.converted("诗词"), value: "\(library.totalPoemCount)")
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "person.2.fill", title: script.converted("作者"), value: "\(library.totalAuthorCount)")
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "rectangle.stack.fill", title: script.converted("诗单"), value: "\(library.totalCollectionCount)")
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "internaldrive.fill", title: script.converted("离线可用"), value: script.converted("全部"))
                 Divider().padding(.leading, 50)
 
-                NavigationLink(value: ProfileDestination.settings) {
-                    ProfileNavigationRow(
-                        symbol: "gearshape",
-                        title: "本地账号设置"
-                    )
+                NavigationLink(value: ProfileDestination.dataSource) {
+                    ProfileNavigationRow(symbol: "doc.text.magnifyingglass", title: script.converted("数据来源与许可"))
+                }
+                .buttonStyle(.plain)
+            }
+            .groupedListBackground()
+        }
+    }
+
+    private var localDataSettings: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: script.converted("本机数据"), showsChevron: false)
+
+            VStack(spacing: 0) {
+                SettingsValueRow(symbol: "heart.fill", title: script.converted("收藏"), value: "\(session.favoritePoemIDs.count)")
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "clock.fill", title: script.converted("最近阅读"), value: "\(session.recentPoemIDs.count)")
+                Divider().padding(.leading, 50)
+
+                Button(role: .destructive) {
+                    pendingResetAction = .favorites
+                } label: {
+                    SettingsLabelRow(symbol: "heart.slash.fill", title: script.converted("清除收藏"), includesRowPadding: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(session.favoritePoemIDs.isEmpty)
+
+                Divider().padding(.leading, 50)
+
+                Button(role: .destructive) {
+                    pendingResetAction = .recents
+                } label: {
+                    SettingsLabelRow(symbol: "clock.badge.xmark.fill", title: script.converted("清除最近阅读"), includesRowPadding: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(session.recentPoemIDs.isEmpty)
+            }
+            .groupedListBackground()
+        }
+    }
+
+    private var displaySettings: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: script.converted("显示"), showsChevron: false)
+
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(script.converted("繁简体"))
+                        .font(.body)
+                        .foregroundStyle(PoemeryTheme.primaryText)
+
+                    Picker(script.converted("繁简体"), selection: $chineseScriptRawValue) {
+                        ForEach(ChineseScriptPreference.allCases) { script in
+                            Text(script.title).tag(script.rawValue)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "sun.max.fill", title: script.converted("外观"), value: script.converted("浅色纸感"))
+                Divider().padding(.leading, 50)
+                poemTextSizeRow
+            }
+            .groupedListBackground()
+        }
+    }
+
+    private var poemTextSizeRow: some View {
+        HStack(alignment: .center, spacing: 12) {
+            SettingsLabelRow(symbol: "textformat.size", title: script.converted("正文字号"))
+
+            Spacer(minLength: 12)
+
+            Text(PoemTextSizePreference.displayValue(for: poemTextSize))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
+
+            Stepper(
+                script.converted("正文字号"),
+                value: poemTextSizeBinding,
+                in: PoemTextSizePreference.range,
+                step: PoemTextSizePreference.step
+            )
+            .labelsHidden()
+            .fixedSize()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    private var poemTextSizeBinding: Binding<Double> {
+        Binding {
+            PoemTextSizePreference.clamped(poemTextSize)
+        } set: { newValue in
+            poemTextSize = PoemTextSizePreference.clamped(newValue)
+        }
+    }
+
+    private var privacySummary: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: script.converted("隐私"), showsChevron: false)
+
+            VStack(spacing: 0) {
+                SettingsValueRow(symbol: "wifi.slash", title: script.converted("诗库"), value: script.converted("本地离线"))
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "person.crop.circle.badge.xmark", title: script.converted("登录"), value: script.converted("无需"))
+                Divider().padding(.leading, 50)
+
+                NavigationLink(value: ProfileDestination.privacy) {
+                    ProfileNavigationRow(symbol: "hand.raised.fill", title: script.converted("隐私说明"))
                 }
                 .buttonStyle(.plain)
             }
@@ -145,12 +291,12 @@ struct ProfileScreen: View {
 
     private var readingTaste: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "阅读偏好", showsChevron: false)
+            SectionTitle(title: script.converted("阅读偏好"), showsChevron: false)
 
             VStack(alignment: .leading, spacing: 0) {
-                PreferenceRow(title: "常读作者", values: topAuthors)
+                PreferenceRow(title: script.converted("常读作者"), values: topAuthors.map(script.converted))
                 Divider()
-                PreferenceRow(title: "常读体裁", values: topForms)
+                PreferenceRow(title: script.converted("常读体裁"), values: topForms.map(script.converted))
             }
             .groupedListBackground()
         }
@@ -194,6 +340,7 @@ struct ProfileScreen: View {
 private struct ProfileAvatar: View {
     let symbol: String
     let size: CGFloat
+    @Environment(\.chineseScriptPreference) private var script
 
     var body: some View {
         ZStack {
@@ -205,7 +352,7 @@ private struct ProfileAvatar: View {
                 .foregroundStyle(PoemeryTheme.secondaryText)
         }
         .frame(width: size, height: size)
-        .accessibilityLabel("账号头像")
+        .accessibilityLabel(script.converted("账号头像"))
     }
 }
 
@@ -219,7 +366,8 @@ private struct AccountValueRow: View {
             Image(systemName: symbol)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.accent)
-                .frame(width: 24)
+                .frame(width: 24, height: 22, alignment: .center)
+                .baselineOffset(-1)
 
             Text(title)
                 .font(.body)
@@ -247,7 +395,8 @@ private struct ProfileNavigationRow: View {
             Image(systemName: symbol)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.accent)
-                .frame(width: 24)
+                .frame(width: 24, height: 22, alignment: .center)
+                .baselineOffset(-1)
 
             Text(title)
                 .font(.body)
@@ -271,6 +420,7 @@ private struct ProfileEditorSheet: View {
     @Binding var avatarSymbol: String
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.chineseScriptPreference) private var script
     @State private var draftDisplayName: String
     @State private var draftSignature: String
     @State private var draftAvatarSymbol: String
@@ -310,15 +460,15 @@ private struct ProfileEditorSheet: View {
                     .listRowBackground(Color.clear)
                 }
 
-                Section("账号资料") {
-                    TextField("昵称", text: $draftDisplayName)
+                Section(script.converted("账号资料")) {
+                    TextField(script.converted("昵称"), text: $draftDisplayName)
                         .textInputAutocapitalization(.never)
 
-                    TextField("签名", text: $draftSignature, axis: .vertical)
+                    TextField(script.converted("签名"), text: $draftSignature, axis: .vertical)
                         .lineLimit(2...3)
                 }
 
-                Section("头像") {
+                Section(script.converted("头像")) {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 5), spacing: 12) {
                         ForEach(avatarOptions, id: \.self) { symbol in
                             Button {
@@ -334,23 +484,23 @@ private struct ProfileEditorSheet: View {
                                     )
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("头像")
+                            .accessibilityLabel(script.converted("头像"))
                         }
                     }
                     .padding(.vertical, 4)
                 }
             }
-            .navigationTitle("编辑资料")
+            .navigationTitle(script.converted("编辑资料"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
+                    Button(script.converted("取消")) {
                         dismiss()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") {
+                    Button(script.converted("完成")) {
                         save()
                     }
                 }
@@ -362,8 +512,8 @@ private struct ProfileEditorSheet: View {
     private func save() {
         let trimmedName = draftDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedSignature = draftSignature.trimmingCharacters(in: .whitespacesAndNewlines)
-        displayName = trimmedName.isEmpty ? "诗笺用户" : trimmedName
-        signature = trimmedSignature.isEmpty ? "把喜欢的诗词留在本机" : trimmedSignature
+        displayName = trimmedName.isEmpty ? script.converted("诗笺用户") : trimmedName
+        signature = trimmedSignature.isEmpty ? script.converted("把喜欢的诗词留在本机") : trimmedSignature
         avatarSymbol = draftAvatarSymbol
         dismiss()
     }
@@ -372,6 +522,7 @@ private struct ProfileEditorSheet: View {
 private struct PreferenceRow: View {
     let title: String
     let values: [String]
+    @Environment(\.chineseScriptPreference) private var script
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
@@ -391,6 +542,6 @@ private struct PreferenceRow: View {
     }
 
     private var displayValue: String {
-        values.isEmpty ? "暂无记录" : values.joined(separator: " · ")
+        values.isEmpty ? script.converted("暂无记录") : values.joined(separator: " · ")
     }
 }

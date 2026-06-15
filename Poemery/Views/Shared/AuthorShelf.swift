@@ -27,7 +27,7 @@ struct AuthorShelf: View {
                                 Text(author.name)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(PoemeryTheme.primaryText)
-                                Text("\(author.dynasty) · \(author.poems.count) 首")
+                                Text("\(author.dynasty) · \(author.poemCount) 首")
                                     .font(.caption)
                                     .foregroundStyle(PoemeryTheme.secondaryText)
                             }

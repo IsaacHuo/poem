@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum ProfileDestination: Hashable {
-    case settings
+    case library
     case dataSource
     case privacy
 }
@@ -32,81 +32,19 @@ enum ProfileResetAction: Identifiable {
     }
 }
 
-struct ProfileSettingsView: View {
-    let library: PoemLibraryStore
-    let session: ReadingSessionStore
-    @Binding var pendingResetAction: ProfileResetAction?
-    @AppStorage(ChineseScriptPreference.storageKey) private var chineseScriptRawValue = ChineseScriptPreference.simplified.rawValue
-
-    var body: some View {
-        List {
-            Section("本地诗库") {
-                SettingsValueRow(symbol: "text.book.closed.fill", title: "诗词", value: "\(library.poems.count)")
-                SettingsValueRow(symbol: "person.2.fill", title: "作者", value: "\(library.authors().count)")
-                SettingsValueRow(symbol: "rectangle.stack.fill", title: "诗单", value: "\(library.collections.count)")
-
-                NavigationLink(value: ProfileDestination.dataSource) {
-                    SettingsLabelRow(symbol: "doc.text.magnifyingglass", title: "数据来源与许可")
-                }
-            }
-
-            Section("本机数据") {
-                SettingsValueRow(symbol: "heart.fill", title: "收藏", value: "\(session.favoritePoemIDs.count)")
-                SettingsValueRow(symbol: "clock.fill", title: "最近阅读", value: "\(session.recentPoemIDs.count)")
-
-                Button(role: .destructive) {
-                    pendingResetAction = .favorites
-                } label: {
-                    SettingsLabelRow(symbol: "heart.slash.fill", title: "清除收藏")
-                }
-                .disabled(session.favoritePoemIDs.isEmpty)
-
-                Button(role: .destructive) {
-                    pendingResetAction = .recents
-                } label: {
-                    SettingsLabelRow(symbol: "clock.badge.xmark.fill", title: "清除最近阅读")
-                }
-                .disabled(session.recentPoemIDs.isEmpty)
-            }
-
-            Section("显示") {
-                Picker("繁简体", selection: $chineseScriptRawValue) {
-                    ForEach(ChineseScriptPreference.allCases) { script in
-                        Text(script.title).tag(script.rawValue)
-                    }
-                }
-                .pickerStyle(.segmented)
-
-                SettingsValueRow(symbol: "sun.max.fill", title: "外观", value: "浅色纸感")
-                SettingsValueRow(symbol: "textformat.size", title: "文字", value: "跟随系统动态字体")
-            }
-
-            Section("隐私") {
-                NavigationLink(value: ProfileDestination.privacy) {
-                    SettingsLabelRow(symbol: "hand.raised.fill", title: "隐私说明")
-                }
-                SettingsValueRow(symbol: "wifi.slash", title: "网络", value: "离线可用")
-                SettingsValueRow(symbol: "person.crop.circle.badge.xmark", title: "远程登录", value: "无需")
-            }
-        }
-        .navigationTitle("设置")
-        .navigationBarTitleDisplayMode(.large)
-        .background(PoemeryTheme.background)
-    }
-}
-
 struct DataSourceNoticeView: View {
     private let noticeText = DataSourceNoticeView.loadNoticeText()
+    @Environment(\.chineseScriptPreference) private var script
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Poemery 使用随 App 打包的离线诗词数据。")
+                    Text(script.converted("Poemery 使用随 App 打包的本地诗词数据。"))
                         .font(.headline)
                         .foregroundStyle(PoemeryTheme.primaryText)
 
-                    Text("内容来自 chinese-poetry/chinese-poetry 的固定版本，App 不在运行时联网更新诗库。")
+                    Text(script.converted("内容来自 chinese-poetry/chinese-poetry 的固定版本，阅读和搜索不会在运行时请求远端诗库。"))
                         .font(.subheadline)
                         .foregroundStyle(PoemeryTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -114,7 +52,7 @@ struct DataSourceNoticeView: View {
                 .padding(16)
                 .groupedListBackground()
 
-                Text(noticeText)
+                Text(script.converted(noticeText))
                     .font(.footnote.monospaced())
                     .foregroundStyle(PoemeryTheme.secondaryText)
                     .textSelection(.enabled)
@@ -124,7 +62,7 @@ struct DataSourceNoticeView: View {
             }
             .screenContentPadding()
         }
-        .navigationTitle("数据来源")
+        .navigationTitle(script.converted("数据来源"))
         .navigationBarTitleDisplayMode(.large)
         .scrollIndicators(.hidden)
         .background(PoemeryTheme.background)
@@ -142,53 +80,62 @@ struct DataSourceNoticeView: View {
 }
 
 struct PrivacyOverviewView: View {
+    @Environment(\.chineseScriptPreference) private var script
+
     var body: some View {
         List {
-            Section("免费离线") {
-                SettingsLabelRow(symbol: "wifi.slash", title: "核心阅读和搜索不需要联网")
-                SettingsLabelRow(symbol: "person.crop.circle.badge.xmark", title: "本地账号不需要远程登录")
+            Section(script.converted("免费离线")) {
+                SettingsLabelRow(symbol: "internaldrive.fill", title: script.converted("诗库随 App 保存在本机"))
+                SettingsLabelRow(symbol: "wifi.slash", title: script.converted("核心阅读和搜索不需要联网"))
             }
 
-            Section("本机保存") {
-                SettingsLabelRow(symbol: "heart.fill", title: "收藏保存在本机 UserDefaults")
-                SettingsLabelRow(symbol: "clock.fill", title: "最近阅读保存在本机 UserDefaults")
-                SettingsLabelRow(symbol: "trash.fill", title: "可以在设置中清除本机记录")
+            Section(script.converted("本机保存")) {
+                SettingsLabelRow(symbol: "heart.fill", title: script.converted("收藏保存在本机 UserDefaults"))
+                SettingsLabelRow(symbol: "clock.fill", title: script.converted("最近阅读保存在本机 UserDefaults"))
+                SettingsLabelRow(symbol: "trash.fill", title: script.converted("可以在设置中清除本机记录"))
             }
 
-            Section("数据使用") {
-                SettingsLabelRow(symbol: "hand.raised.fill", title: "不追踪用户")
-                SettingsLabelRow(symbol: "icloud.slash.fill", title: "不上传收藏或最近阅读")
-                SettingsLabelRow(symbol: "bell.slash.fill", title: "不使用推送通知")
+            Section(script.converted("数据使用")) {
+                SettingsLabelRow(symbol: "hand.raised.fill", title: script.converted("不追踪用户"))
+                SettingsLabelRow(symbol: "icloud.slash.fill", title: script.converted("不上传收藏或最近阅读"))
+                SettingsLabelRow(symbol: "bell.slash.fill", title: script.converted("不使用推送通知"))
             }
         }
-        .navigationTitle("隐私说明")
+        .navigationTitle(script.converted("隐私说明"))
         .navigationBarTitleDisplayMode(.large)
         .background(PoemeryTheme.background)
     }
 }
 
-private struct SettingsLabelRow: View {
+struct SettingsLabelRow: View {
     let symbol: String
     let title: String
+    var includesRowPadding = false
 
     var body: some View {
-        Label {
-            Text(title)
-                .foregroundStyle(PoemeryTheme.primaryText)
-        } icon: {
+        HStack(alignment: .center, spacing: 12) {
             Image(systemName: symbol)
+                .font(.body.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.accent)
+                .frame(width: 24, height: 22, alignment: .center)
+                .baselineOffset(-1)
+
+            Text(title)
+                .font(.body)
+                .foregroundStyle(PoemeryTheme.primaryText)
         }
+        .padding(.horizontal, includesRowPadding ? 14 : 0)
+        .padding(.vertical, includesRowPadding ? 11 : 0)
     }
 }
 
-private struct SettingsValueRow: View {
+struct SettingsValueRow: View {
     let symbol: String
     let title: String
     let value: String
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             SettingsLabelRow(symbol: symbol, title: title)
 
             Spacer(minLength: 12)
@@ -198,5 +145,7 @@ private struct SettingsValueRow: View {
                 .foregroundStyle(PoemeryTheme.secondaryText)
                 .multilineTextAlignment(.trailing)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
     }
 }

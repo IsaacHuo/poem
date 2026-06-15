@@ -22,7 +22,6 @@ struct FeaturedCarousel: View {
                             } label: {
                                 FeaturedCollectionCard(
                                     collection: collection,
-                                    poems: library.poems(for: collection),
                                     size: cardSize
                                 )
                             }

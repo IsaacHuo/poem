@@ -1,4 +1,5 @@
 import SwiftUI
+import Photos
 import UIKit
 
 struct PoemDetailView: View {
@@ -8,6 +9,7 @@ struct PoemDetailView: View {
     let session: ReadingSessionStore
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.chineseScriptPreference) private var script
     @State private var currentPoemID: Poem.ID
     @State private var authorPath: [AuthorResult.ID] = []
     @State private var selectedAnnotation: PoemAnnotation?
@@ -48,7 +50,7 @@ struct PoemDetailView: View {
 
     private var queuePositionText: String {
         guard let currentQueueIndex else {
-            return currentQueue.title
+            return script.converted(currentQueue.title)
         }
         return "\(currentQueueIndex + 1) / \(currentQueue.poemIDs.count)"
     }
@@ -64,12 +66,8 @@ struct PoemDetailView: View {
 
                         compactHero
 
-                        PoemTextSection(
-                            poem: visiblePoem,
-                            highlightedLineID: nil,
-                            selectedAnnotation: $selectedAnnotation
-                        )
-                        .gesture(swipeGesture)
+                        poemTextContent
+                            .gesture(swipeGesture)
 
                         RelatedPoemsSection(poems: relatedPoems, onOpenPoem: showRelatedPoem)
                             .frame(maxWidth: 680, alignment: .leading)
@@ -96,7 +94,7 @@ struct PoemDetailView: View {
                         Image(systemName: "xmark")
                             .font(.headline.weight(.semibold))
                     }
-                    .accessibilityLabel("关闭")
+                    .accessibilityLabel(script.converted("关闭"))
                 }
 
                 ToolbarItemGroup(placement: .bottomBar) {
@@ -106,7 +104,7 @@ struct PoemDetailView: View {
                         Image(systemName: "chevron.left")
                     }
                     .disabled(!canMoveInQueue)
-                    .accessibilityLabel("上一首作品")
+                    .accessibilityLabel(script.converted("上一首作品"))
 
                     Spacer()
 
@@ -117,7 +115,7 @@ struct PoemDetailView: View {
                         .monospacedDigit()
                         .frame(minWidth: 132)
                         .fixedSize(horizontal: true, vertical: false)
-                        .accessibilityLabel("\(currentQueue.title)，\(queuePositionText)")
+                        .accessibilityLabel("\(script.converted(currentQueue.title))，\(queuePositionText)")
 
                     Spacer()
 
@@ -127,15 +125,18 @@ struct PoemDetailView: View {
                         Image(systemName: "chevron.right")
                     }
                     .disabled(!canMoveInQueue)
-                    .accessibilityLabel("下一首作品")
+                    .accessibilityLabel(script.converted("下一首作品"))
                 }
             }
             .toolbarBackground(.hidden, for: .bottomBar)
             .navigationDestination(for: AuthorResult.ID.self) { authorID in
                 if let author = library.author(id: authorID) {
-                    AuthorDetailContent(author: author, onOpenPoem: showAuthorPoem)
+                    PagedAuthorDetailContent(author: author, library: library, onOpenPoem: showAuthorPoem)
                 } else {
-                    EmptyLibraryState(title: "未找到作者", subtitle: "这个作者条目已经不可用。")
+                    EmptyLibraryState(
+                        title: script.converted("未找到作者"),
+                        subtitle: script.converted("这个作者条目已经不可用。")
+                    )
                         .padding(20)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(PoemeryTheme.background)
@@ -155,6 +156,30 @@ struct PoemDetailView: View {
                     hasStartedInitialReading = true
                 }
             }
+            .task(id: "\(currentPoemID)|\(script.rawValue)") {
+                await library.loadPoemDetailIfNeeded(id: currentPoemID, script: script)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var poemTextContent: some View {
+        if visiblePoem.lines.isEmpty {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .tint(PoemeryTheme.accent)
+
+                Text(script.converted("正在加载正文"))
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.secondaryText)
+            }
+            .frame(maxWidth: 680, minHeight: 160)
+        } else {
+            PoemTextSection(
+                poem: visiblePoem,
+                highlightedLineID: nil,
+                selectedAnnotation: $selectedAnnotation
+            )
         }
     }
 
@@ -194,7 +219,7 @@ struct PoemDetailView: View {
                 authorAttributionLabel(showsChevron: true)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("查看\(visiblePoem.author)的作者介绍")
+            .accessibilityLabel(script.converted("查看\(visiblePoem.author)的作者介绍"))
         } else {
             authorAttributionLabel(showsChevron: false)
         }
@@ -234,7 +259,7 @@ struct PoemDetailView: View {
                 .background(.regularMaterial, in: Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(session.isFavorite(visiblePoem) ? "取消收藏" : "收藏")
+        .accessibilityLabel(script.converted(session.isFavorite(visiblePoem) ? "取消收藏" : "收藏"))
     }
 
     @ViewBuilder
@@ -245,7 +270,7 @@ struct PoemDetailView: View {
             shareButtonLabel
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("制作分享图片")
+        .accessibilityLabel(script.converted("制作分享图片"))
     }
 
     private var shareButtonLabel: some View {
@@ -278,24 +303,25 @@ struct PoemDetailView: View {
     }
 
     private var detailAttributionText: String {
-        if visiblePoem.form == "词" || visiblePoem.tags.contains("宋词") {
+        if visiblePoem.form == script.converted("词") || visiblePoem.tags.contains(script.converted("宋词")) {
             return "\(visiblePoem.author) · \(visiblePoem.form)"
         }
         return "\(visiblePoem.displayArtist) · \(visiblePoem.form)"
     }
 
     private var shortQueueTitle: String {
-        if currentQueue.title.count > 4 {
-            return String(currentQueue.title.prefix(4))
+        let title = script.converted(currentQueue.title)
+        if title.count > 4 {
+            return String(title.prefix(4))
         }
-        return currentQueue.title
+        return title
     }
 
     private var readerPositionText: String {
         guard let currentQueueIndex else {
-            return "正在阅读"
+            return script.converted("正在阅读")
         }
-        return "第 \(currentQueueIndex + 1) 首 / 共 \(currentQueue.poemIDs.count) 首"
+        return script.converted("第 \(currentQueueIndex + 1) 首 / 共 \(currentQueue.poemIDs.count) 首")
     }
 
     private var relatedPoems: [Poem] {
@@ -366,15 +392,16 @@ private struct PoemShareComposer: View {
     let poem: Poem
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.chineseScriptPreference) private var script
     @State private var selection = PoemShareSelection.whole
     @State private var shareSheetItem: PoemShareSheetItem?
-    @State private var showsExportError = false
+    @State private var saveAlert: PoemShareSaveAlert?
 
-    private var selectedLine: PoemLine? {
-        guard case .line(let lineID) = selection else {
-            return nil
+    private var selectedLines: [PoemLine] {
+        guard case .lines(let lineIDs) = selection else {
+            return []
         }
-        return poem.lines.first { $0.id == lineID }
+        return poem.lines.filter { lineIDs.contains($0.id) }
     }
 
     var body: some View {
@@ -382,7 +409,7 @@ private struct PoemShareComposer: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 18) {
-                        PoemSharePosterPreview(poem: poem, selectedLine: selectedLine)
+                        PoemSharePosterPreview(poem: poem, selectedLines: selectedLines, script: script)
                             .frame(maxWidth: 420)
 
                         selectionSection
@@ -397,7 +424,7 @@ private struct PoemShareComposer: View {
                 shareFooter
             }
             .background(PoemeryTheme.background)
-            .navigationTitle("分享卡片")
+            .navigationTitle(script.converted("分享卡片"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -407,28 +434,30 @@ private struct PoemShareComposer: View {
                         Image(systemName: "xmark")
                             .font(.headline.weight(.semibold))
                     }
-                    .accessibilityLabel("关闭")
+                    .accessibilityLabel(script.converted("关闭"))
                 }
             }
             .sheet(item: $shareSheetItem) { item in
                 PoemShareSheet(item: item)
                     .presentationDetents([.medium, .large])
             }
-            .alert("无法生成图片", isPresented: $showsExportError) {
-                Button("好", role: .cancel) {}
+            .alert(script.converted(saveAlert?.title ?? "分享卡片"), isPresented: saveAlertBinding, presenting: saveAlert) { _ in
+                Button(script.converted("好"), role: .cancel) {}
+            } message: { alert in
+                Text(script.converted(alert.message))
             }
         }
     }
 
     private var selectionSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("内容")
+            Text(script.converted("内容"))
                 .font(.headline.weight(.semibold))
                 .foregroundStyle(PoemeryTheme.primaryText)
 
             VStack(spacing: 0) {
                 selectionButton(
-                    title: "全诗",
+                    title: script.converted("全诗"),
                     subtitle: poem.lines.prefix(3).map(\.text).joined(separator: " / "),
                     isSelected: selection == .whole
                 ) {
@@ -442,9 +471,9 @@ private struct PoemShareComposer: View {
                     selectionButton(
                         title: line.text,
                         subtitle: nil,
-                        isSelected: selection == .line(line.id)
+                        isSelected: selection.contains(line.id)
                     ) {
-                        selection = .line(line.id)
+                        toggleLineSelection(line.id)
                     }
                 }
             }
@@ -493,26 +522,48 @@ private struct PoemShareComposer: View {
         VStack(spacing: 0) {
             Divider()
 
-            Button {
-                exportSelectedImage()
-            } label: {
-                Label("分享图片", systemImage: "square.and.arrow.up")
-                    .font(.headline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+            HStack(spacing: 12) {
+                Button {
+                    saveSelectedImageToPhotos()
+                } label: {
+                    Label(script.converted("保存到相册"), systemImage: "square.and.arrow.down")
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    exportSelectedImage()
+                } label: {
+                    Label(script.converted("分享图片"), systemImage: "square.and.arrow.up")
+                        .font(.headline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(PoemeryTheme.accent)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(PoemeryTheme.accent)
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
         }
         .background(.regularMaterial)
     }
 
+    private var saveAlertBinding: Binding<Bool> {
+        Binding {
+            saveAlert != nil
+        } set: { isPresented in
+            if !isPresented {
+                saveAlert = nil
+            }
+        }
+    }
+
     @MainActor
     private func exportSelectedImage() {
-        guard let image = PoemShareImage.render(poem: poem, selectedLine: selectedLine) else {
-            showsExportError = true
+        guard let image = PoemShareImage.render(poem: poem, selectedLines: selectedLines, script: script) else {
+            saveAlert = .exportFailed
             return
         }
 
@@ -522,19 +573,104 @@ private struct PoemShareComposer: View {
                 url: try image.writeTemporaryFile()
             )
         } catch {
-            showsExportError = true
+            saveAlert = .exportFailed
         }
+    }
+
+    @MainActor
+    private func saveSelectedImageToPhotos() {
+        guard let image = PoemShareImage.render(poem: poem, selectedLines: selectedLines, script: script) else {
+            saveAlert = .exportFailed
+            return
+        }
+
+        Task {
+            do {
+                try await image.saveToPhotoLibrary()
+                await MainActor.run {
+                    saveAlert = .saved
+                }
+            } catch PoemSharePhotoSaveError.denied {
+                await MainActor.run {
+                    saveAlert = .permissionDenied
+                }
+            } catch {
+                await MainActor.run {
+                    saveAlert = .saveFailed
+                }
+            }
+        }
+    }
+
+    private func toggleLineSelection(_ lineID: PoemLine.ID) {
+        var lineIDs = selection.lineIDs
+        if lineIDs.contains(lineID) {
+            lineIDs.remove(lineID)
+        } else {
+            lineIDs.insert(lineID)
+        }
+        selection = lineIDs.isEmpty ? .whole : .lines(lineIDs)
     }
 }
 
 private enum PoemShareSelection: Hashable {
     case whole
-    case line(PoemLine.ID)
+    case lines(Set<PoemLine.ID>)
+
+    var lineIDs: Set<PoemLine.ID> {
+        guard case .lines(let lineIDs) = self else {
+            return []
+        }
+        return lineIDs
+    }
+
+    func contains(_ lineID: PoemLine.ID) -> Bool {
+        lineIDs.contains(lineID)
+    }
+}
+
+private enum PoemShareSaveAlert: Identifiable {
+    case saved
+    case permissionDenied
+    case exportFailed
+    case saveFailed
+
+    var id: String {
+        switch self {
+        case .saved: "saved"
+        case .permissionDenied: "permissionDenied"
+        case .exportFailed: "exportFailed"
+        case .saveFailed: "saveFailed"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .saved: "已保存到相册"
+        case .permissionDenied: "没有相册权限"
+        case .exportFailed: "无法生成图片"
+        case .saveFailed: "保存失败"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .saved:
+            return "分享卡片已经保存到系统相册。"
+        case .permissionDenied:
+            return "请在系统设置中允许诗境添加照片。"
+        case .exportFailed:
+            return "这张分享卡片暂时没有生成成功。"
+        case .saveFailed:
+            return "请稍后再试，或使用系统分享保存图片。"
+        }
+    }
 }
 
 private struct PoemSharePosterPreview: View {
     let poem: Poem
-    let selectedLine: PoemLine?
+    let selectedLines: [PoemLine]
+    let script: ChineseScriptPreference
 
     private var aspectRatio: CGFloat {
         PoemSharePoster.posterWidth / PoemSharePoster.posterHeight
@@ -547,7 +683,7 @@ private struct PoemSharePosterPreview: View {
                 proxy.size.height / PoemSharePoster.posterHeight
             )
 
-            PoemSharePoster(poem: poem, selectedLine: selectedLine)
+            PoemSharePoster(poem: poem, selectedLines: selectedLines, script: script)
                 .scaleEffect(scale)
                 .frame(
                     width: PoemSharePoster.posterWidth * scale,
@@ -572,10 +708,26 @@ private struct PoemShareImage {
         return url
     }
 
+    func saveToPhotoLibrary() async throws {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            throw PoemSharePhotoSaveError.denied
+        }
+
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            request.addResource(with: .photo, data: jpegData, options: nil)
+        }
+    }
+
     @MainActor
-    static func render(poem: Poem, selectedLine: PoemLine? = nil) -> PoemShareImage? {
+    static func render(
+        poem: Poem,
+        selectedLines: [PoemLine] = [],
+        script: ChineseScriptPreference = .simplified
+    ) -> PoemShareImage? {
         let renderer = ImageRenderer(
-            content: PoemSharePoster(poem: poem, selectedLine: selectedLine)
+            content: PoemSharePoster(poem: poem, selectedLines: selectedLines, script: script)
                 .frame(width: PoemSharePoster.posterWidth, height: PoemSharePoster.posterHeight)
         )
         renderer.scale = 1
@@ -588,12 +740,13 @@ private struct PoemShareImage {
 
         return PoemShareImage(
             jpegData: jpegData,
-            fileName: imageFileName(poem: poem, selectedLine: selectedLine)
+            fileName: imageFileName(poem: poem, selectedLines: selectedLines)
         )
     }
 
-    private static func imageFileName(poem: Poem, selectedLine: PoemLine?) -> String {
-        let rawName = selectedLine.map { "\(poem.title)-\($0.text)" } ?? poem.title
+    private static func imageFileName(poem: Poem, selectedLines: [PoemLine]) -> String {
+        let selectedText = selectedLines.map(\.text).joined(separator: "-")
+        let rawName = selectedText.isEmpty ? poem.title : "\(poem.title)-\(selectedText)"
         let allowedCharacters = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
         let sanitized = rawName
             .unicodeScalars
@@ -602,6 +755,10 @@ private struct PoemShareImage {
             .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
         return "Poemery-\(sanitized.isEmpty ? poem.id : sanitized).jpg"
     }
+}
+
+private enum PoemSharePhotoSaveError: Error {
+    case denied
 }
 
 private struct PoemShareSheetItem: Identifiable {
@@ -630,15 +787,16 @@ private struct PoemSharePoster: View {
     static let posterHeight: CGFloat = 1200
 
     let poem: Poem
-    let selectedLine: PoemLine?
+    let selectedLines: [PoemLine]
+    let script: ChineseScriptPreference
 
     private var style: ArtworkStyle {
         poem.displayArtworkStyle
     }
 
     private var posterLines: [String] {
-        if let selectedLine {
-            return [selectedLine.text]
+        if !selectedLines.isEmpty {
+            return selectedLines.map(\.text)
         }
 
         let maxLineCount = 12
@@ -676,8 +834,9 @@ private struct PoemSharePoster: View {
     }
 
     private var poemFontSize: CGFloat {
-        if selectedLine != nil {
-            return min(76, max(44, 620 / CGFloat(longestPosterLineCount)))
+        if !selectedLines.isEmpty {
+            let lineLimitedSize = selectedLines.count > 2 ? CGFloat(64 - min(selectedLines.count, 8) * 3) : 76
+            return min(lineLimitedSize, max(34, 620 / CGFloat(longestPosterLineCount)))
         }
 
         let lineCount = posterLines.count
@@ -699,7 +858,7 @@ private struct PoemSharePoster: View {
     }
 
     private var poemLineSpacing: CGFloat {
-        if selectedLine != nil {
+        if !selectedLines.isEmpty {
             return 24
         }
 
@@ -770,9 +929,9 @@ private struct PoemSharePoster: View {
 
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("来自诗境 Poemery")
+                        Text(script.converted("来自诗境 Poemery"))
                             .font(.system(size: 24, weight: .bold))
-                        Text("诗意很远，心意很近。")
+                        Text(script.converted("诗意很远，心意很近。"))
                             .font(.system(size: 22, weight: .semibold))
                     }
                     .foregroundStyle(.white.opacity(0.78))

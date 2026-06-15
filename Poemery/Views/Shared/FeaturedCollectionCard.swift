@@ -2,16 +2,13 @@ import SwiftUI
 
 struct FeaturedCollectionCard: View {
     let collection: PoemCollection
-    let poems: [Poem]
     let size: CGSize
 
     init(
         collection: PoemCollection,
-        poems: [Poem],
         size: CGSize = CGSize(width: 320, height: 346)
     ) {
         self.collection = collection
-        self.poems = poems
         self.size = size
     }
 
@@ -25,7 +22,7 @@ struct FeaturedCollectionCard: View {
         .frame(width: size.width, height: size.height)
         .shadow(color: collection.accent.primary.opacity(0.22), radius: isCompact ? 20 : 24, x: 0, y: 14)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(collection.title)，\(collection.subtitle)，\(poems.count) 首")
+        .accessibilityLabel("\(collection.title)，\(collection.subtitle)，\(collection.poemCount) 首")
     }
 
     private var coverBase: some View {
@@ -106,7 +103,7 @@ struct FeaturedCollectionCard: View {
                 .foregroundStyle(.white.opacity(0.88))
                 .lineLimit(2)
 
-            Text("\(poems.count) 首作品")
+            Text("\(collection.poemCount) 首作品")
                 .font(.system(size: isCompact ? 11 : 12, weight: .bold))
                 .foregroundStyle(.white.opacity(0.76))
                 .padding(.top, 4)

@@ -15,7 +15,7 @@ struct CollectionListSection: View {
                     Button {
                         onOpenCollection(collection)
                     } label: {
-                        CollectionListRow(collection: collection, count: library.poems(for: collection).count)
+                        CollectionListRow(collection: collection, count: collection.poemCount)
                     }
                     .buttonStyle(.plain)
 

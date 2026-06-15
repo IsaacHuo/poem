@@ -19,7 +19,7 @@ struct SearchResultsView: View {
                             Button {
                                 onOpenPoem(poem)
                             } label: {
-                                PoemListItemRow(item: poem)
+                                PoemSearchResultRow(item: poem)
                             }
                             .buttonStyle(.plain)
 
@@ -70,7 +70,7 @@ struct SearchResultsView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(PoemeryTheme.secondaryText)
                                 Spacer()
-                                Text("\(author.poems.count) 首")
+                                Text("\(author.poemCount) 首")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(PoemeryTheme.accent)
                             }

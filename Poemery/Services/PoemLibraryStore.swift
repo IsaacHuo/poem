@@ -39,6 +39,26 @@ final class PoemLibraryStore {
         self.dynastiesCache = index.dynasties
     }
 
+    var totalPoemCount: Int {
+        poems.count
+    }
+
+    var totalAuthorCount: Int {
+        authorsCache.count
+    }
+
+    var totalCollectionCount: Int {
+        collections.count
+    }
+
+    var totalCategoryCount: Int {
+        categories.count
+    }
+
+    var cachedPoemCount: Int {
+        poems.count
+    }
+
     nonisolated static func loadBundled(script: ChineseScriptPreference = .simplified) async throws -> PoemLibraryStore {
         let indexedCatalog = try await Task.detached(priority: .userInitiated) {
             let catalog = try loadAvailableBundledCatalog().converted(to: script)
@@ -58,6 +78,18 @@ final class PoemLibraryStore {
         collection.poemIDs.compactMap { poemsByID[$0] }
     }
 
+    func loadPoemDetailIfNeeded(id: Poem.ID, script: ChineseScriptPreference) async {
+        // The local SQLite catalog already includes the full poem payload.
+    }
+
+    func loadPoemsPage(page: Int, script: ChineseScriptPreference) async -> PagedPoems {
+        localPoemsPage(poems, page: page)
+    }
+
+    func loadCollectionPoems(collection: PoemCollection, page: Int, script: ChineseScriptPreference) async -> PagedPoems {
+        localPoemsPage(poems(for: collection), page: page)
+    }
+
     func poems(matching category: PoemCategory) -> [Poem] {
         poems.filter { poem in
             poem.tags.contains(category.tag) || poem.dynasty == category.tag || poem.form == category.tag || poem.author == category.tag
@@ -70,6 +102,14 @@ final class PoemLibraryStore {
 
     func authors() -> [AuthorResult] {
         authorsCache
+    }
+
+    func loadAuthorsPage(page: Int, script: ChineseScriptPreference) async -> PagedAuthors {
+        localAuthorsPage(authorsCache, page: page)
+    }
+
+    func loadAuthorPoems(author: AuthorResult, page: Int, script: ChineseScriptPreference) async -> PagedPoems {
+        localPoemsPage(poemsByAuthor(author), page: page)
     }
 
     func author(id: AuthorResult.ID) -> AuthorResult? {
@@ -145,7 +185,12 @@ final class PoemLibraryStore {
         )
     }
 
-    func searchPage(_ query: String, offset: Int = 0, limit: Int = 100) async -> SearchResultsPage {
+    func searchPage(
+        _ query: String,
+        offset: Int = 0,
+        limit: Int = 100,
+        script: ChineseScriptPreference = .simplified
+    ) async -> SearchResultsPage {
         let engine = searchEngine
         let safeOffset = max(0, offset)
         let safeLimit = max(1, limit)
@@ -160,6 +205,56 @@ final class PoemLibraryStore {
             candidates,
             poemOrderByID: poemOrderByID,
             poemScoreByID: poemScoreByID
+        )
+    }
+
+    private func poemsByAuthor(_ author: AuthorResult) -> [Poem] {
+        let authorPoems = author.poems.compactMap { poemsByID[$0.id] ?? $0 }
+        if !authorPoems.isEmpty {
+            return popularSortedPoems(authorPoems)
+        }
+
+        let authorNameVariants = Self.searchTokenVariants(author.name).flatMap { $0 }
+        let dynastyVariants = Self.searchTokenVariants(author.dynasty).flatMap { $0 }
+
+        return popularSortedPoems(poems.filter { poem in
+            let poemAuthor = Self.normalizedSearchText(poem.author)
+            let poemDynasty = Self.normalizedSearchText(poem.dynasty)
+            let authorMatches = authorNameVariants.contains { poemAuthor.localizedStandardContains($0) }
+            let dynastyMatches = dynastyVariants.isEmpty || dynastyVariants.contains { poemDynasty.localizedStandardContains($0) }
+            return authorMatches && dynastyMatches
+        })
+    }
+
+    private func localPoemsPage(_ source: [Poem], page: Int, pageSize: Int = 100) -> PagedPoems {
+        guard !source.isEmpty else {
+            return PagedPoems(poems: [], page: 1, totalPages: 0, total: 0)
+        }
+
+        let safePage = max(1, page)
+        let start = min((safePage - 1) * pageSize, source.count)
+        let end = min(start + pageSize, source.count)
+        return PagedPoems(
+            poems: Array(source[start..<end]),
+            page: safePage,
+            totalPages: Int(ceil(Double(source.count) / Double(pageSize))),
+            total: source.count
+        )
+    }
+
+    private func localAuthorsPage(_ source: [AuthorResult], page: Int, pageSize: Int = 100) -> PagedAuthors {
+        guard !source.isEmpty else {
+            return PagedAuthors(authors: [], page: 1, totalPages: 0, total: 0)
+        }
+
+        let safePage = max(1, page)
+        let start = min((safePage - 1) * pageSize, source.count)
+        let end = min(start + pageSize, source.count)
+        return PagedAuthors(
+            authors: Array(source[start..<end]),
+            page: safePage,
+            totalPages: Int(ceil(Double(source.count) / Double(pageSize))),
+            total: source.count
         )
     }
 
