@@ -2,6 +2,11 @@ import SwiftUI
 
 enum ProfileDestination: Hashable {
     case library
+    case poems
+    case authors
+    case collections
+    case favorites
+    case recents
     case dataSource
     case privacy
 }

@@ -90,6 +90,52 @@ struct ProfileScreen: View {
                 onOpenCollection: onOpenCollection,
                 onRefresh: onRefresh
             )
+        case .poems:
+            ProfilePoemListView(
+                title: script.converted("诗词"),
+                poems: library.poems,
+                emptyTitle: script.converted("暂无诗词"),
+                emptySubtitle: script.converted("诗库暂时没有可阅读的作品。"),
+                queueTitle: script.converted("诗词"),
+                onOpenPoem: onOpenPoem
+            )
+        case .authors:
+            ProfileAuthorListView(
+                authors: library.authors(),
+                onOpenPoem: onOpenPoem
+            )
+        case .collections:
+            ScrollView {
+                CollectionListSection(
+                    title: script.converted("诗单"),
+                    collections: library.collections,
+                    library: library,
+                    onOpenCollection: onOpenCollection
+                )
+                .screenContentPadding()
+            }
+            .navigationTitle(script.converted("诗单"))
+            .navigationBarTitleDisplayMode(.large)
+            .scrollIndicators(.hidden)
+            .background(PoemeryTheme.background)
+        case .favorites:
+            ProfilePoemListView(
+                title: script.converted("收藏"),
+                poems: favoritePoems,
+                emptyTitle: script.converted("还没有收藏"),
+                emptySubtitle: script.converted("打开作品详情后可以把喜欢的诗词加入收藏。"),
+                queueTitle: script.converted("收藏"),
+                onOpenPoem: onOpenPoem
+            )
+        case .recents:
+            ProfilePoemListView(
+                title: script.converted("最近阅读"),
+                poems: recentPoems,
+                emptyTitle: script.converted("还没有最近阅读"),
+                emptySubtitle: script.converted("打开任意作品详情后会出现在这里。"),
+                queueTitle: script.converted("最近阅读"),
+                onOpenPoem: onOpenPoem
+            )
         case .dataSource:
             DataSourceNoticeView()
         case .privacy:
@@ -137,9 +183,17 @@ struct ProfileScreen: View {
                 Divider()
                     .padding(.leading, 82)
 
-                AccountValueRow(symbol: "heart.fill", title: script.converted("收藏"), value: "\(favoritePoems.count)")
+                NavigationLink(value: ProfileDestination.favorites) {
+                    AccountValueRow(symbol: "heart.fill", title: script.converted("收藏"), value: "\(favoritePoems.count)")
+                }
+                .buttonStyle(.plain)
+
                 Divider().padding(.leading, 50)
-                AccountValueRow(symbol: "clock.fill", title: script.converted("最近阅读"), value: "\(recentPoems.count)")
+
+                NavigationLink(value: ProfileDestination.recents) {
+                    AccountValueRow(symbol: "clock.fill", title: script.converted("最近阅读"), value: "\(recentPoems.count)")
+                }
+                .buttonStyle(.plain)
             }
             .groupedListBackground()
         }
@@ -156,11 +210,25 @@ struct ProfileScreen: View {
                 .buttonStyle(.plain)
 
                 Divider().padding(.leading, 50)
-                SettingsValueRow(symbol: "text.book.closed.fill", title: script.converted("诗词"), value: "\(library.totalPoemCount)")
+                NavigationLink(value: ProfileDestination.poems) {
+                    ProfileValueNavigationRow(symbol: "text.book.closed.fill", title: script.converted("诗词"), value: "\(library.totalPoemCount)")
+                }
+                .buttonStyle(.plain)
+
                 Divider().padding(.leading, 50)
-                SettingsValueRow(symbol: "person.2.fill", title: script.converted("作者"), value: "\(library.totalAuthorCount)")
+
+                NavigationLink(value: ProfileDestination.authors) {
+                    ProfileValueNavigationRow(symbol: "person.2.fill", title: script.converted("作者"), value: "\(library.totalAuthorCount)")
+                }
+                .buttonStyle(.plain)
+
                 Divider().padding(.leading, 50)
-                SettingsValueRow(symbol: "rectangle.stack.fill", title: script.converted("诗单"), value: "\(library.totalCollectionCount)")
+
+                NavigationLink(value: ProfileDestination.collections) {
+                    ProfileValueNavigationRow(symbol: "rectangle.stack.fill", title: script.converted("诗单"), value: "\(library.totalCollectionCount)")
+                }
+                .buttonStyle(.plain)
+
                 Divider().padding(.leading, 50)
                 SettingsValueRow(symbol: "internaldrive.fill", title: script.converted("离线可用"), value: script.converted("全部"))
                 Divider().padding(.leading, 50)
@@ -179,9 +247,18 @@ struct ProfileScreen: View {
             SectionTitle(title: script.converted("本机数据"), showsChevron: false)
 
             VStack(spacing: 0) {
-                SettingsValueRow(symbol: "heart.fill", title: script.converted("收藏"), value: "\(session.favoritePoemIDs.count)")
+                NavigationLink(value: ProfileDestination.favorites) {
+                    ProfileValueNavigationRow(symbol: "heart.fill", title: script.converted("收藏"), value: "\(session.favoritePoemIDs.count)")
+                }
+                .buttonStyle(.plain)
+
                 Divider().padding(.leading, 50)
-                SettingsValueRow(symbol: "clock.fill", title: script.converted("最近阅读"), value: "\(session.recentPoemIDs.count)")
+
+                NavigationLink(value: ProfileDestination.recents) {
+                    ProfileValueNavigationRow(symbol: "clock.fill", title: script.converted("最近阅读"), value: "\(session.recentPoemIDs.count)")
+                }
+                .buttonStyle(.plain)
+
                 Divider().padding(.leading, 50)
 
                 Button(role: .destructive) {
@@ -380,9 +457,14 @@ private struct AccountValueRow: View {
                 .font(.body)
                 .foregroundStyle(PoemeryTheme.secondaryText)
                 .lineLimit(1)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.tertiaryText)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
+        .contentShape(Rectangle())
     }
 }
 
@@ -410,6 +492,153 @@ private struct ProfileNavigationRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct ProfileValueNavigationRow: View {
+    let symbol: String
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            SettingsLabelRow(symbol: symbol, title: title)
+
+            Spacer(minLength: 12)
+
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
+                .multilineTextAlignment(.trailing)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.tertiaryText)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct ProfilePoemListView: View {
+    let title: String
+    let poems: [Poem]
+    let emptyTitle: String
+    let emptySubtitle: String
+    let queueTitle: String
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    var body: some View {
+        ScrollView {
+            if poems.isEmpty {
+                EmptyLibraryState(title: emptyTitle, subtitle: emptySubtitle)
+                    .screenContentPadding()
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(poems) { poem in
+                        Button {
+                            onOpenPoem(poem, ReadingQueue(title: queueTitle, poems: poems))
+                        } label: {
+                            PoemListRow(poem: poem)
+                        }
+                        .buttonStyle(.plain)
+
+                        if poem.id != poems.last?.id {
+                            Divider()
+                                .padding(.leading, 74)
+                        }
+                    }
+                }
+                .groupedListBackground()
+                .screenContentPadding()
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.large)
+        .scrollIndicators(.hidden)
+        .background(PoemeryTheme.background)
+    }
+}
+
+private struct ProfileAuthorListView: View {
+    let authors: [AuthorResult]
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
+    @Environment(\.chineseScriptPreference) private var script
+
+    var body: some View {
+        ScrollView {
+            if authors.isEmpty {
+                EmptyLibraryState(
+                    title: script.converted("暂无诗人"),
+                    subtitle: script.converted("诗库暂时没有可浏览的诗人。")
+                )
+                .screenContentPadding()
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(authors) { author in
+                        Button {
+                            if let firstPoem = author.poems.first {
+                                onOpenPoem(firstPoem, ReadingQueue(title: author.name, poems: author.poems))
+                            }
+                        } label: {
+                            ProfileAuthorRow(author: author)
+                        }
+                        .buttonStyle(.plain)
+
+                        if author.id != authors.last?.id {
+                            Divider()
+                                .padding(.leading, 72)
+                        }
+                    }
+                }
+                .groupedListBackground()
+                .screenContentPadding()
+            }
+        }
+        .navigationTitle(script.converted("作者"))
+        .navigationBarTitleDisplayMode(.large)
+        .scrollIndicators(.hidden)
+        .background(PoemeryTheme.background)
+    }
+}
+
+private struct ProfileAuthorRow: View {
+    let author: AuthorResult
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(PoemeryTheme.groupedBackground)
+
+                Text(String(author.name.prefix(1)))
+                    .font(PoemeryTheme.chineseFont(size: 26, relativeTo: .title3))
+                    .foregroundStyle(PoemeryTheme.accent)
+            }
+            .frame(width: 52, height: 52)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(author.name)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+                    .lineLimit(1)
+
+                Text("\(author.dynasty) · \(author.poemCount) 首")
+                    .font(.subheadline)
+                    .foregroundStyle(PoemeryTheme.secondaryText)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(PoemeryTheme.tertiaryText)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .contentShape(Rectangle())
     }
 }
