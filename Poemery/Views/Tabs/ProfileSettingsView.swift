@@ -1,12 +1,9 @@
 import SwiftUI
 
 enum ProfileDestination: Hashable {
-    case library
-    case poems
-    case authors
-    case collections
     case favorites
     case recents
+    case settings
     case dataSource
     case privacy
 }
@@ -33,6 +30,151 @@ enum ProfileResetAction: Identifiable {
         switch self {
         case .favorites: "收藏只保存在本机。清除后不会影响诗库内容。"
         case .recents: "最近阅读和当前阅读状态会从本机移除。"
+        }
+    }
+}
+
+struct ProfileSettingsHomeView: View {
+    @Binding var chineseScriptRawValue: String
+    @Binding var poemTextSize: Double
+
+    let favoriteCount: Int
+    let recentCount: Int
+    let onReset: (ProfileResetAction) -> Void
+
+    @Environment(\.chineseScriptPreference) private var script
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                displaySection
+                localDataSection
+                privacySection
+            }
+            .screenContentPadding()
+            .padding(.bottom, 52)
+        }
+        .navigationTitle(script.converted("设置与隐私"))
+        .navigationBarTitleDisplayMode(.large)
+        .scrollIndicators(.hidden)
+        .background(PoemeryTheme.background)
+    }
+
+    private var displaySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: script.converted("显示"), showsChevron: false)
+
+            VStack(spacing: 0) {
+                scriptPickerRow
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "sun.max.fill", title: script.converted("外观"), value: script.converted("浅色纸感"))
+                Divider().padding(.leading, 50)
+                poemTextSizeRow
+            }
+            .groupedListBackground()
+        }
+    }
+
+    private var scriptPickerRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(script.converted("繁简体"))
+                .font(.body)
+                .foregroundStyle(PoemeryTheme.primaryText)
+
+            Picker(script.converted("繁简体"), selection: $chineseScriptRawValue) {
+                ForEach(ChineseScriptPreference.allCases) { script in
+                    Text(script.title).tag(script.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    private var poemTextSizeRow: some View {
+        HStack(alignment: .center, spacing: 12) {
+            SettingsLabelRow(symbol: "textformat.size", title: script.converted("正文字号"))
+
+            Spacer(minLength: 12)
+
+            Text(PoemTextSizePreference.displayValue(for: poemTextSize))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
+
+            Stepper(
+                script.converted("正文字号"),
+                value: poemTextSizeBinding,
+                in: PoemTextSizePreference.range,
+                step: PoemTextSizePreference.step
+            )
+            .labelsHidden()
+            .fixedSize()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    private var poemTextSizeBinding: Binding<Double> {
+        Binding {
+            PoemTextSizePreference.clamped(poemTextSize)
+        } set: { newValue in
+            poemTextSize = PoemTextSizePreference.clamped(newValue)
+        }
+    }
+
+    private var localDataSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: script.converted("本机记录"), showsChevron: false)
+
+            VStack(spacing: 0) {
+                SettingsValueRow(symbol: "heart.fill", title: script.converted("收藏"), value: "\(favoriteCount)")
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "clock.fill", title: script.converted("最近阅读"), value: "\(recentCount)")
+                Divider().padding(.leading, 50)
+                resetButton(action: .favorites, symbol: "heart.slash.fill", isDisabled: favoriteCount == 0)
+                Divider().padding(.leading, 50)
+                resetButton(action: .recents, symbol: "clock.badge.xmark.fill", isDisabled: recentCount == 0)
+            }
+            .groupedListBackground()
+        }
+    }
+
+    private func resetButton(action: ProfileResetAction, symbol: String, isDisabled: Bool) -> some View {
+        Button(role: .destructive) {
+            onReset(action)
+        } label: {
+            SettingsLabelRow(symbol: symbol, title: script.converted(action.title), includesRowPadding: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+    }
+
+    private var privacySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: script.converted("离线与隐私"), showsChevron: false)
+
+            VStack(spacing: 0) {
+                SettingsValueRow(symbol: "wifi.slash", title: script.converted("诗库"), value: script.converted("本地离线"))
+                Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "person.crop.circle.badge.xmark", title: script.converted("登录"), value: script.converted("无需"))
+                Divider().padding(.leading, 50)
+
+                NavigationLink(value: ProfileDestination.dataSource) {
+                    SettingsNavigationRow(symbol: "doc.text.magnifyingglass", title: script.converted("数据来源与许可"))
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 50)
+
+                NavigationLink(value: ProfileDestination.privacy) {
+                    SettingsNavigationRow(symbol: "hand.raised.fill", title: script.converted("隐私说明"))
+                }
+                .buttonStyle(.plain)
+            }
+            .groupedListBackground()
         }
     }
 }
@@ -109,6 +251,26 @@ struct PrivacyOverviewView: View {
         .navigationTitle(script.converted("隐私说明"))
         .navigationBarTitleDisplayMode(.large)
         .background(PoemeryTheme.background)
+    }
+}
+
+private struct SettingsNavigationRow: View {
+    let symbol: String
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SettingsLabelRow(symbol: symbol, title: title)
+
+            Spacer(minLength: 12)
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.tertiaryText)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
     }
 }
 

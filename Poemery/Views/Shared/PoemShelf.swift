@@ -9,7 +9,7 @@ struct PoemShelf: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionTitle(title: title, showsChevron: !poems.isEmpty)
+            SectionTitle(title: title)
 
             if poems.isEmpty {
                 EmptyLibraryState(title: emptyTitle, subtitle: emptySubtitle)

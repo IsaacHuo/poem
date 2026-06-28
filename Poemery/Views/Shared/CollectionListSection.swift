@@ -8,7 +8,7 @@ struct CollectionListSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: title, showsChevron: !collections.isEmpty)
+            SectionTitle(title: title)
 
             VStack(spacing: 0) {
                 ForEach(collections) { collection in

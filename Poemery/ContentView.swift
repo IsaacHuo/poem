@@ -7,6 +7,7 @@ struct ContentView: View {
     @State private var selectedTab: AppTab = .home
     @State private var lastContentTab: AppTab = .home
     @State private var presentedItem: PresentedLibraryItem?
+    @State private var presentedPoem: PresentedPoem?
     @State private var tabSearchText = ""
 
     var body: some View {
@@ -18,6 +19,9 @@ struct ContentView: View {
             .background(PoemeryTheme.background.ignoresSafeArea())
             .sheet(item: $presentedItem) { item in
                 presentedView(for: item)
+            }
+            .fullScreenCover(item: $presentedPoem) { item in
+                presentedPoemView(for: item)
             }
             .preferredColorScheme(.light)
             .onChange(of: selectedTab) { _, newTab in
@@ -67,30 +71,23 @@ struct ContentView: View {
                 .tabBarMinimizeBehavior(.onScrollDown)
         } else if #available(iOS 18.0, *) {
             modernTabView(library: library)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    readingFallbackAccessory(library: library)
-                }
         } else {
             legacyTabView(library: library)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    readingFallbackAccessory(library: library)
-                }
         }
     }
 
     private func legacyTabView(library: PoemLibraryStore) -> some View {
         TabView(selection: $selectedTab) {
-            legacyTabScreen(.home) {
+            legacyTabScreen(.home, library: library) {
                 HomeScreen(
                     library: library,
                     session: session,
                     onOpenPoem: openPoem,
-                    onOpenCollection: openCollection,
-                    onOpenAuthor: openAuthor
+                    onOpenCollection: openCollection
                 )
             }
 
-            legacyTabScreen(.discover) {
+            legacyTabScreen(.discover, library: library) {
                 DiscoverScreen(
                     library: library,
                     onOpenPoem: openPoem,
@@ -99,17 +96,15 @@ struct ContentView: View {
                 )
             }
 
-            legacyTabScreen(.profile) {
+            legacyTabScreen(.profile, library: library) {
                 ProfileScreen(
                     library: library,
                     session: session,
-                    onOpenPoem: openPoem,
-                    onOpenCollection: openCollection,
-                    onRefresh: { await refreshLibrary(library) }
+                    onOpenPoem: openPoem
                 )
             }
 
-            legacyTabScreen(.search) {
+            legacyTabScreen(.search, library: library) {
                 SearchScreen(
                     library: library,
                     searchText: $tabSearchText,
@@ -126,19 +121,18 @@ struct ContentView: View {
     private func modernTabView(library: PoemLibraryStore) -> some View {
         TabView(selection: $selectedTab) {
             Tab(chineseScriptPreference.converted(AppTab.home.title), systemImage: AppTab.home.symbol, value: AppTab.home) {
-                tabContent {
+                tabContent(library: library) {
                     HomeScreen(
                         library: library,
                         session: session,
                         onOpenPoem: openPoem,
-                        onOpenCollection: openCollection,
-                        onOpenAuthor: openAuthor
+                        onOpenCollection: openCollection
                     )
                 }
             }
 
             Tab(chineseScriptPreference.converted(AppTab.discover.title), systemImage: AppTab.discover.symbol, value: AppTab.discover) {
-                tabContent {
+                tabContent(library: library) {
                     DiscoverScreen(
                         library: library,
                         onOpenPoem: openPoem,
@@ -149,19 +143,17 @@ struct ContentView: View {
             }
 
             Tab(chineseScriptPreference.converted(AppTab.profile.title), systemImage: AppTab.profile.symbol, value: AppTab.profile) {
-                tabContent {
+                tabContent(library: library) {
                     ProfileScreen(
                         library: library,
                         session: session,
-                        onOpenPoem: openPoem,
-                        onOpenCollection: openCollection,
-                        onRefresh: { await refreshLibrary(library) }
+                        onOpenPoem: openPoem
                     )
                 }
             }
 
             Tab(chineseScriptPreference.converted(AppTab.search.title), systemImage: AppTab.search.symbol, value: AppTab.search, role: .search) {
-                tabContent {
+                tabContent(library: library) {
                     SearchScreen(
                         library: library,
                         searchText: $tabSearchText,
@@ -193,9 +185,10 @@ struct ContentView: View {
 
     private func legacyTabScreen<Content: View>(
         _ tab: AppTab,
+        library: PoemLibraryStore,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        tabContent {
+        tabContent(library: library) {
             content()
         }
         .tag(tab)
@@ -204,15 +197,24 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
     private func tabContent<Content: View>(
+        library: PoemLibraryStore,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        content()
+        if #available(iOS 26.0, *) {
+            content()
+        } else {
+            content()
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    readingFallbackAccessory(library: library)
+                }
+        }
     }
 
     private func openPoem(_ poem: Poem, queue: ReadingQueue) {
         session.startReading(poem, in: queue)
-        presentedItem = .poem(poem.id, session.currentQueue ?? queue)
+        presentedPoem = PresentedPoem(poemID: poem.id, queue: session.currentQueue ?? queue)
     }
 
     private func openCurrentPoem() {
@@ -221,17 +223,17 @@ struct ContentView: View {
             return
         }
         let queue = session.currentQueue ?? .singlePoem(poem)
-        presentedItem = .poem(poem.id, queue)
+        presentedPoem = PresentedPoem(poemID: poem.id, queue: queue)
     }
 
     private func openPoemFromPresentedItem(_ poem: Poem, queue: ReadingQueue) {
         session.startReading(poem, in: queue)
-        let nextItem = PresentedLibraryItem.poem(poem.id, queue)
+        let nextPoem = PresentedPoem(poemID: poem.id, queue: queue)
         presentedItem = nil
 
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 180_000_000)
-            presentedItem = nextItem
+            presentedPoem = nextPoem
         }
     }
 
@@ -260,16 +262,23 @@ struct ContentView: View {
     }
 
     @ViewBuilder
+    private func presentedPoemView(for item: PresentedPoem) -> some View {
+        if case .loaded(let library) = libraryLoadState {
+            PoemDetailView(
+                initialPoemID: item.poemID,
+                queue: item.queue,
+                library: library,
+                session: session
+            )
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
     private func presentedView(for item: PresentedLibraryItem) -> some View {
         if case .loaded(let library) = libraryLoadState {
             switch item {
-            case .poem(let poemID, let queue):
-                PoemDetailView(
-                    initialPoemID: poemID,
-                    queue: queue,
-                    library: library,
-                    session: session
-                )
             case .collection(let collectionID):
                 if let collection = library.collection(id: collectionID) {
                     CollectionDetailView(
@@ -506,14 +515,21 @@ private struct LibraryLoadFailedScreen: View {
     }
 }
 
+private struct PresentedPoem: Identifiable {
+    let poemID: Poem.ID
+    let queue: ReadingQueue
+
+    var id: String {
+        "poem-\(queue.id)-\(poemID)"
+    }
+}
+
 private enum PresentedLibraryItem: Identifiable {
-    case poem(Poem.ID, ReadingQueue)
     case collection(PoemCollection.ID)
     case author(AuthorResult.ID)
 
     var id: String {
         switch self {
-        case .poem(let poemID, let queue): "poem-\(queue.id)-\(poemID)"
         case .collection(let collectionID): "collection-\(collectionID)"
         case .author(let authorID): "author-\(authorID)"
         }

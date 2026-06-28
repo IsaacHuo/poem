@@ -9,7 +9,7 @@ struct FeaturedCarousel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionTitle(title: title, showsChevron: true)
+            SectionTitle(title: title)
 
             GeometryReader { proxy in
                 let cardSize = cardSize(for: proxy.size.width)
@@ -26,10 +26,19 @@ struct FeaturedCarousel: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                                content
+                                    .scaleEffect(phase.isIdentity ? 1 : 0.96)
+                                    .opacity(phase.isIdentity ? 1 : 0.86)
+                            }
                         }
                     }
-                    .padding(.horizontal, 2)
+                    .scrollTargetLayout()
                 }
+                .contentMargins(.horizontal, 16, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+                .scrollClipDisabled()
+                .padding(.horizontal, -16)
             }
             .frame(height: carouselHeight)
         }

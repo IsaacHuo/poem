@@ -67,7 +67,7 @@ struct PoemDetailView: View {
                         compactHero
 
                         poemTextContent
-                            .gesture(swipeGesture)
+                            .simultaneousGesture(swipeGesture)
 
                         RelatedPoemsSection(poems: relatedPoems, onOpenPoem: showRelatedPoem)
                             .frame(maxWidth: 680, alignment: .leading)
@@ -332,10 +332,17 @@ struct PoemDetailView: View {
     }
 
     private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 35)
+        DragGesture(minimumDistance: 20)
             .onEnded { value in
-                guard abs(value.translation.width) > abs(value.translation.height),
-                      abs(value.translation.width) > 60
+                let horizontalDistance = abs(value.translation.width)
+                let verticalDistance = abs(value.translation.height)
+                let horizontalVelocity = abs(value.velocity.width)
+                let verticalVelocity = abs(value.velocity.height)
+
+                guard horizontalDistance > 48,
+                      horizontalDistance > verticalDistance * 1.5,
+                      horizontalVelocity > 650,
+                      horizontalVelocity > verticalVelocity * 1.5
                 else {
                     return
                 }
@@ -394,8 +401,15 @@ private struct PoemShareComposer: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.chineseScriptPreference) private var script
     @State private var selection = PoemShareSelection.whole
+    @State private var backgroundMode = PoemShareBackgroundMode.artworkDefault
+    @State private var customBackgroundColor: Color
     @State private var shareSheetItem: PoemShareSheetItem?
     @State private var saveAlert: PoemShareSaveAlert?
+
+    init(poem: Poem) {
+        self.poem = poem
+        self._customBackgroundColor = State(initialValue: poem.displayArtworkStyle.primary)
+    }
 
     private var selectedLines: [PoemLine] {
         guard case .lines(let lineIDs) = selection else {
@@ -404,14 +418,29 @@ private struct PoemShareComposer: View {
         return poem.lines.filter { lineIDs.contains($0.id) }
     }
 
+    private var backgroundStyle: PoemShareBackgroundStyle {
+        switch backgroundMode {
+        case .artworkDefault:
+            return .artworkDefault
+        case .custom:
+            return .custom(customBackgroundColor)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 18) {
-                        PoemSharePosterPreview(poem: poem, selectedLines: selectedLines, script: script)
+                        PoemSharePosterPreview(
+                            poem: poem,
+                            selectedLines: selectedLines,
+                            script: script,
+                            backgroundStyle: backgroundStyle
+                        )
                             .frame(maxWidth: 420)
 
+                        backgroundSection
                         selectionSection
                     }
                     .padding(.horizontal, 20)
@@ -446,6 +475,36 @@ private struct PoemShareComposer: View {
             } message: { alert in
                 Text(script.converted(alert.message))
             }
+        }
+    }
+
+    private var backgroundSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(script.converted("背景"))
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.primaryText)
+
+            VStack(spacing: 12) {
+                Picker(script.converted("背景"), selection: $backgroundMode) {
+                    Text(script.converted("作品默认"))
+                        .tag(PoemShareBackgroundMode.artworkDefault)
+                    Text(script.converted("自定义"))
+                        .tag(PoemShareBackgroundMode.custom)
+                }
+                .pickerStyle(.segmented)
+
+                if backgroundMode == .custom {
+                    ColorPicker(
+                        script.converted("背景颜色"),
+                        selection: $customBackgroundColor,
+                        supportsOpacity: false
+                    )
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+                }
+            }
+            .padding(14)
+            .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
 
@@ -562,7 +621,12 @@ private struct PoemShareComposer: View {
 
     @MainActor
     private func exportSelectedImage() {
-        guard let image = PoemShareImage.render(poem: poem, selectedLines: selectedLines, script: script) else {
+        guard let image = PoemShareImage.render(
+            poem: poem,
+            selectedLines: selectedLines,
+            script: script,
+            backgroundStyle: backgroundStyle
+        ) else {
             saveAlert = .exportFailed
             return
         }
@@ -579,7 +643,12 @@ private struct PoemShareComposer: View {
 
     @MainActor
     private func saveSelectedImageToPhotos() {
-        guard let image = PoemShareImage.render(poem: poem, selectedLines: selectedLines, script: script) else {
+        guard let image = PoemShareImage.render(
+            poem: poem,
+            selectedLines: selectedLines,
+            script: script,
+            backgroundStyle: backgroundStyle
+        ) else {
             saveAlert = .exportFailed
             return
         }
@@ -629,6 +698,31 @@ private enum PoemShareSelection: Hashable {
     }
 }
 
+private enum PoemShareBackgroundMode: Hashable {
+    case artworkDefault
+    case custom
+}
+
+private enum PoemShareBackgroundStyle {
+    case artworkDefault
+    case custom(Color)
+
+    func fill(for artworkStyle: ArtworkStyle) -> AnyShapeStyle {
+        switch self {
+        case .artworkDefault:
+            return AnyShapeStyle(
+                LinearGradient(
+                    colors: [artworkStyle.primary, artworkStyle.secondary, artworkStyle.tertiary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        case .custom(let color):
+            return AnyShapeStyle(color)
+        }
+    }
+}
+
 private enum PoemShareSaveAlert: Identifiable {
     case saved
     case permissionDenied
@@ -671,6 +765,7 @@ private struct PoemSharePosterPreview: View {
     let poem: Poem
     let selectedLines: [PoemLine]
     let script: ChineseScriptPreference
+    let backgroundStyle: PoemShareBackgroundStyle
 
     private var aspectRatio: CGFloat {
         PoemSharePoster.posterWidth / PoemSharePoster.posterHeight
@@ -683,7 +778,12 @@ private struct PoemSharePosterPreview: View {
                 proxy.size.height / PoemSharePoster.posterHeight
             )
 
-            PoemSharePoster(poem: poem, selectedLines: selectedLines, script: script)
+            PoemSharePoster(
+                poem: poem,
+                selectedLines: selectedLines,
+                script: script,
+                backgroundStyle: backgroundStyle
+            )
                 .scaleEffect(scale)
                 .frame(
                     width: PoemSharePoster.posterWidth * scale,
@@ -723,11 +823,17 @@ private struct PoemShareImage {
     @MainActor
     static func render(
         poem: Poem,
-        selectedLines: [PoemLine] = [],
-        script: ChineseScriptPreference = .simplified
+        selectedLines: [PoemLine],
+        script: ChineseScriptPreference,
+        backgroundStyle: PoemShareBackgroundStyle
     ) -> PoemShareImage? {
         let renderer = ImageRenderer(
-            content: PoemSharePoster(poem: poem, selectedLines: selectedLines, script: script)
+            content: PoemSharePoster(
+                poem: poem,
+                selectedLines: selectedLines,
+                script: script,
+                backgroundStyle: backgroundStyle
+            )
                 .frame(width: PoemSharePoster.posterWidth, height: PoemSharePoster.posterHeight)
         )
         renderer.scale = 1
@@ -789,6 +895,7 @@ private struct PoemSharePoster: View {
     let poem: Poem
     let selectedLines: [PoemLine]
     let script: ChineseScriptPreference
+    let backgroundStyle: PoemShareBackgroundStyle
 
     private var style: ArtworkStyle {
         poem.displayArtworkStyle
@@ -950,13 +1057,7 @@ private struct PoemSharePoster: View {
 
     private var posterBackground: some View {
         Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [style.primary, style.secondary, style.tertiary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .fill(backgroundStyle.fill(for: style))
             .overlay {
                 LinearGradient(
                     colors: [.white.opacity(0.24), .clear, .black.opacity(0.44)],
