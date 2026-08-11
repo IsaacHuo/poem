@@ -48,14 +48,14 @@ final class PoemeryTests: XCTestCase {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
 
         let firstPage = await store.searchPage("月", limit: 1)
-        let secondPage = await store.searchPage("月", offset: firstPage.nextOffset ?? 0, limit: 1)
+        let secondPage = await store.searchPage("月", cursor: firstPage.nextCursor, limit: 1)
         let combinedPage = firstPage.appending(secondPage)
 
         XCTAssertEqual(firstPage.totalPoemCount, 2)
         XCTAssertEqual(firstPage.poems.map(\.title), ["静夜思"])
-        XCTAssertEqual(firstPage.nextOffset, 1)
+        XCTAssertNotNil(firstPage.nextCursor)
         XCTAssertEqual(secondPage.poems.map(\.title), ["秋日"])
-        XCTAssertNil(secondPage.nextOffset)
+        XCTAssertNil(secondPage.nextCursor)
         XCTAssertEqual(combinedPage.poems.map(\.title), ["静夜思", "秋日"])
         XCTAssertEqual(combinedPage.poemIDs, ["jing-ye-si", "ordinary"])
     }
@@ -88,6 +88,44 @@ final class PoemeryTests: XCTestCase {
         XCTAssertTrue(poem.themes.contains("唐"))
         XCTAssertGreaterThanOrEqual(poem.difficulty, 1)
         XCTAssertEqual(poem.canonicalKey, "唐|李白|静夜思")
+        XCTAssertNil(poem.supplement)
+    }
+
+    func testSupplementConversionKeepsPronunciationAndConvertsEditorialText() {
+        let line = PoemLine(id: "line-1", order: 0, text: "风吹万户")
+        let poem = Poem(
+            id: "supplement-sample",
+            title: "样本",
+            author: "作者",
+            dynasty: "宋",
+            form: "诗",
+            tags: [],
+            summary: "样本",
+            lines: [line],
+            annotations: [],
+            sourceURL: nil,
+            artworkStyle: .fallback,
+            supplement: PoemSupplement(
+                pronunciations: [PoemPronunciationLine(lineID: line.id, text: "fēng chuī wàn hù")],
+                translation: "风吹过万户。",
+                appreciation: "语言简练。"
+            )
+        )
+
+        let converted = PoemSeedCatalog(poems: [poem], collections: [], categories: []).converted(to: .traditional).poems[0]
+
+        XCTAssertEqual(converted.supplement?.pronunciations.first?.text, "fēng chuī wàn hù")
+        XCTAssertEqual(converted.supplement?.translation, "風吹過萬戶。")
+        XCTAssertEqual(converted.supplement?.appreciation, "語言簡練。")
+    }
+
+    func testBootstrapLibraryIsImmediatelyReadableAndCoversMoreDynasties() {
+        let store = PoemLibraryStore.bootstrap()
+        let dynasties = Set(store.dynasties())
+
+        XCTAssertFalse(store.cachedPoems().isEmpty)
+        XCTAssertNotNil(store.cachedPoems().first { $0.title == "元日" && $0.author == "王安石" }?.supplement)
+        XCTAssertTrue(["汉", "魏晋", "南北朝", "五代", "明", "清"].allSatisfy(dynasties.contains))
     }
 
     func testPopularPoemsPreferClassicTitles() {
@@ -135,12 +173,12 @@ final class PoemeryTests: XCTestCase {
         let authors = store.popularAuthors(limit: 2)
 
         XCTAssertEqual(authors.first?.name, "李白")
-        XCTAssertEqual(authors.first?.poems.map(\.title), ["静夜思"])
+        XCTAssertEqual(authors.first.map(store.poemsByAuthor)?.map(\.title), ["静夜思"])
     }
 
     func testAuthorLookupFindsAggregatedAuthorForPoem() throws {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
-        let poem = store.poems[0]
+        let poem = store.cachedPoems()[0]
 
         let author = try XCTUnwrap(store.author(for: poem))
 
@@ -150,48 +188,69 @@ final class PoemeryTests: XCTestCase {
 
     func testAuthorIntroductionUsesKnownAndFallbackText() throws {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
-        let knownAuthor = try XCTUnwrap(store.author(for: store.poems[0]))
+        let knownAuthor = try XCTUnwrap(store.author(for: store.cachedPoems()[0]))
         let fallbackAuthor = AuthorResult(
             id: "唐-测试作者",
             name: "测试作者",
             dynasty: "唐",
-            poems: [store.poems[1]]
+            poemCount: 1
         )
 
         XCTAssertTrue(knownAuthor.introduction.contains("诗仙"))
         XCTAssertTrue(fallbackAuthor.introduction.contains("当前诗库收录 1 首作品"))
     }
 
-    func testBundledCatalogHasExpectedShape() async throws {
+    func testBundledLibraryBootstrapsWithoutMaterializingTheCatalog() async throws {
         let store = try await PoemLibraryStore.loadBundled()
 
-        XCTAssertEqual(store.poems.count, 12042)
+        XCTAssertEqual(store.totalPoemCount, 33_786)
+        XCTAssertLessThanOrEqual(store.cachedPoemCount, 300)
+        XCTAssertTrue(store.popularPoems(limit: 24).allSatisfy { $0.lines.isEmpty })
         XCTAssertGreaterThanOrEqual(store.collections.count, 26)
-        XCTAssertGreaterThanOrEqual(store.categories.count, 13)
-        XCTAssertEqual(store.poems(forTheme: "论语").count, 20)
-        XCTAssertEqual(store.poems(forTheme: "诗经").count, 305)
-        XCTAssertEqual(store.poems(forTheme: "四书五经").count, 16)
-        XCTAssertTrue(store.collections.allSatisfy { collection in
-            !store.poems(for: collection).isEmpty
-        })
-        XCTAssertTrue(store.poems.allSatisfy { poem in
-            !poem.sourceName.isEmpty
-                && !poem.sourceLicense.isEmpty
-                && !poem.editorialSummary.isEmpty
-                && !poem.themes.isEmpty
-                && (1...5).contains(poem.difficulty)
-                && !poem.canonicalKey.isEmpty
-        })
+        XCTAssertGreaterThanOrEqual(store.categories.count, 15)
+        let dynasties = Set(store.dynasties())
+        XCTAssertTrue(["汉", "魏晋", "南北朝", "五代", "明", "清"].allSatisfy(dynasties.contains))
+        XCTAssertNotNil(store.collections.first { $0.title == "全宋词" })
+        XCTAssertNotNil(store.collections.first { $0.title == "楚辞" })
+        XCTAssertNotNil(store.collections.first { $0.title == "曹操诗集" })
     }
 
-    func testBundledSQLiteCatalogMatchesBundledJSONCatalog() throws {
+    func testSQLiteQueryActorLoadsSummariesThenDetailOnDemand() async throws {
         let sqliteURL = try XCTUnwrap(PoemLibraryStore.bundledSQLiteCatalogURLForTests())
-        let sqliteCatalog = try PoemLibraryStore.loadCatalogForTests(fromSQLiteURL: sqliteURL)
-        let jsonCatalog = try PoemLibraryStore.loadBundledJSONCatalogForTests()
+        let repository = SQLitePoemLibraryQueryActor(url: sqliteURL)
+        let bootstrap = try await repository.bootstrap(script: .simplified)
+        let firstPage = try await repository.poemPage(query: .all, limit: 50)
 
-        XCTAssertEqual(sqliteCatalog.poems, jsonCatalog.poems)
-        XCTAssertEqual(sqliteCatalog.collections, jsonCatalog.collections)
-        XCTAssertEqual(sqliteCatalog.categories, jsonCatalog.categories)
+        XCTAssertEqual(bootstrap.stats.totalPoems, 33_786)
+        XCTAssertEqual(firstPage.items.count, 50)
+        XCTAssertTrue(firstPage.items.allSatisfy { $0.lines.isEmpty })
+        XCTAssertNotNil(firstPage.nextCursor)
+
+        let firstID = try XCTUnwrap(firstPage.items.first?.id)
+        let loadedDetail = try await repository.poemDetail(id: firstID)
+        let detail = try XCTUnwrap(loadedDetail)
+        XCTAssertFalse(detail.lines.isEmpty)
+        XCTAssertEqual(detail.id, firstID)
+    }
+
+    func testSQLiteFTSReturnsBodySnippetWithoutLoadingDetails() async throws {
+        let sqliteURL = try XCTUnwrap(PoemLibraryStore.bundledSQLiteCatalogURLForTests())
+        let repository = SQLitePoemLibraryQueryActor(url: sqliteURL)
+        let page = try await repository.searchPage("明月光", limit: 50)
+
+        XCTAssertFalse(page.poems.isEmpty)
+        XCTAssertTrue(page.poems.contains { $0.searchMatch?.kind == .content })
+    }
+
+    func testDiscoveryIsStableForASeedAndChangesForAnotherBatch() {
+        let store = PoemLibraryStore(catalog: Self.sampleCatalog)
+
+        let first = store.discoveryPoems(seed: "2026-08-11|0").map(\.id)
+        let repeated = store.discoveryPoems(seed: "2026-08-11|0").map(\.id)
+        let refreshed = store.discoveryPoems(seed: "2026-08-11|1").map(\.id)
+
+        XCTAssertEqual(first, repeated)
+        XCTAssertNotEqual(first, refreshed)
     }
 
     func testLibraryCanBrowseByThemeDynastyAndForm() {
@@ -213,7 +272,7 @@ final class PoemeryTests: XCTestCase {
     func testFavoritesToggleAndClear() {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
         let session = ReadingSessionStore(defaults: makeDefaults())
-        let poem = store.poems[0]
+        let poem = store.cachedPoems()[0]
 
         session.toggleFavorite(poem)
         XCTAssertTrue(session.isFavorite(poem))
@@ -226,8 +285,8 @@ final class PoemeryTests: XCTestCase {
         XCTAssertTrue(session.favoritePoemIDs.isEmpty)
     }
 
-    func testRecentPoemsDeduplicateAndKeepTwentyItems() {
-        let poems = (0..<25).map { index in
+    func testRecentPoemsDeduplicateAndKeepFiftyItems() {
+        let poems = (0..<55).map { index in
             Self.poem(
                 id: "poem-\(index)",
                 title: "作品\(index)",
@@ -242,7 +301,7 @@ final class PoemeryTests: XCTestCase {
         }
         session.startReading(poems[10], in: .singlePoem(poems[10]))
 
-        XCTAssertEqual(session.recentPoemIDs.count, 20)
+        XCTAssertEqual(session.recentPoemIDs.count, 50)
         XCTAssertEqual(session.recentPoemIDs.first, poems[10].id)
         XCTAssertEqual(Set(session.recentPoemIDs).count, session.recentPoemIDs.count)
 
@@ -255,7 +314,7 @@ final class PoemeryTests: XCTestCase {
     func testReadingQueueMovesForwardAndBackward() {
         let store = PoemLibraryStore(catalog: Self.sampleCatalog)
         let session = ReadingSessionStore(defaults: makeDefaults())
-        let poems = Array(store.poems.prefix(2))
+        let poems = Array(store.cachedPoems().prefix(2))
         let queue = ReadingQueue(title: "测试队列", poems: poems)
 
         session.startReading(poems[0], in: queue)
