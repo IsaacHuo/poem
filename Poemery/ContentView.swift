@@ -69,9 +69,7 @@ struct ContentView: View {
                     ReadingTabAccessory(
                         poem: session.currentPoem(in: library),
                         queue: session.currentQueue,
-                        canMoveNext: session.canMoveInCurrentQueue,
-                        onOpenPoem: openCurrentPoem,
-                        onMoveNext: moveToNextPoem
+                        onOpenPoem: openCurrentPoem
                     )
                 }
                 .tabBarMinimizeBehavior(.onScrollDown)
@@ -205,9 +203,7 @@ struct ContentView: View {
             poem: session.currentPoem(in: library),
             queue: session.currentQueue,
             isInline: false,
-            canMoveNext: session.canMoveInCurrentQueue,
-            onOpenPoem: openCurrentPoem,
-            onMoveNext: moveToNextPoem
+            onOpenPoem: openCurrentPoem
         )
         .background(
             PoemeryTheme.warmPaper.opacity(0.34)
@@ -268,13 +264,6 @@ struct ContentView: View {
             try? await Task.sleep(nanoseconds: 180_000_000)
             presentedPoem = nextPoem
         }
-    }
-
-    private func moveToNextPoem() {
-        guard let library = libraryLoadState.library else {
-            return
-        }
-        _ = session.moveToNextPoem(in: library)
     }
 
     private func openCollection(_ collection: PoemCollection) {
@@ -858,9 +847,7 @@ private struct SearchToolbarBehaviorModifier: ViewModifier {
 private struct ReadingTabAccessory: View {
     let poem: Poem?
     let queue: ReadingQueue?
-    let canMoveNext: Bool
     let onOpenPoem: () -> Void
-    let onMoveNext: () -> Void
 
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
 
@@ -869,9 +856,7 @@ private struct ReadingTabAccessory: View {
             poem: poem,
             queue: queue,
             isInline: placement == .inline,
-            canMoveNext: canMoveNext,
-            onOpenPoem: onOpenPoem,
-            onMoveNext: onMoveNext
+            onOpenPoem: onOpenPoem
         )
         .animation(PoemeryTheme.quickMotion, value: placement)
     }
@@ -881,9 +866,7 @@ private struct ReadingAccessoryContent: View {
     let poem: Poem?
     let queue: ReadingQueue?
     let isInline: Bool
-    let canMoveNext: Bool
     let onOpenPoem: () -> Void
-    let onMoveNext: () -> Void
 
     @Environment(\.chineseScriptPreference) private var script
 
@@ -904,69 +887,49 @@ private struct ReadingAccessoryContent: View {
     }
 
     private func expandedPoemRow(_ poem: Poem) -> some View {
-        HStack(spacing: 12) {
-            Button(action: onOpenPoem) {
-                HStack(spacing: 12) {
-                    PoemArtwork(poem: poem, size: 44, cornerRadius: 8)
+        Button(action: onOpenPoem) {
+            HStack(spacing: 12) {
+                PoemArtwork(poem: poem, size: 44, cornerRadius: 8)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(poem.title)
-                            .font(.headline.weight(.semibold))
-                            .foregroundStyle(PoemeryTheme.primaryText)
-                            .lineLimit(1)
-
-                        Text(subtitle(for: poem))
-                            .font(.subheadline)
-                            .foregroundStyle(PoemeryTheme.secondaryText)
-                            .lineLimit(1)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(script.converted("当前阅读，\(poem.title)，\(subtitle(for: poem))"))
-
-            Spacer(minLength: 12)
-
-            Button(action: onMoveNext) {
-                Image(systemName: "chevron.right")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(canMoveNext ? PoemeryTheme.primaryText : PoemeryTheme.tertiaryText)
-                    .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .disabled(!canMoveNext)
-            .accessibilityLabel(script.converted("下一首"))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-    }
-
-    private func compactPoemRow(_ poem: Poem) -> some View {
-        HStack(spacing: 10) {
-            Button(action: onOpenPoem) {
-                HStack(spacing: 10) {
-                    PoemArtwork(poem: poem, size: 34, cornerRadius: 7)
-
+                VStack(alignment: .leading, spacing: 2) {
                     Text(poem.title)
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(PoemeryTheme.primaryText)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.74)
-                }
-            }
-            .buttonStyle(.plain)
 
-            Button(action: onMoveNext) {
-                Image(systemName: "chevron.right")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(canMoveNext ? PoemeryTheme.primaryText : PoemeryTheme.tertiaryText)
+                    Text(subtitle(for: poem))
+                        .font(.subheadline)
+                        .foregroundStyle(PoemeryTheme.secondaryText)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 12)
             }
-            .buttonStyle(.plain)
-            .disabled(!canMoveNext)
-            .accessibilityLabel(script.converted("下一首"))
+            .contentShape(Rectangle())
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
+        .buttonStyle(.plain)
+        .accessibilityLabel(script.converted("打开当前阅读，\(poem.title)，\(subtitle(for: poem))"))
+    }
+
+    private func compactPoemRow(_ poem: Poem) -> some View {
+        Button(action: onOpenPoem) {
+            HStack(spacing: 10) {
+                PoemArtwork(poem: poem, size: 34, cornerRadius: 7)
+
+                Text(poem.title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.74)
+            }
+            .contentShape(Rectangle())
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(script.converted("打开当前阅读，\(poem.title)"))
     }
 
     private var compactPlaceholder: some View {

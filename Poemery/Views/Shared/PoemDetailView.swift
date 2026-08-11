@@ -17,6 +17,8 @@ struct PoemDetailView: View {
     @State private var shareComposerItem: PoemShareComposerItem?
     @State private var playlistPresentation: PlaylistPresentation?
     @State private var hasStartedInitialReading = false
+    @State private var isSelectingText = false
+    @State private var isMovingPoem = false
 
     init(
         initialPoemID: Poem.ID,
@@ -70,7 +72,6 @@ struct PoemDetailView: View {
                         compactHero
 
                         poemTextContent
-                            .simultaneousGesture(swipeGesture)
 
                         if let supplement = visiblePoem.supplement {
                             PoemSupplementContent(supplement: supplement)
@@ -87,8 +88,10 @@ struct PoemDetailView: View {
                 }
                 .scrollIndicators(.hidden)
                 .background(background)
+                .simultaneousGesture(swipeGesture)
                 .onChange(of: currentPoemID) {
                     selectedAnnotation = nil
+                    isSelectingText = false
                     withAnimation(PoemeryTheme.motion) {
                         proxy.scrollTo(session.readingPosition(for: currentPoemID) ?? "reader-top", anchor: .top)
                     }
@@ -128,7 +131,7 @@ struct PoemDetailView: View {
                     } label: {
                         Image(systemName: "chevron.left")
                     }
-                    .disabled(!canMoveInQueue)
+                    .disabled(!canMoveInQueue || isMovingPoem)
                     .accessibilityLabel(script.converted("上一首作品"))
 
                     Spacer()
@@ -149,7 +152,7 @@ struct PoemDetailView: View {
                     } label: {
                         Image(systemName: "chevron.right")
                     }
-                    .disabled(!canMoveInQueue)
+                    .disabled(!canMoveInQueue || isMovingPoem)
                     .accessibilityLabel(script.converted("下一首作品"))
                 }
             }
@@ -189,6 +192,7 @@ struct PoemDetailView: View {
             }
             .task(id: "\(currentPoemID)|\(script.rawValue)") {
                 await library.loadPoemDetailIfNeeded(id: currentPoemID, script: script)
+                await prefetchAdjacentSummary()
             }
         }
     }
@@ -210,6 +214,7 @@ struct PoemDetailView: View {
                 poem: visiblePoem,
                 highlightedLineID: nil,
                 selectedAnnotation: $selectedAnnotation,
+                isSelectingText: $isSelectingText,
                 onVisibleLine: { lineID in
                     session.saveReadingPosition(lineID: lineID, for: visiblePoem.id)
                 }
@@ -363,18 +368,21 @@ struct PoemDetailView: View {
     }
 
     private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 20)
+        DragGesture(minimumDistance: 12)
             .onEnded { value in
+                guard !isSelectingText, !isMovingPoem else {
+                    return
+                }
+
                 let horizontalDistance = abs(value.translation.width)
                 let verticalDistance = abs(value.translation.height)
-                let horizontalVelocity = abs(value.velocity.width)
-                let verticalVelocity = abs(value.velocity.height)
+                let predictedHorizontalDistance = abs(value.predictedEndTranslation.width)
+                let predictedVerticalDistance = abs(value.predictedEndTranslation.height)
+                let hasEnoughTravel = horizontalDistance >= 44 || predictedHorizontalDistance >= 90
+                let isHorizontal = horizontalDistance > verticalDistance * 1.15
+                    || predictedHorizontalDistance > predictedVerticalDistance * 1.15
 
-                guard horizontalDistance > 48,
-                      horizontalDistance > verticalDistance * 1.5,
-                      horizontalVelocity > 650,
-                      horizontalVelocity > verticalVelocity * 1.5
-                else {
+                guard hasEnoughTravel, isHorizontal else {
                     return
                 }
 
@@ -403,20 +411,38 @@ struct PoemDetailView: View {
 
     private func movePoem(by offset: Int) {
         guard canMoveInQueue,
+              !isMovingPoem,
               let currentQueueIndex
         else {
             return
         }
 
-        let nextIndex = (currentQueueIndex + offset + currentQueue.poemIDs.count) % currentQueue.poemIDs.count
-        guard let poem = library.poem(id: currentQueue.poemIDs[nextIndex]) else {
+        let queue = currentQueue
+        let nextIndex = (currentQueueIndex + offset + queue.poemIDs.count) % queue.poemIDs.count
+        let nextPoemID = queue.poemIDs[nextIndex]
+
+        isMovingPoem = true
+        Task { @MainActor in
+            let poems = await library.loadSummaries(ids: [nextPoemID], script: script)
+            guard let poem = poems.first else {
+                isMovingPoem = false
+                return
+            }
+
+            session.startReading(poem, in: queue)
+            withAnimation(PoemeryTheme.motion) {
+                currentPoemID = poem.id
+            }
+            isMovingPoem = false
+        }
+    }
+
+    private func prefetchAdjacentSummary() async {
+        guard let currentQueueIndex, currentQueue.poemIDs.count > 1 else {
             return
         }
-
-        session.startReading(poem, in: currentQueue)
-        withAnimation(PoemeryTheme.motion) {
-            currentPoemID = poem.id
-        }
+        let nextIndex = (currentQueueIndex + 1) % currentQueue.poemIDs.count
+        _ = await library.loadSummaries(ids: [currentQueue.poemIDs[nextIndex]], script: script)
     }
 
 }
