@@ -22,7 +22,6 @@ struct DiscoverScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    ScreenHeader(title: "每天从诗库里，遇见一些没读过的。", subtitle: nil)
                     discoveryContent
                 }
                 .screenContentPadding()
@@ -47,7 +46,7 @@ struct DiscoverScreen: View {
 
     private var discoveryContent: some View {
         VStack(alignment: .leading, spacing: 32) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 22) {
                 HStack {
                     SectionTitle(title: "每日发现")
                     Spacer()
@@ -57,6 +56,10 @@ struct DiscoverScreen: View {
                         Label("换一批", systemImage: "arrow.triangle.2.circlepath")
                             .font(.subheadline.weight(.semibold))
                     }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.small)
+                    .tint(PoemeryTheme.accent)
                 }
 
                 PoemListSection(

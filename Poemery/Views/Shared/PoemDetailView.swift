@@ -92,8 +92,10 @@ struct PoemDetailView: View {
                 .onChange(of: currentPoemID) {
                     selectedAnnotation = nil
                     isSelectingText = false
-                    withAnimation(PoemeryTheme.motion) {
-                        proxy.scrollTo(session.readingPosition(for: currentPoemID) ?? "reader-top", anchor: .top)
+                    var transaction = Transaction()
+                    transaction.animation = nil
+                    withTransaction(transaction) {
+                        proxy.scrollTo("reader-top", anchor: .top)
                     }
                 }
                 .onAppear {
@@ -396,17 +398,13 @@ struct PoemDetailView: View {
 
     private func showRelatedPoem(_ poem: Poem, queue: ReadingQueue) {
         session.startReading(poem, in: queue)
-        withAnimation(PoemeryTheme.motion) {
-            currentPoemID = poem.id
-        }
+        currentPoemID = poem.id
     }
 
     private func showAuthorPoem(_ poem: Poem, queue: ReadingQueue) {
         session.startReading(poem, in: queue)
-        withAnimation(PoemeryTheme.motion) {
-            currentPoemID = poem.id
-            authorPath = []
-        }
+        currentPoemID = poem.id
+        authorPath = []
     }
 
     private func movePoem(by offset: Int) {
@@ -430,9 +428,7 @@ struct PoemDetailView: View {
             }
 
             session.startReading(poem, in: queue)
-            withAnimation(PoemeryTheme.motion) {
-                currentPoemID = poem.id
-            }
+            currentPoemID = poem.id
             isMovingPoem = false
         }
     }

@@ -22,7 +22,7 @@ struct FeaturedCollectionCard: View {
         .frame(width: size.width, height: size.height)
         .shadow(color: collection.accent.primary.opacity(0.22), radius: isCompact ? 20 : 24, x: 0, y: 14)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(collection.title)，\(collection.subtitle)，\(collection.poemCount) 首")
+        .accessibilityLabel("\(collection.title)，\(collection.subtitle)")
     }
 
     private var coverBase: some View {
@@ -102,11 +102,6 @@ struct FeaturedCollectionCard: View {
                 .font(.system(size: isCompact ? 13 : 15, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.88))
                 .lineLimit(2)
-
-            Text("\(collection.poemCount) 首作品")
-                .font(.system(size: isCompact ? 11 : 12, weight: .bold))
-                .foregroundStyle(.white.opacity(0.76))
-                .padding(.top, 4)
         }
         .padding(max(isCompact ? 16 : 18, size.width * 0.06))
     }

@@ -14,136 +14,87 @@ struct PoemTextSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                SectionTitle(title: script.converted("正文"), showsChevron: false)
-
-                Spacer()
-
-                Button {
-                    UIPasteboard.general.string = poem.lines.map(\.text).joined(separator: "\n")
-                } label: {
-                    Image(systemName: "doc.on.doc")
-                        .font(.body.weight(.semibold))
-                        .frame(width: 36, height: 36)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel(script.converted("复制全文"))
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            SectionTitle(title: script.converted("正文"), showsChevron: false)
 
             ViewThatFits(in: .horizontal) {
-                poemLines(using: .whole, allowsTextWrapping: false)
+                selectableText(using: .whole, allowsTextWrapping: false)
                     .fixedSize(horizontal: true, vertical: false)
 
-                poemLines(using: .balanced, allowsTextWrapping: true)
+                selectableText(using: .balanced, allowsTextWrapping: true)
             }
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-        }
-        .frame(maxWidth: 680, alignment: .leading)
-    }
 
-    private func poemLines(using layout: PoemLineLayout, allowsTextWrapping: Bool) -> some View {
-        VStack(alignment: .center, spacing: 12) {
-            ForEach(poem.lines) { line in
-                PoemLineTextBlock(
-                    line: line,
-                    displayedLines: layout.displayLines(for: line),
-                    allowsTextWrapping: allowsTextWrapping,
-                    fontSize: CGFloat(PoemTextSizePreference.clamped(poemTextSize)),
-                    isHighlighted: line.id == highlightedLineID,
-                    pronunciation: showPinyin ? poem.supplement?.pronunciation(for: line.id) : nil,
-                    annotations: poem.annotations(for: line.id),
-                    selectedAnnotation: $selectedAnnotation,
-                    isSelectingText: $isSelectingText
-                )
-                .id(line.id)
-                .onAppear { onVisibleLine(line.id) }
-            }
-        }
-    }
-}
-
-private struct PoemLineTextBlock: View {
-    let line: PoemLine
-    let displayedLines: [String]
-    let allowsTextWrapping: Bool
-    let fontSize: CGFloat
-    let isHighlighted: Bool
-    let pronunciation: String?
-    let annotations: [PoemAnnotation]
-    @Binding var selectedAnnotation: PoemAnnotation?
-    @Binding var isSelectingText: Bool
-
-    var body: some View {
-        VStack(alignment: .center, spacing: 8) {
-            lineContent
-
-            if let pronunciation, !pronunciation.isEmpty {
-                Text(pronunciation)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(PoemeryTheme.tertiaryText)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-                    .textSelection(.enabled)
-                    .accessibilityLabel("拼音：\(pronunciation)")
-            }
-
-            if !annotations.isEmpty {
+            if !poem.annotations.isEmpty {
                 annotationChips
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
-
-    private var lineContent: some View {
-        VStack(alignment: .center, spacing: 10) {
-            ForEach(Array(displayedLines.enumerated()), id: \.offset) { _, text in
-                poemText(text)
-                    .fixedSize(horizontal: !allowsTextWrapping, vertical: true)
+        .frame(maxWidth: 680, alignment: .leading)
+        .onAppear {
+            if let firstLineID = poem.lines.first?.id {
+                onVisibleLine(firstLineID)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
     }
 
-    private var annotationChips: some View {
-        HStack(spacing: 8) {
-            ForEach(annotations) { annotation in
-                Button {
-                    selectedAnnotation = annotation
-                } label: {
-                    Text(annotation.term)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(PoemeryTheme.accent)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(PoemeryTheme.accentSoft, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-    }
-
-    private func poemText(_ text: String) -> some View {
-        SelectablePoemLineText(
-            text: text,
-            fontSize: fontSize,
+    private func selectableText(
+        using layout: PoemLineLayout,
+        allowsTextWrapping: Bool
+    ) -> some View {
+        SelectablePoemText(
+            paragraphs: poem.lines.map { line in
+                SelectablePoemParagraph(
+                    id: line.id,
+                    displayedLines: layout.displayLines(for: line),
+                    pronunciation: showPinyin ? poem.supplement?.pronunciation(for: line.id) : nil,
+                    isHighlighted: line.id == highlightedLineID
+                )
+            },
+            fontSize: CGFloat(PoemTextSizePreference.clamped(poemTextSize)),
             allowsTextWrapping: allowsTextWrapping,
-            isHighlighted: isHighlighted,
             isSelectingText: $isSelectingText
         )
     }
+
+    private var annotationChips: some View {
+        VStack(spacing: 10) {
+            ForEach(poem.lines) { line in
+                let annotations = poem.annotations(for: line.id)
+                if !annotations.isEmpty {
+                    HStack(spacing: 8) {
+                        ForEach(annotations) { annotation in
+                            Button {
+                                selectedAnnotation = annotation
+                            } label: {
+                                Text(annotation.term)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(PoemeryTheme.accent)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(PoemeryTheme.accentSoft, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
 }
 
-private struct SelectablePoemLineText: UIViewRepresentable {
-    let text: String
+private struct SelectablePoemParagraph: Hashable {
+    let id: PoemLine.ID
+    let displayedLines: [String]
+    let pronunciation: String?
+    let isHighlighted: Bool
+}
+
+private struct SelectablePoemText: UIViewRepresentable {
+    let paragraphs: [SelectablePoemParagraph]
     let fontSize: CGFloat
     let allowsTextWrapping: Bool
-    let isHighlighted: Bool
     @Binding var isSelectingText: Bool
 
     func makeCoordinator() -> Coordinator {
@@ -151,7 +102,7 @@ private struct SelectablePoemLineText: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UITextView {
-        let textView = UITextView()
+        let textView = PoemSelectableTextView()
         textView.delegate = context.coordinator
         textView.backgroundColor = .clear
         textView.isEditable = false
@@ -159,24 +110,31 @@ private struct SelectablePoemLineText: UIViewRepresentable {
         textView.isScrollEnabled = false
         textView.textContainerInset = .zero
         textView.textContainer.lineFragmentPadding = 0
-        textView.textContainer.maximumNumberOfLines = allowsTextWrapping ? 0 : 1
-        textView.textContainer.lineBreakMode = allowsTextWrapping ? .byWordWrapping : .byClipping
+        textView.textContainer.maximumNumberOfLines = 0
         textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         textView.setContentHuggingPriority(.required, for: .vertical)
         textView.tintColor = .systemRed
+        textView.adjustsFontForContentSizeCategory = true
         textView.accessibilityTraits = .staticText
         return textView
     }
 
     func updateUIView(_ textView: UITextView, context: Context) {
         context.coordinator.isSelectingText = $isSelectingText
-        textView.textContainer.maximumNumberOfLines = allowsTextWrapping ? 0 : 1
         textView.textContainer.lineBreakMode = allowsTextWrapping ? .byWordWrapping : .byClipping
+        textView.textContainer.widthTracksTextView = allowsTextWrapping
+
         let attributedText = makeAttributedText()
         if !textView.attributedText.isEqual(to: attributedText) {
             textView.attributedText = attributedText
         }
-        textView.accessibilityLabel = text
+        textView.accessibilityLabel = paragraphs
+            .flatMap(\.displayedLines)
+            .joined(separator: "\n")
+    }
+
+    static func dismantleUIView(_ uiView: UITextView, coordinator: Coordinator) {
+        coordinator.isSelectingText.wrappedValue = false
     }
 
     func sizeThatFits(
@@ -202,22 +160,68 @@ private struct SelectablePoemLineText: UIViewRepresentable {
     }
 
     private func makeAttributedText() -> NSAttributedString {
+        let result = NSMutableAttributedString()
         let baseFont = UIFont(name: PoemeryTheme.chineseFontName, size: fontSize)
             ?? UIFont.systemFont(ofSize: fontSize)
-        let font = UIFontMetrics(forTextStyle: .title3).scaledFont(for: baseFont)
+        let poemFont = UIFontMetrics(forTextStyle: .title3).scaledFont(for: baseFont)
+        let pronunciationFont = UIFontMetrics(forTextStyle: .caption1).scaledFont(
+            for: .systemFont(ofSize: 12, weight: .medium)
+        )
+
+        for (paragraphIndex, paragraph) in paragraphs.enumerated() {
+            for (lineIndex, text) in paragraph.displayedLines.enumerated() {
+                result.append(
+                    NSAttributedString(
+                        string: text,
+                        attributes: poemAttributes(font: poemFont, isHighlighted: paragraph.isHighlighted)
+                    )
+                )
+                if lineIndex < paragraph.displayedLines.count - 1 {
+                    result.append(NSAttributedString(string: "\n"))
+                }
+            }
+
+            if let pronunciation = paragraph.pronunciation, !pronunciation.isEmpty {
+                result.append(
+                    NSAttributedString(
+                        string: "\n\(pronunciation)",
+                        attributes: pronunciationAttributes(font: pronunciationFont)
+                    )
+                )
+            }
+
+            if paragraphIndex < paragraphs.count - 1 {
+                result.append(NSAttributedString(string: "\n\n"))
+            }
+        }
+        return result
+    }
+
+    private func poemAttributes(font: UIFont, isHighlighted: Bool) -> [NSAttributedString.Key: Any] {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
         paragraphStyle.lineSpacing = max(8, fontSize * 0.42)
         paragraphStyle.lineBreakMode = allowsTextWrapping ? .byWordWrapping : .byClipping
 
-        return NSAttributedString(
-            string: text,
-            attributes: [
-                .font: font,
-                .foregroundColor: isHighlighted ? UIColor.systemRed : UIColor.label,
-                .paragraphStyle: paragraphStyle
-            ]
-        )
+        return [
+            .font: font,
+            .foregroundColor: isHighlighted ? UIColor.systemRed : UIColor.label,
+            .paragraphStyle: paragraphStyle
+        ]
+    }
+
+    private func pronunciationAttributes(font: UIFont) -> [NSAttributedString.Key: Any] {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        paragraphStyle.lineSpacing = 3
+        paragraphStyle.lineBreakMode = .byWordWrapping
+
+        return [
+            .font: font,
+            .foregroundColor: UIColor.tertiaryLabel,
+            .paragraphStyle: paragraphStyle,
+            .poemeryPronunciation: true
+        ]
     }
 
     final class Coordinator: NSObject, UITextViewDelegate {
@@ -230,6 +234,34 @@ private struct SelectablePoemLineText: UIViewRepresentable {
         func textViewDidChangeSelection(_ textView: UITextView) {
             isSelectingText.wrappedValue = textView.selectedRange.length > 0
         }
+    }
+}
+
+private extension NSAttributedString.Key {
+    static let poemeryPronunciation = NSAttributedString.Key("PoemeryPronunciation")
+}
+
+private final class PoemSelectableTextView: UITextView {
+    override func copy(_ sender: Any?) {
+        guard selectedRange.length > 0,
+              NSMaxRange(selectedRange) <= attributedText.length
+        else {
+            super.copy(sender)
+            return
+        }
+
+        let selection = attributedText.attributedSubstring(from: selectedRange)
+        var copiedText = ""
+        selection.enumerateAttributes(
+            in: NSRange(location: 0, length: selection.length)
+        ) { attributes, range, _ in
+            guard attributes[.poemeryPronunciation] == nil else {
+                return
+            }
+            copiedText += selection.attributedSubstring(from: range).string
+        }
+
+        UIPasteboard.general.string = copiedText
     }
 }
 

@@ -183,9 +183,27 @@ struct ProfileSettingsHomeView: View {
                     SettingsNavigationRow(symbol: "hand.raised.fill", title: script.converted("隐私说明"))
                 }
                 .buttonStyle(.plain)
+
+                Divider().padding(.leading, 50)
+
+                Link(destination: contactAuthorURL) {
+                    SettingsNavigationRow(symbol: "envelope.fill", title: script.converted("联系作者"))
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(script.converted("使用默认邮件应用发送反馈"))
             }
             .groupedListBackground()
         }
+    }
+
+    private var contactAuthorURL: URL {
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "2210286979@qq.com"
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: "Poemery 使用反馈")
+        ]
+        return components.url ?? URL(string: "mailto:2210286979@qq.com")!
     }
 }
 
