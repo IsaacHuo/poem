@@ -6,9 +6,21 @@ enum PoemeryTheme {
 
     static let accent = Color(uiColor: .systemRed)
     static let accentSoft = Color(uiColor: .systemRed).opacity(0.12)
-    static let background = Color(red: 0.965, green: 0.952, blue: 0.918)
-    static let groupedBackground = Color(red: 0.985, green: 0.976, blue: 0.948)
-    static let surface = Color(red: 0.992, green: 0.986, blue: 0.965)
+    static let background = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.systemBackground
+            : UIColor(red: 0.965, green: 0.952, blue: 0.918, alpha: 1)
+    })
+    static let groupedBackground = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.secondarySystemGroupedBackground
+            : UIColor(red: 0.985, green: 0.976, blue: 0.948, alpha: 1)
+    })
+    static let surface = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor.secondarySystemBackground
+            : UIColor(red: 0.992, green: 0.986, blue: 0.965, alpha: 1)
+    })
     static let primaryText = Color(uiColor: .label)
     static let secondaryText = Color(uiColor: .secondaryLabel)
     static let tertiaryText = Color(uiColor: .tertiaryLabel)

@@ -16,6 +16,12 @@ struct PoemListRow: View {
                     .font(.subheadline)
                     .foregroundStyle(PoemeryTheme.secondaryText)
                     .lineLimit(1)
+                if (poem.form == "词" || poem.form == "曲"), !poem.firstLinePreview.isEmpty {
+                    Text(poem.firstLinePreview)
+                        .font(.caption)
+                        .foregroundStyle(PoemeryTheme.tertiaryText)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
@@ -46,6 +52,12 @@ struct PoemListItemRow: View {
                     .font(.subheadline)
                     .foregroundStyle(PoemeryTheme.secondaryText)
                     .lineLimit(1)
+                if (item.form == "词" || item.form == "曲"), !item.firstLinePreview.isEmpty {
+                    Text(item.firstLinePreview)
+                        .font(.caption)
+                        .foregroundStyle(PoemeryTheme.tertiaryText)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()

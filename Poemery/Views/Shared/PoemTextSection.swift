@@ -4,8 +4,10 @@ struct PoemTextSection: View {
     let poem: Poem
     let highlightedLineID: PoemLine.ID?
     @Binding var selectedAnnotation: PoemAnnotation?
+    let onVisibleLine: (PoemLine.ID) -> Void
 
     @AppStorage(PoemTextSizePreference.storageKey) private var poemTextSize = PoemTextSizePreference.defaultValue
+    @AppStorage("poemery.display.showPinyin") private var showPinyin = true
     @Environment(\.chineseScriptPreference) private var script
 
     var body: some View {
@@ -35,9 +37,12 @@ struct PoemTextSection: View {
                     allowsTextWrapping: allowsTextWrapping,
                     fontSize: CGFloat(PoemTextSizePreference.clamped(poemTextSize)),
                     isHighlighted: line.id == highlightedLineID,
+                    pronunciation: showPinyin ? poem.supplement?.pronunciation(for: line.id) : nil,
                     annotations: poem.annotations(for: line.id),
                     selectedAnnotation: $selectedAnnotation
                 )
+                .id(line.id)
+                .onAppear { onVisibleLine(line.id) }
             }
         }
     }
@@ -49,12 +54,23 @@ private struct PoemLineTextBlock: View {
     let allowsTextWrapping: Bool
     let fontSize: CGFloat
     let isHighlighted: Bool
+    let pronunciation: String?
     let annotations: [PoemAnnotation]
     @Binding var selectedAnnotation: PoemAnnotation?
 
     var body: some View {
         VStack(alignment: .center, spacing: 8) {
             lineContent
+
+            if let pronunciation, !pronunciation.isEmpty {
+                Text(pronunciation)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(PoemeryTheme.tertiaryText)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .textSelection(.enabled)
+                    .accessibilityLabel("拼音：\(pronunciation)")
+            }
 
             if !annotations.isEmpty {
                 annotationChips

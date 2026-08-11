@@ -48,6 +48,24 @@ struct LibraryScreen: View {
                         destination: .poems
                     )
                     LibraryNavigationRow(
+                        symbol: "building.columns.fill",
+                        title: "朝代",
+                        value: "\(library.dynasties().count)",
+                        destination: .facets(.dynasty)
+                    )
+                    LibraryNavigationRow(
+                        symbol: "textformat",
+                        title: "体裁",
+                        value: "\(library.forms(limit: 100).count)",
+                        destination: .facets(.form)
+                    )
+                    LibraryNavigationRow(
+                        symbol: "leaf.fill",
+                        title: "主题",
+                        value: "\(library.categories.count)",
+                        destination: .facets(.theme)
+                    )
+                    LibraryNavigationRow(
                         symbol: "chart.bar.fill",
                         title: "作品榜",
                         value: "\(library.chartPoems(limit: 100).count)",
@@ -149,7 +167,7 @@ struct LibraryScreen: View {
         case .poems:
             PoemListSection(
                 title: selectedSort.title,
-                poems: sortedPoems(Array(library.poems.prefix(80))).prefixArray(6),
+                poems: sortedPoems(library.cachedPoems(limit: 80)).prefixArray(6),
                 queueTitle: "诗词",
                 onOpenPoem: onOpenPoem
             )
@@ -178,8 +196,9 @@ struct LibraryScreen: View {
             )
         case .authors:
             AuthorShelf(authors: Array(authors.prefix(8))) { author in
-                if let firstPoem = author.poems.first {
-                    onOpenPoem(firstPoem, ReadingQueue(title: author.name, poems: author.poems))
+                let poems = library.poemsByAuthor(author)
+                if let firstPoem = poems.first {
+                    onOpenPoem(firstPoem, ReadingQueue(title: author.name, poems: poems))
                 }
             }
         }
@@ -262,6 +281,8 @@ struct LibraryScreen: View {
                 queueTitle: "作品榜",
                 onOpenPoem: onOpenPoem
             )
+        case .facets(let kind):
+            LibraryFacetDirectory(kind: kind, library: library, onOpenPoem: onOpenPoem)
         case .favorites:
             PoemDirectoryView(
                 title: "收藏",
@@ -291,8 +312,58 @@ private enum LibraryDestination: Hashable {
     case author(AuthorResult.ID)
     case poems
     case chart
+    case facets(LibraryFacetKind)
     case favorites
     case recents
+}
+
+private enum LibraryFacetKind: String, Hashable {
+    case dynasty
+    case form
+    case theme
+
+    var title: String {
+        switch self {
+        case .dynasty: "朝代"
+        case .form: "体裁"
+        case .theme: "主题"
+        }
+    }
+}
+
+private struct LibraryFacetDirectory: View {
+    let kind: LibraryFacetKind
+    let library: PoemLibraryStore
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    private var values: [String] {
+        switch kind {
+        case .dynasty: library.dynasties()
+        case .form: library.forms(limit: 100)
+        case .theme: Array(Set(library.categories.map(\.tag))).sorted()
+        }
+    }
+
+    var body: some View {
+        List(values, id: \.self) { value in
+            NavigationLink(value: value) {
+                Text(value)
+            }
+        }
+        .navigationTitle(kind.title)
+        .navigationDestination(for: String.self) { value in
+            PagedPoemDirectoryView(
+                title: value,
+                library: library,
+                emptyTitle: "暂无作品",
+                emptySubtitle: "这个分类暂时没有作品。",
+                queueTitle: value,
+                facetKind: kind.rawValue,
+                facetValue: value,
+                onOpenPoem: onOpenPoem
+            )
+        }
+    }
 }
 
 private enum LibraryShelf: String, CaseIterable, Identifiable {
@@ -322,7 +393,7 @@ private enum LibrarySort: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .curated: "精选排序"
+        case .curated: "分类"
         case .title: "按题名"
         case .author: "按作者"
         }
@@ -489,6 +560,8 @@ private struct PagedPoemDirectoryView: View {
     let emptyTitle: String
     let emptySubtitle: String
     let queueTitle: String
+    var facetKind: String? = nil
+    var facetValue: String? = nil
     let onOpenPoem: (Poem, ReadingQueue) -> Void
 
     @Environment(\.chineseScriptPreference) private var script
@@ -498,7 +571,7 @@ private struct PagedPoemDirectoryView: View {
     @State private var isLoading = false
 
     private var displayTotal: Int {
-        max(total, library.totalPoemCount)
+        total > 0 ? total : (facetKind == nil ? library.totalPoemCount : 0)
     }
 
     var body: some View {
@@ -619,7 +692,17 @@ private struct PagedPoemDirectoryView: View {
         }
 
         isLoading = true
-        let result = await library.loadPoemsPage(page: page, script: script)
+        let result: PagedPoems
+        if let facetKind, let facetValue {
+            result = await library.loadFacetPoems(
+                kind: facetKind,
+                value: facetValue,
+                page: page,
+                script: script
+            )
+        } else {
+            result = await library.loadPoemsPage(page: page, script: script)
+        }
         if page <= 1 {
             poems = result.poems
         } else {

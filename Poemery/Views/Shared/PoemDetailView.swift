@@ -32,8 +32,7 @@ struct PoemDetailView: View {
     private var visiblePoem: Poem {
         library.poem(id: currentPoemID)
             ?? session.currentPoem(in: library)
-            ?? library.poems.first
-            ?? library.poems[0]
+            ?? library.firstCachedPoem()!
     }
 
     private var currentQueue: ReadingQueue {
@@ -69,6 +68,11 @@ struct PoemDetailView: View {
                         poemTextContent
                             .simultaneousGesture(swipeGesture)
 
+                        if let supplement = visiblePoem.supplement {
+                            PoemSupplementContent(supplement: supplement)
+                                .frame(maxWidth: 680, alignment: .leading)
+                        }
+
                         RelatedPoemsSection(poems: relatedPoems, onOpenPoem: showRelatedPoem)
                             .frame(maxWidth: 680, alignment: .leading)
                     }
@@ -82,7 +86,14 @@ struct PoemDetailView: View {
                 .onChange(of: currentPoemID) {
                     selectedAnnotation = nil
                     withAnimation(PoemeryTheme.motion) {
-                        proxy.scrollTo("reader-top", anchor: .top)
+                        proxy.scrollTo(session.readingPosition(for: currentPoemID) ?? "reader-top", anchor: .top)
+                    }
+                }
+                .onAppear {
+                    if let lineID = session.readingPosition(for: visiblePoem.id) {
+                        Task { @MainActor in
+                            proxy.scrollTo(lineID, anchor: .top)
+                        }
                     }
                 }
             }
@@ -178,7 +189,10 @@ struct PoemDetailView: View {
             PoemTextSection(
                 poem: visiblePoem,
                 highlightedLineID: nil,
-                selectedAnnotation: $selectedAnnotation
+                selectedAnnotation: $selectedAnnotation,
+                onVisibleLine: { lineID in
+                    session.saveReadingPosition(lineID: lineID, for: visiblePoem.id)
+                }
             )
         }
     }
@@ -192,8 +206,8 @@ struct PoemDetailView: View {
                 Text(visiblePoem.title)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(PoemeryTheme.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.56)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
 
                 authorAttribution
 
@@ -325,10 +339,7 @@ struct PoemDetailView: View {
     }
 
     private var relatedPoems: [Poem] {
-        library.poems
-            .filter { $0.id != visiblePoem.id && !$0.tags.filter(visiblePoem.tags.contains).isEmpty }
-            .prefix(4)
-            .map { $0 }
+        library.relatedPoems(to: visiblePoem)
     }
 
     private var swipeGesture: some Gesture {
@@ -388,6 +399,73 @@ struct PoemDetailView: View {
         }
     }
 
+}
+
+private struct PoemSupplementContent: View {
+    let supplement: PoemSupplement
+
+    @Environment(\.chineseScriptPreference) private var script
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if !supplement.translation.isEmpty {
+                textCard(title: script.converted("译文"), symbol: "character.book.closed", text: supplement.translation)
+            }
+
+            if !supplement.appreciation.isEmpty {
+                textCard(title: script.converted("赏析"), symbol: "text.quote", text: supplement.appreciation)
+            }
+
+            sourceCard
+        }
+    }
+
+    private func textCard(title: String, symbol: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(title, systemImage: symbol)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(PoemeryTheme.primaryText)
+
+            Text(text)
+                .font(.body)
+                .foregroundStyle(PoemeryTheme.secondaryText)
+                .lineSpacing(6)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(18)
+        .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.55), lineWidth: 0.6)
+        }
+    }
+
+    private var sourceCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(script.converted("内容来源"), systemImage: "checkmark.seal")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(PoemeryTheme.primaryText)
+
+            if let sourceURL = supplement.sourceURL {
+                Link(supplement.sourceName, destination: sourceURL)
+                    .font(.footnote.weight(.semibold))
+            } else {
+                Text(supplement.sourceName)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.secondaryText)
+            }
+
+            if !supplement.sourceLicense.isEmpty {
+                Text(supplement.sourceLicense)
+                    .font(.caption)
+                    .foregroundStyle(PoemeryTheme.tertiaryText)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(PoemeryTheme.warmPaper.opacity(0.46), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
 }
 
 private struct PoemShareComposerItem: Identifiable {

@@ -18,7 +18,9 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
     let themes: [String]
     let difficulty: Int
     let canonicalKey: String
+    let supplement: PoemSupplement?
     let searchMatch: SearchMatchSnippet?
+    let firstLinePreview: String
 
     init(
         id: String,
@@ -38,7 +40,9 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         themes: [String]? = nil,
         difficulty: Int? = nil,
         canonicalKey: String? = nil,
-        searchMatch: SearchMatchSnippet? = nil
+        supplement: PoemSupplement? = nil,
+        searchMatch: SearchMatchSnippet? = nil,
+        firstLinePreview: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -63,7 +67,9 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         self.themes = themes?.isEmpty == false ? themes ?? [] : Self.defaultThemes(tags: tags, dynasty: dynasty, form: form)
         self.difficulty = difficulty ?? Self.defaultDifficulty(form: form, lines: lines)
         self.canonicalKey = canonicalKey ?? Self.defaultCanonicalKey(dynasty: dynasty, author: author, title: title)
+        self.supplement = supplement
         self.searchMatch = searchMatch
+        self.firstLinePreview = firstLinePreview ?? lines.first?.text ?? ""
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -84,7 +90,9 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         case themes
         case difficulty
         case canonicalKey
+        case supplement
         case searchMatch
+        case firstLinePreview
     }
 
     init(from decoder: Decoder) throws {
@@ -119,7 +127,9 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
             themes: try container.decodeIfPresent([String].self, forKey: .themes),
             difficulty: try container.decodeIfPresent(Int.self, forKey: .difficulty),
             canonicalKey: try container.decodeIfPresent(String.self, forKey: .canonicalKey),
-            searchMatch: try container.decodeIfPresent(SearchMatchSnippet.self, forKey: .searchMatch)
+            supplement: try container.decodeIfPresent(PoemSupplement.self, forKey: .supplement),
+            searchMatch: try container.decodeIfPresent(SearchMatchSnippet.self, forKey: .searchMatch),
+            firstLinePreview: try container.decodeIfPresent(String.self, forKey: .firstLinePreview)
         )
     }
 
@@ -161,7 +171,9 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
             themes: themes,
             difficulty: difficulty,
             canonicalKey: canonicalKey,
-            searchMatch: searchMatch
+            supplement: supplement,
+            searchMatch: searchMatch,
+            firstLinePreview: firstLinePreview
         )
     }
 
@@ -221,6 +233,40 @@ struct Poem: Identifiable, Codable, Hashable, Sendable {
         }
         return summary
     }
+}
+
+struct PoemSupplement: Codable, Hashable, Sendable {
+    let pronunciations: [PoemPronunciationLine]
+    let translation: String
+    let appreciation: String
+    let sourceName: String
+    let sourceURL: URL?
+    let sourceLicense: String
+
+    init(
+        pronunciations: [PoemPronunciationLine] = [],
+        translation: String = "",
+        appreciation: String = "",
+        sourceName: String = "Poemery 编辑内容",
+        sourceURL: URL? = nil,
+        sourceLicense: String = "Poemery 原创编辑"
+    ) {
+        self.pronunciations = pronunciations
+        self.translation = translation
+        self.appreciation = appreciation
+        self.sourceName = sourceName
+        self.sourceURL = sourceURL
+        self.sourceLicense = sourceLicense
+    }
+
+    func pronunciation(for lineID: PoemLine.ID) -> String? {
+        pronunciations.first { $0.lineID == lineID }?.text
+    }
+}
+
+struct PoemPronunciationLine: Codable, Hashable, Sendable {
+    let lineID: PoemLine.ID
+    let text: String
 }
 
 struct PoemLine: Identifiable, Codable, Hashable, Sendable {
@@ -306,6 +352,21 @@ struct PoemCategory: Identifiable, Codable, Hashable, Sendable {
     let symbol: String
 }
 
+struct AuthorProfile: Identifiable, Codable, Hashable, Sendable {
+    let id: String
+    let name: String
+    let dynasty: String
+    let biography: String
+    let lifeYears: String?
+    let courtesyNames: [String]
+    let aliases: [String]
+    let nativePlace: String?
+    let sourceName: String
+    let sourceURL: URL?
+    let sourceLicense: String
+    let portrait: AuthorPortrait?
+}
+
 struct PoemKeyword: Identifiable, Hashable, Sendable {
     let id: String
     let text: String
@@ -321,6 +382,7 @@ struct PoemListItem: Identifiable, Hashable, Sendable {
     let form: String
     let artworkStyle: ArtworkStyle
     let searchMatch: SearchMatchSnippet?
+    let firstLinePreview: String
 
     init(
         id: Poem.ID,
@@ -329,7 +391,8 @@ struct PoemListItem: Identifiable, Hashable, Sendable {
         dynasty: String,
         form: String,
         artworkStyle: ArtworkStyle,
-        searchMatch: SearchMatchSnippet? = nil
+        searchMatch: SearchMatchSnippet? = nil,
+        firstLinePreview: String = ""
     ) {
         self.id = id
         self.title = title
@@ -338,6 +401,7 @@ struct PoemListItem: Identifiable, Hashable, Sendable {
         self.form = form
         self.artworkStyle = artworkStyle
         self.searchMatch = searchMatch
+        self.firstLinePreview = firstLinePreview
     }
 
     init(poem: Poem, searchMatch: SearchMatchSnippet? = nil) {
@@ -348,6 +412,7 @@ struct PoemListItem: Identifiable, Hashable, Sendable {
         self.form = poem.form
         self.artworkStyle = poem.artworkStyle
         self.searchMatch = searchMatch ?? poem.searchMatch
+        self.firstLinePreview = poem.firstLinePreview
     }
 
     var displayArtist: String {
@@ -369,10 +434,24 @@ struct PoemListItem: Identifiable, Hashable, Sendable {
             dynasty: dynasty,
             form: form,
             artworkStyle: artworkStyle,
-            searchMatch: searchMatch
+            searchMatch: searchMatch,
+            firstLinePreview: firstLinePreview
         )
     }
 }
+
+struct PageCursor: Codable, Hashable, Sendable {
+    let order: Int
+    let id: String
+}
+
+struct PageResult<Element: Sendable>: Sendable {
+    let items: [Element]
+    let nextCursor: PageCursor?
+    let total: Int
+}
+
+typealias PoemDetail = Poem
 
 enum SearchMatchKind: String, Codable, Hashable, Sendable {
     case title
@@ -467,6 +546,19 @@ struct PoemSeedCatalog: Codable, Sendable {
     let poems: [Poem]
     let collections: [PoemCollection]
     let categories: [PoemCategory]
+    let authorProfiles: [AuthorProfile]
+
+    init(
+        poems: [Poem],
+        collections: [PoemCollection],
+        categories: [PoemCategory],
+        authorProfiles: [AuthorProfile] = []
+    ) {
+        self.poems = poems
+        self.collections = collections
+        self.categories = categories
+        self.authorProfiles = authorProfiles
+    }
 }
 
 struct PoemeryStats: Codable, Sendable {
@@ -481,6 +573,17 @@ struct PoemeryBootstrapSnapshot: Sendable {
     let catalog: PoemSeedCatalog
 }
 
+struct PoemLibraryBootstrap: Sendable {
+    let stats: PoemeryStats
+    let collections: [PoemCollection]
+    let categories: [PoemCategory]
+    let authors: [AuthorResult]
+    let keywords: [PoemKeyword]
+    let dynasties: [String]
+    let forms: [String]
+    let popularPoems: [Poem]
+}
+
 struct SearchResults: Sendable {
     var poems: [Poem] = []
     var authors: [AuthorResult] = []
@@ -491,12 +594,17 @@ struct SearchResults: Sendable {
     }
 }
 
+struct SearchPageCursor: Sendable, Equatable {
+    let rank: Double
+    let rowID: Int
+}
+
 struct SearchResultsPage: Sendable {
     var poems: [PoemListItem] = []
     var authors: [AuthorResult] = []
     var collections: [PoemCollection] = []
     var totalPoemCount: Int = 0
-    var nextOffset: Int?
+    var nextCursor: SearchPageCursor?
     var poemIDs: [Poem.ID] = []
 
     var isEmpty: Bool {
@@ -516,7 +624,7 @@ struct SearchResultsPage: Sendable {
             authors: authors.isEmpty ? page.authors : authors,
             collections: collections.isEmpty ? page.collections : collections,
             totalPoemCount: max(totalPoemCount, page.totalPoemCount),
-            nextOffset: page.nextOffset,
+            nextCursor: page.nextCursor,
             poemIDs: combinedPoemIDs
         )
     }
@@ -557,14 +665,20 @@ struct AuthorResult: Identifiable, Codable, Hashable, Sendable {
     let name: String
     let dynasty: String
     let poemCount: Int
-    let poems: [Poem]
+    let profile: AuthorProfile?
 
-    init(id: String, name: String, dynasty: String, poemCount: Int? = nil, poems: [Poem]) {
+    init(
+        id: String,
+        name: String,
+        dynasty: String,
+        poemCount: Int,
+        profile: AuthorProfile? = nil
+    ) {
         self.id = id
         self.name = name
         self.dynasty = dynasty
-        self.poemCount = poemCount ?? poems.count
-        self.poems = poems
+        self.poemCount = poemCount
+        self.profile = profile
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -572,22 +686,16 @@ struct AuthorResult: Identifiable, Codable, Hashable, Sendable {
         case name
         case dynasty
         case poemCount
-        case poems
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let poems = try container.decodeIfPresent([Poem].self, forKey: .poems) ?? []
-
-        self.id = try container.decode(String.self, forKey: .id)
-        self.name = try container.decode(String.self, forKey: .name)
-        self.dynasty = try container.decode(String.self, forKey: .dynasty)
-        self.poemCount = try container.decodeIfPresent(Int.self, forKey: .poemCount) ?? poems.count
-        self.poems = poems
+        case profile
     }
 
     var introduction: String {
-        if let introduction = Self.introductions[name] {
+        if let biography = profile?.biography, !biography.isEmpty {
+            return biography
+        }
+
+        let simplifiedName = ChineseTextConverter.convert(name, to: .simplified)
+        if let introduction = Self.introductions[name] ?? Self.introductions[simplifiedName] {
             return introduction
         }
 
@@ -598,6 +706,15 @@ struct AuthorResult: Identifiable, Codable, Hashable, Sendable {
         let era = dynasty.isEmpty ? "" : "\(dynasty)代"
         let countText = poemCount == 0 ? "暂无收录作品" : "当前诗库收录 \(poemCount) 首作品"
         return "\(era)作者。\(countText)，可从作品列表继续阅读相关作品。"
+    }
+
+    var portrait: AuthorPortrait? {
+        if let portrait = profile?.portrait {
+            return portrait
+        }
+
+        let simplifiedName = ChineseTextConverter.convert(name, to: .simplified)
+        return Self.portraits[name] ?? Self.portraits[simplifiedName]
     }
 
     private static let introductions: [String: String] = [
@@ -625,8 +742,73 @@ struct AuthorResult: Identifiable, Codable, Hashable, Sendable {
         "关汉卿": "关汉卿，元代杂剧作家、散曲家。其作品关注世情与人物命运，是元曲的重要代表。",
         "關漢卿": "关汉卿，元代杂剧作家、散曲家。其作品关注世情与人物命运，是元曲的重要代表。",
         "马致远": "马致远，元代戏曲家、散曲家。其小令清疏苍凉，常以羁旅与秋思意象见长。",
-        "馬致遠": "马致远，元代戏曲家、散曲家。其小令清疏苍凉，常以羁旅与秋思意象见长。"
+        "馬致遠": "马致远，元代戏曲家、散曲家。其小令清疏苍凉，常以羁旅与秋思意象见长。",
+        "王安石": "王安石，北宋政治家、文学家，字介甫，号半山。其诗文立意峭拔、语言精练，既关注现实，也善于从日常景物中写出新意。",
+        "曹操": "曹操，东汉末年政治家、军事家、文学家，字孟德。其诗语言质朴而气象雄健，是建安文学的重要代表。",
+        "陶渊明": "陶渊明，东晋诗人，名潜，字元亮。其田园诗自然平淡而意蕴深远，对后世文人生活理想与诗歌审美影响深远。",
+        "李煜": "李煜，五代南唐后主，字重光。其词善写人生感受与故国之思，语言明净，情感深切，对宋词发展影响显著。",
+        "于谦": "于谦，明代政治家、诗人，字廷益，号节庵。其诗多见刚正自持的品格与关切时事的襟怀。",
+        "龚自珍": "龚自珍，清代思想家、文学家，字璱人，号定盦。其诗文关注时代变局，想象奇崛，常以鲜明语言表达革新愿望。",
+        "纳兰性德": "纳兰性德，清代词人，字容若，号楞伽山人。其词情感真挚、语言清丽，尤擅悼亡、行旅与边塞题材。"
     ]
+
+    private static let portraits: [String: AuthorPortrait] = [
+        "王安石": AuthorPortrait(
+            assetName: "AuthorPortraitWangAnshi",
+            sourceURL: URL(string: "https://commons.wikimedia.org/wiki/File:Wang_Anshi.jpg")!,
+            credit: "传统画像，作者不详，清宫旧藏 · Wikimedia Commons",
+            license: "Public domain"
+        ),
+        "曹操": AuthorPortrait(
+            assetName: "AuthorPortraitCaoCao",
+            sourceURL: URL(string: "https://commons.wikimedia.org/wiki/File:Cao_Cao_scth.jpg")!,
+            credit: "王圻《三才图会》传统画像 · Wikimedia Commons",
+            license: "Public domain"
+        ),
+        "陶渊明": AuthorPortrait(
+            assetName: "AuthorPortraitTaoYuanming",
+            sourceURL: URL(string: "https://commons.wikimedia.org/wiki/File:%27Tao_Yuanming%27,_ink_on_paper_scroll_by_Min_Zhen,_18th_century_china.jpg")!,
+            credit: "闵贞绘陶渊明传统画像 · Wikimedia Commons",
+            license: "Public domain"
+        ),
+        "李煜": AuthorPortrait(
+            assetName: "AuthorPortraitLiYu",
+            sourceURL: URL(string: "https://commons.wikimedia.org/wiki/File:Li_Yu_scth.jpg")!,
+            credit: "王圻《三才图会》传统画像 · Wikimedia Commons",
+            license: "Public domain"
+        ),
+        "于谦": AuthorPortrait(
+            assetName: "AuthorPortraitYuQian",
+            sourceURL: URL(string: "https://commons.wikimedia.org/wiki/File:Yu_Qian_by_Gu_Jianlong.jpg")!,
+            credit: "顾见龙绘于谦传统画像 · Wikimedia Commons",
+            license: "Public domain"
+        ),
+        "龚自珍": AuthorPortrait(
+            assetName: "AuthorPortraitGongZizhen",
+            sourceURL: URL(string: "https://commons.wikimedia.org/wiki/File:Gong_Zizhen.jpg")!,
+            credit: "清人绘龚自珍传统画像 · Wikimedia Commons",
+            license: "Public domain"
+        )
+    ]
+}
+
+struct AuthorPortrait: Codable, Hashable, Sendable {
+    let assetName: String?
+    let sourceURL: URL?
+    let credit: String
+    let license: String
+
+    init(
+        assetName: String? = nil,
+        sourceURL: URL? = nil,
+        credit: String,
+        license: String
+    ) {
+        self.assetName = assetName
+        self.sourceURL = sourceURL
+        self.credit = credit
+        self.license = license
+    }
 }
 
 extension Color {

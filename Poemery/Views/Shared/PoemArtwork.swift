@@ -51,16 +51,18 @@ struct PoemArtwork: View {
                 }
                 .overlay(PaperTexture().opacity(0.20))
 
-            VStack(alignment: .leading) {
-                Spacer()
-                Text(title)
-                    .font(.system(size: max(13, size * 0.15), weight: .bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(size < 70 ? 1 : 3)
-                    .minimumScaleFactor(0.62)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(max(8, size * 0.08))
+            Circle()
+                .fill(.white.opacity(0.10))
+                .frame(width: size * 0.72, height: size * 0.72)
+                .blur(radius: size * 0.08)
+                .offset(x: size * 0.18, y: -size * 0.20)
+
+            Text(style.glyph)
+                .font(PoemeryTheme.chineseFont(size: max(24, size * 0.42), relativeTo: .largeTitle).weight(.bold))
+                .foregroundStyle(.white.opacity(0.94))
+                .minimumScaleFactor(0.85)
+                .shadow(color: .black.opacity(0.18), radius: size * 0.04, x: 0, y: size * 0.025)
+                .padding(size * 0.14)
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))

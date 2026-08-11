@@ -30,6 +30,8 @@ iOS 26 使用 `.glassEffect(...)` / `GlassEffectContainer`，低版本 fallback 
 
 根视图是 `Poemery/ContentView.swift`。
 
+启动时同步创建仅含少量精选作品的 `PoemLibraryStore.bootstrap()`，立即渲染可操作的 Tab 界面。完整 SQLite/JSON 诗库在后台读取并建立索引；加载期间顶部仅显示非阻塞状态条，加载失败也保留精选内容和重试入口，不再展示阻塞式全屏 loading。
+
 当前主导航结构：
 
 - `主页`
@@ -140,7 +142,9 @@ iOS 26 下根据 `tabViewBottomAccessoryPlacement` 自动切换：
 结构：
 
 - compact hero：小封面、标题、作者朝代体裁、标签、收藏按钮。
-- 正文：`PoemTextSection`。
+- 正文：`PoemTextSection`，补充数据存在时在诗句下显示拼音。
+- 增强内容：按数据条件显示译文、赏析和内容来源；没有资料时不显示空 section。
+- 注释：点击正文下方词语标签打开详细注释。
 - 相关诗词：按共享标签筛选。
 - 底部工具栏：上一首、当前队列位置、下一首。
 - 横向滑动正文区域可切换上一首/下一首。
@@ -153,11 +157,20 @@ iOS 26 下根据 `tabViewBottomAccessoryPlacement` 自动切换：
 
 结构：
 
-- 大封面 `CollectionCover`：渐变、纸纹、诗境标记、集合 glyph。
-- 标题、副标题、作品数量。
+- 大封面 `CollectionCover`：渐变、纸纹、诗境标记和集合 glyph，不在封面内重复可能很长的完整标题。
+- 封面外展示完整标题、副标题、作品数量。
 - 作品列表。
 
 诗单详情页对应 Apple Music 专辑/歌单详情的信息结构，但内容语义是诗单和作品。
+
+### 诗人详情页
+
+文件：`Poemery/Views/Shared/CollectionDetailView.swift`
+
+- 使用接近 Apple Music Artist 页的大幅 hero：传统画像、底部渐变、诗人姓名、朝代和作品数。
+- 首批画像来自 Wikimedia Commons 逐文件核验的公版传统画像，hero 下方提供可点击来源与许可信息。
+- 图片通过 `AsyncImage` 懒加载，不参与诗库启动流程；离线、加载中或失败时使用首字渐变意境 fallback。
+- 作者简介来自本地编辑元数据；未知作者继续使用包含朝代和收录数量的通用说明。
 
 ## 共享组件
 
@@ -169,7 +182,7 @@ iOS 26 下根据 `tabViewBottomAccessoryPlacement` 自动切换：
 - `PoemShelf` / `CompactPoemCard`：横向作品 shelf。
 - `PoemListSection` / `PoemListRow`：列表型作品入口。
 - `CategoryTile`：题材入口。
-- `PoemArtwork`：用 `ArtworkStyle` 生成封面。
+- `PoemArtwork`：用 `ArtworkStyle` 生成意境封面，只显示标题首个 CJK 字符，不把完整长标题压进小封面。
 - `PaperTexture`：轻量纸纹装饰。
 - `EmptyLibraryState`：空状态。
 
@@ -178,4 +191,5 @@ iOS 26 下根据 `tabViewBottomAccessoryPlacement` 自动切换：
 - 最低系统保持 iOS 17。
 - iOS 26 优先使用系统原生 Liquid Glass 和底栏 API。
 - iOS 17-25 不追求完全复刻 iOS 26 形态，而是保留稳定可用的系统 `TabView`、`safeAreaInset` 和 material fallback。
-- 当前 UI 不依赖远程图片，封面由本地数据中的 `ArtworkStyle` 生成。
+- 诗词和诗单封面仍完全由本地 `ArtworkStyle` 生成。部分诗人页会按需请求 Wikimedia Commons 公版传统画像；请求失败不会影响浏览和阅读。
+- App Icon 使用 1024×1024、无 Alpha 的全幅源图，外部白色遮罩已去除，最终圆角由 iOS 系统生成。

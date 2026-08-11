@@ -43,6 +43,7 @@ struct ProfileSettingsHomeView: View {
     let onReset: (ProfileResetAction) -> Void
 
     @Environment(\.chineseScriptPreference) private var script
+    @AppStorage("poemery.display.showPinyin") private var showPinyin = true
 
     var body: some View {
         ScrollView {
@@ -70,6 +71,13 @@ struct ProfileSettingsHomeView: View {
                 SettingsValueRow(symbol: "sun.max.fill", title: script.converted("外观"), value: script.converted("浅色纸感"))
                 Divider().padding(.leading, 50)
                 poemTextSizeRow
+                Divider().padding(.leading, 50)
+                Toggle(isOn: $showPinyin) {
+                    SettingsLabelRow(symbol: "character.book.closed.fill", title: script.converted("显示拼音"))
+                }
+                .tint(PoemeryTheme.accent)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 50)
             }
             .groupedListBackground()
         }
@@ -159,6 +167,8 @@ struct ProfileSettingsHomeView: View {
             VStack(spacing: 0) {
                 SettingsValueRow(symbol: "wifi.slash", title: script.converted("诗库"), value: script.converted("本地离线"))
                 Divider().padding(.leading, 50)
+                SettingsValueRow(symbol: "photo.on.rectangle.angled", title: script.converted("诗人画像"), value: script.converted("按需联网"))
+                Divider().padding(.leading, 50)
                 SettingsValueRow(symbol: "person.crop.circle.badge.xmark", title: script.converted("登录"), value: script.converted("无需"))
                 Divider().padding(.leading, 50)
 
@@ -191,7 +201,7 @@ struct DataSourceNoticeView: View {
                         .font(.headline)
                         .foregroundStyle(PoemeryTheme.primaryText)
 
-                    Text(script.converted("内容来自 chinese-poetry/chinese-poetry 的固定版本，阅读和搜索不会在运行时请求远端诗库。"))
+                    Text(script.converted("内容来自 chinese-poetry/chinese-poetry 的固定版本，阅读和搜索不会请求远端诗库；部分诗人页会按需加载 Wikimedia Commons 公版传统画像。"))
                         .font(.subheadline)
                         .foregroundStyle(PoemeryTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
@@ -231,9 +241,14 @@ struct PrivacyOverviewView: View {
 
     var body: some View {
         List {
-            Section(script.converted("免费离线")) {
+            Section(script.converted("核心功能离线")) {
                 SettingsLabelRow(symbol: "internaldrive.fill", title: script.converted("诗库随 App 保存在本机"))
                 SettingsLabelRow(symbol: "wifi.slash", title: script.converted("核心阅读和搜索不需要联网"))
+            }
+
+            Section(script.converted("可选网络内容")) {
+                SettingsLabelRow(symbol: "photo.on.rectangle.angled", title: script.converted("诗人页可能从 Wikimedia Commons 加载公版传统画像"))
+                SettingsLabelRow(symbol: "network", title: script.converted("该请求会向 Wikimedia 发送常规网络信息，但不包含收藏或阅读记录"))
             }
 
             Section(script.converted("本机保存")) {

@@ -1,8 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @AppStorage(ChineseScriptPreference.storageKey) private var chineseScriptRawValue = ChineseScriptPreference.simplified.rawValue
-    @State private var libraryLoadState: LibraryLoadState = .loading
+    @State private var libraryLoadState: LibraryLoadState = .loading(PoemLibraryStore.bootstrap())
     @State private var session = ReadingSessionStore()
     @State private var selectedTab: AppTab = .home
     @State private var lastContentTab: AppTab = .home
@@ -23,7 +24,6 @@ struct ContentView: View {
             .fullScreenCover(item: $presentedPoem) { item in
                 presentedPoemView(for: item)
             }
-            .preferredColorScheme(.light)
             .onChange(of: selectedTab) { _, newTab in
                 if newTab != .search {
                     lastContentTab = newTab
@@ -31,6 +31,9 @@ struct ContentView: View {
             }
             .task(id: chineseScriptRawValue) {
                 await loadLibrary()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+                libraryLoadState.library?.handleMemoryWarning(keeping: presentedPoem?.poemID)
             }
     }
 
@@ -40,18 +43,20 @@ struct ContentView: View {
 
     @ViewBuilder
     private var content: some View {
-        switch libraryLoadState {
-        case .loading:
-            LibraryLoadingScreen()
-        case .loaded(let library):
+        if let library = libraryLoadState.library {
             tabContainer(library: library)
-        case .failed:
-            LibraryLoadFailedScreen {
-                libraryLoadState = .loading
-                Task {
-                    await loadLibrary()
+                .overlay(alignment: .top) {
+                    switch libraryLoadState {
+                    case .loading:
+                        LibraryLoadStatusBanner(status: .loading)
+                    case .failed:
+                        LibraryLoadStatusBanner(status: .failed) {
+                            Task { await loadLibrary() }
+                        }
+                    case .loaded:
+                        EmptyView()
+                    }
                 }
-            }
         }
     }
 
@@ -90,9 +95,20 @@ struct ContentView: View {
             legacyTabScreen(.discover, library: library) {
                 DiscoverScreen(
                     library: library,
+                    session: session,
                     onOpenPoem: openPoem,
                     onOpenCollection: openCollection,
                     onStartSearch: startSearch
+                )
+            }
+
+            legacyTabScreen(.library, library: library) {
+                LibraryScreen(
+                    library: library,
+                    session: session,
+                    onOpenPoem: openPoem,
+                    onOpenCollection: openCollection,
+                    onRefresh: { await refreshLibrary(library) }
                 )
             }
 
@@ -135,9 +151,22 @@ struct ContentView: View {
                 tabContent(library: library) {
                     DiscoverScreen(
                         library: library,
+                        session: session,
                         onOpenPoem: openPoem,
                         onOpenCollection: openCollection,
                         onStartSearch: startSearch
+                    )
+                }
+            }
+
+            Tab(chineseScriptPreference.converted(AppTab.library.title), systemImage: AppTab.library.symbol, value: AppTab.library) {
+                tabContent(library: library) {
+                    LibraryScreen(
+                        library: library,
+                        session: session,
+                        onOpenPoem: openPoem,
+                        onOpenCollection: openCollection,
+                        onRefresh: { await refreshLibrary(library) }
                     )
                 }
             }
@@ -213,12 +242,13 @@ struct ContentView: View {
     }
 
     private func openPoem(_ poem: Poem, queue: ReadingQueue) {
+        libraryLoadState.library?.remember(poem)
         session.startReading(poem, in: queue)
         presentedPoem = PresentedPoem(poemID: poem.id, queue: session.currentQueue ?? queue)
     }
 
     private func openCurrentPoem() {
-        guard case .loaded(let library) = libraryLoadState,
+        guard let library = libraryLoadState.library,
               let poem = session.currentPoem(in: library) else {
             return
         }
@@ -238,7 +268,7 @@ struct ContentView: View {
     }
 
     private func moveToNextPoem() {
-        guard case .loaded(let library) = libraryLoadState else {
+        guard let library = libraryLoadState.library else {
             return
         }
         _ = session.moveToNextPoem(in: library)
@@ -263,7 +293,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private func presentedPoemView(for item: PresentedPoem) -> some View {
-        if case .loaded(let library) = libraryLoadState {
+        if let library = libraryLoadState.library {
             PoemDetailView(
                 initialPoemID: item.poemID,
                 queue: item.queue,
@@ -277,7 +307,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private func presentedView(for item: PresentedLibraryItem) -> some View {
-        if case .loaded(let library) = libraryLoadState {
+        if let library = libraryLoadState.library {
             switch item {
             case .collection(let collectionID):
                 if let collection = library.collection(id: collectionID) {
@@ -308,12 +338,11 @@ struct ContentView: View {
     }
 
     private func loadLibrary() async {
-        if !libraryLoadState.isLoaded {
-            libraryLoadState = .loading
-        }
+        guard let library = libraryLoadState.library else { return }
+        libraryLoadState = .loading(library)
 
         do {
-            let library = try await PoemLibraryStore.loadBundled(script: chineseScriptPreference)
+            try await library.prepare(script: chineseScriptPreference)
             guard !Task.isCancelled else {
                 return
             }
@@ -322,7 +351,7 @@ struct ContentView: View {
             guard !Task.isCancelled else {
                 return
             }
-            libraryLoadState = .failed
+            libraryLoadState = .failed(library)
         }
     }
 
@@ -332,15 +361,60 @@ struct ContentView: View {
 }
 
 private enum LibraryLoadState {
-    case loading
+    case loading(PoemLibraryStore)
     case loaded(PoemLibraryStore)
-    case failed
+    case failed(PoemLibraryStore)
 
-    var isLoaded: Bool {
-        if case .loaded = self {
-            return true
+    var library: PoemLibraryStore? {
+        switch self {
+        case .loading(let library), .loaded(let library), .failed(let library):
+            return library
         }
-        return false
+    }
+}
+
+private struct LibraryLoadStatusBanner: View {
+    enum Status: Equatable {
+        case loading
+        case failed
+    }
+
+    let status: Status
+    var onRetry: (() -> Void)? = nil
+
+    @Environment(\.chineseScriptPreference) private var script
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if status == .loading {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(PoemeryTheme.accent)
+            } else {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .foregroundStyle(PoemeryTheme.accent)
+            }
+
+            Text(script.converted(status == .loading ? "完整诗库正在后台载入，可先开始阅读" : "完整诗库载入失败，当前仍可阅读精选内容"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PoemeryTheme.secondaryText)
+                .lineLimit(2)
+
+            Spacer(minLength: 4)
+
+            if let onRetry {
+                Button(script.converted("重试"), action: onRetry)
+                    .font(.caption.weight(.bold))
+                    .buttonStyle(.borderless)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 9)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) {
+            Divider().opacity(0.45)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -539,6 +613,7 @@ private enum PresentedLibraryItem: Identifiable {
 private enum AppTab: String, Identifiable {
     case home
     case discover
+    case library
     case profile
     case search
 
@@ -547,7 +622,8 @@ private enum AppTab: String, Identifiable {
     var title: String {
         switch self {
         case .home: "主页"
-        case .discover: "资料库"
+        case .discover: "发现"
+        case .library: "资料库"
         case .profile: "我的"
         case .search: "搜索"
         }
@@ -556,7 +632,8 @@ private enum AppTab: String, Identifiable {
     var symbol: String {
         switch self {
         case .home: "house.fill"
-        case .discover: "books.vertical.fill"
+        case .discover: "sparkles"
+        case .library: "books.vertical.fill"
         case .profile: "person.crop.circle.fill"
         case .search: "magnifyingglass"
         }
@@ -564,8 +641,8 @@ private enum AppTab: String, Identifiable {
 }
 
 private struct SearchScreen: View {
-    private static let searchPageSize = 100
-    private static let debounceNanoseconds: UInt64 = 220_000_000
+    private static let searchPageSize = 50
+    private static let debounceNanoseconds: UInt64 = 250_000_000
 
     let library: PoemLibraryStore
     @Binding var searchText: String
@@ -576,7 +653,7 @@ private struct SearchScreen: View {
 
     @Environment(\.chineseScriptPreference) private var script
     @Environment(\.dismissSearch) private var dismissSearch
-    @State private var isSearchPresented = true
+    @State private var isSearchPresented = false
     @State private var results = SearchResultsPage()
     @State private var isLoadingFirstPage = false
     @State private var isLoadingMore = false
@@ -636,7 +713,6 @@ private struct SearchScreen: View {
             )
             .submitLabel(.search)
             .onAppear {
-                isSearchPresented = true
                 scheduleSearch(debounced: false)
             }
             .onChange(of: searchText) {
@@ -647,6 +723,9 @@ private struct SearchScreen: View {
             }
             .onDisappear {
                 searchTask?.cancel()
+                library.cancelSearch()
+                isSearchPresented = false
+                dismissSearch()
             }
             .modifier(SearchToolbarBehaviorModifier())
         }
@@ -673,6 +752,7 @@ private struct SearchScreen: View {
 
     private func scheduleSearch(debounced: Bool) {
         searchTask?.cancel()
+        library.cancelSearch()
 
         let query = trimmedSearchText
         guard !query.isEmpty else {
@@ -705,18 +785,19 @@ private struct SearchScreen: View {
     }
 
     private func loadMoreResults() {
-        guard let nextOffset = results.nextOffset, !isLoadingMore else {
+        guard let nextCursor = results.nextCursor, !isLoadingMore else {
             return
         }
 
         searchTask?.cancel()
+        library.cancelSearch()
         let query = trimmedSearchText
         isLoadingMore = true
 
         searchTask = Task { @MainActor in
             let page = await library.searchPage(
                 query,
-                offset: nextOffset,
+                cursor: nextCursor,
                 limit: Self.searchPageSize,
                 script: script
             )
@@ -730,14 +811,14 @@ private struct SearchScreen: View {
     }
 
     private func openSearchResult(_ item: PoemListItem) {
-        guard let poem = library.poem(id: item.id) else {
-            return
+        Task { @MainActor in
+            let poems = await library.loadSummaries(ids: [item.id], script: script)
+            guard let poem = poems.first else { return }
+            onOpenPoem(
+                poem,
+                ReadingQueue(title: "搜索结果", poemIDs: results.poemIDs)
+            )
         }
-
-        onOpenPoem(
-            poem,
-            ReadingQueue(title: "搜索结果", poemIDs: results.poemIDs)
-        )
     }
 }
 

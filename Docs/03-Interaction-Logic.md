@@ -6,7 +6,7 @@
 
 根状态在 `Poemery/ContentView.swift`：
 
-- `library`：`PoemLibraryStore`，负责读取和查询诗词数据。
+- `libraryLoadState`：同时保存当前可用的 bootstrap/full `PoemLibraryStore` 和后台加载状态。
 - `session`：`ReadingSessionStore`，负责当前阅读、队列、收藏和最近阅读。
 - `selectedTab`：当前 tab。
 - `lastContentTab`：最近一次非搜索 tab，用于关闭搜索后返回原页面。
@@ -17,6 +17,16 @@
 
 - `.poem(Poem.ID, ReadingQueue)`：打开诗词详情页。
 - `.collection(PoemCollection)`：打开诗单详情页。
+
+## 非阻塞启动
+
+1. `ContentView` 初始化时同步创建 `PoemLibraryStore.bootstrap()`。
+2. Tab 主界面立即使用 bootstrap 数据渲染，用户可以浏览、搜索精选内容并打开详情。
+3. `.task(id: chineseScriptRawValue)` 在后台调用 `PoemLibraryStore.loadBundled(script:)`。
+4. 加载期间顶部状态条提示“完整诗库正在后台载入”，不拦截操作。
+5. 完整目录和索引完成后，状态切换为 `.loaded(fullStore)`。
+6. 加载失败时切换为 `.failed(bootstrapStore)`，继续提供精选内容和重试按钮。
+7. 简繁偏好变化会启动新任务；旧任务取消后不能覆盖新字形目录。
 
 ## Tab 切换逻辑
 
@@ -129,12 +139,22 @@ session.canMoveInCurrentQueue
 - 上一首/下一首：底部 toolbar 调用 `movePoem(by:)`。
 - 横向滑动正文：左滑下一首，右滑上一首。
 - 点击注解 term：打开 `AnnotationDetailSheet`。
+- supplement 存在时逐行显示拼音，并在正文后显示译文、赏析、来源与许可。
+- supplement 不存在或字段为空时，对应 section 不生成。
 - 点击相关诗词：使用相关诗词自身队列切换当前详情页内容。
 
 底部状态文案：
 
 - 使用队列短标题和位置，例如“唐诗三 1 / 366”。
 - 队列标题超过 4 个字符会截断到前 4 个字符。
+
+## 诗人详情页
+
+- 诗人页先渲染本地 hero fallback、姓名、朝代、作品数量和简介。
+- 已配置公版传统画像时，`AsyncImage` 异步请求 Wikimedia Commons；成功后淡入替换 fallback。
+- 加载失败不显示错误占位，也不影响作品分页。
+- hero 下方来源链接跳转到具体 Commons 文件页。
+- 作品列表仍通过 `loadAuthorPoems` 分页加载，点击作品时建立作者阅读队列。
 
 ## 诗单详情页
 
@@ -246,7 +266,7 @@ openCollection(_ collection: PoemCollection)
 
 `PoemTextSection` 会读取每一行对应的 `PoemAnnotation`。
 
-当前导入数据中 annotations 为空，因此大多数作品不会出现注解按钮。数据结构和 `AnnotationDetailSheet` 已准备好，后续只需要在数据里补充注解即可显示。
+打包主库 annotations 仍为空，因此大多数作品不会出现注解按钮。精选增强层中的《元日》已包含逐行拼音和四条词语注释，用于验证完整交互；后续作品必须在来源和编辑内容审校后逐步加入。
 
 ## 当前限制
 
@@ -254,4 +274,5 @@ openCollection(_ collection: PoemCollection)
 - 当前阅读条只有下一首，没有播放/暂停音频状态。
 - 详情页队列切换基于当前传入队列，不跨不同诗单自动混合。
 - 收藏和最近阅读只在本机保存。
-- 搜索是本地字符串匹配，没有拼音、繁简转换或语义搜索。
+- 搜索是本地字符串/gram 匹配，支持简繁转换和少量作者别号；主题同义词模糊匹配与语义搜索按本轮产品决定延期。
+- 远程诗人画像只用于视觉增强，离线阅读、收藏和完整诗库不依赖网络。

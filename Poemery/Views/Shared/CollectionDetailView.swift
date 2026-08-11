@@ -301,81 +301,93 @@ struct PagedAuthorDetailContent: View {
     }
 }
 
-struct AuthorDetailContent: View {
+struct AuthorHeader: View {
     let author: AuthorResult
-    let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    @Environment(\.chineseScriptPreference) private var script
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                AuthorHeader(author: author)
-                AuthorIntroduction(author: author)
-                poemList
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 22)
-            .padding(.bottom, 56)
-        }
-        .background(PoemeryTheme.background)
-        .navigationTitle(author.name)
-        .navigationBarTitleDisplayMode(.inline)
-    }
+        VStack(alignment: .leading, spacing: 10) {
+            ZStack(alignment: .bottomLeading) {
+                AuthorPortraitArtwork(author: author)
 
-    private var poemList: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "作品")
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.12), .black.opacity(0.76)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
 
-            if author.poems.isEmpty {
-                EmptyLibraryState(title: "暂无作品", subtitle: "这个诗人暂时没有可阅读的作品。")
-            } else {
-                LazyVStack(spacing: 0) {
-                    ForEach(author.poems) { poem in
-                        Button {
-                            onOpenPoem(poem, ReadingQueue(title: author.name, poems: author.poems))
-                        } label: {
-                            PoemListRow(poem: poem)
-                        }
-                        .buttonStyle(.plain)
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(author.name)
+                        .font(.system(size: 40, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
 
-                        if poem.id != author.poems.last?.id {
-                            Divider()
-                                .padding(.leading, 74)
-                        }
-                    }
+                    Text(script.converted("\(author.dynasty) · \(author.poemCount) 首作品"))
+                        .font(.headline)
+                        .foregroundStyle(.white.opacity(0.84))
                 }
-                .groupedListBackground()
+                .padding(22)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 320)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.16), radius: 24, x: 0, y: 14)
+
+            if let portrait = author.portrait, let sourceURL = portrait.sourceURL {
+                Link(destination: sourceURL) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                        Text(script.converted(portrait.credit))
+                        Text("· \(portrait.license)")
+                    }
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(PoemeryTheme.tertiaryText)
+                    .lineLimit(2)
+                }
+                .accessibilityLabel(script.converted("查看诗人画像来源"))
             }
         }
     }
 }
 
-struct AuthorHeader: View {
+private struct AuthorPortraitArtwork: View {
     let author: AuthorResult
 
     var body: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(PoemeryTheme.groupedBackground)
+        ZStack {
+            fallbackArtwork
 
-                Text(String(author.name.prefix(1)))
-                    .font(PoemeryTheme.chineseFont(size: 40, relativeTo: .largeTitle))
-                    .foregroundStyle(PoemeryTheme.accent)
+            if let assetName = author.portrait?.assetName {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFill()
             }
-            .frame(width: 82, height: 82)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .accessibilityHidden(true)
+    }
 
-            VStack(alignment: .leading, spacing: 7) {
-                Text(author.name)
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(PoemeryTheme.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
+    private var fallbackArtwork: some View {
+        ZStack {
+            LinearGradient(
+                colors: [PoemeryTheme.deepInk, PoemeryTheme.accent.opacity(0.72), PoemeryTheme.agedPaper],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
-                Text("\(author.dynasty) · \(author.poemCount) 首作品")
-                    .font(.headline)
-                    .foregroundStyle(PoemeryTheme.secondaryText)
-                    .lineLimit(1)
-            }
+            Circle()
+                .fill(.white.opacity(0.10))
+                .frame(width: 260, height: 260)
+                .offset(x: 120, y: -90)
+
+            Text(String(author.name.prefix(1)))
+                .font(PoemeryTheme.chineseFont(size: 152, relativeTo: .largeTitle).weight(.bold))
+                .foregroundStyle(.white.opacity(0.30))
+                .offset(x: 72, y: -12)
+
+            PaperTexture().opacity(0.22)
         }
     }
 }
@@ -451,11 +463,9 @@ private struct CollectionCover: View {
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white.opacity(0.78))
 
-                Text(collection.title)
-                    .font(.system(size: 32, weight: .bold))
+                Text("诗意选集")
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.72)
 
                 Text("\(poemCount) 首作品")
                     .font(.subheadline.weight(.semibold))

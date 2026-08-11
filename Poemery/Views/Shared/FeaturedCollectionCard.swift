@@ -96,7 +96,7 @@ struct FeaturedCollectionCard: View {
                 .font(.system(size: titleFontSize, weight: .bold))
                 .foregroundStyle(.white)
                 .lineLimit(2)
-                .minimumScaleFactor(0.78)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(collection.subtitle)
                 .font(.system(size: isCompact ? 13 : 15, weight: .semibold))
@@ -126,6 +126,6 @@ struct FeaturedCollectionCard: View {
     }
 
     private var titleFontSize: CGFloat {
-        isCompact ? 23 : max(28, size.width * 0.10)
+        isCompact ? 22 : min(30, max(26, size.width * 0.09))
     }
 }

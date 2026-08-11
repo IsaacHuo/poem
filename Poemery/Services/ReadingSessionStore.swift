@@ -26,12 +26,14 @@ struct ReadingQueue: Identifiable, Codable, Hashable {
 final class ReadingSessionStore {
     private let favoritesKey = "poemery.favoritePoemIDs"
     private let recentsKey = "poemery.recentPoemIDs"
+    private let readingPositionsKey = "poemery.readingPositions"
     private let defaults: UserDefaults
 
     private(set) var favoritePoemIDs: [Poem.ID]
     private(set) var recentPoemIDs: [Poem.ID]
     private(set) var currentPoemID: Poem.ID?
     private(set) var currentQueue: ReadingQueue?
+    private(set) var readingPositions: [Poem.ID: PoemLine.ID]
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -39,6 +41,7 @@ final class ReadingSessionStore {
         self.recentPoemIDs = defaults.stringArray(forKey: recentsKey) ?? []
         self.currentPoemID = nil
         self.currentQueue = nil
+        self.readingPositions = defaults.dictionary(forKey: readingPositionsKey) as? [Poem.ID: PoemLine.ID] ?? [:]
     }
 
     func favoritePoems(in library: PoemLibraryStore) -> [Poem] {
@@ -79,8 +82,8 @@ final class ReadingSessionStore {
         currentPoemID = poem.id
         recentPoemIDs.removeAll { $0 == poem.id }
         recentPoemIDs.insert(poem.id, at: 0)
-        if recentPoemIDs.count > 20 {
-            recentPoemIDs = Array(recentPoemIDs.prefix(20))
+        if recentPoemIDs.count > 50 {
+            recentPoemIDs = Array(recentPoemIDs.prefix(50))
         }
         persistRecents()
     }
@@ -89,7 +92,20 @@ final class ReadingSessionStore {
         currentPoemID = nil
         currentQueue = nil
         recentPoemIDs.removeAll()
+        readingPositions.removeAll()
         persistRecents()
+        persistReadingPositions()
+    }
+
+    func readingPosition(for poemID: Poem.ID) -> PoemLine.ID? {
+        readingPositions[poemID]
+    }
+
+    func saveReadingPosition(lineID: PoemLine.ID, for poemID: Poem.ID) {
+        readingPositions[poemID] = lineID
+        let retainedIDs = Set(recentPoemIDs.prefix(50))
+        readingPositions = readingPositions.filter { retainedIDs.contains($0.key) }
+        persistReadingPositions()
     }
 
     func startReading(_ poem: Poem, in queue: ReadingQueue) {
@@ -113,6 +129,10 @@ final class ReadingSessionStore {
 
     private func persistRecents() {
         defaults.set(recentPoemIDs, forKey: recentsKey)
+    }
+
+    private func persistReadingPositions() {
+        defaults.set(readingPositions, forKey: readingPositionsKey)
     }
 
     private func moveCurrentPoem(by offset: Int, in library: PoemLibraryStore) -> Poem? {

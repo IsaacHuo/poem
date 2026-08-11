@@ -31,7 +31,7 @@ struct SearchResultsView: View {
                     }
                     .groupedListBackground()
 
-                    if results.nextOffset != nil {
+                    if results.nextCursor != nil {
                         Button(action: onLoadMore) {
                             HStack(spacing: 8) {
                                 if isLoadingMore {
@@ -109,6 +109,6 @@ struct SearchResultsView: View {
     }
 
     private var poemSectionTitle: String {
-        results.nextOffset == nil ? "诗词" : "诗词 · \(results.totalPoemCount) 首"
+        results.nextCursor == nil ? "诗词" : "诗词 · \(results.totalPoemCount) 首"
     }
 }

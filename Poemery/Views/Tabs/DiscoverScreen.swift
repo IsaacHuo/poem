@@ -2,9 +2,14 @@ import SwiftUI
 
 struct DiscoverScreen: View {
     let library: PoemLibraryStore
+    let session: ReadingSessionStore
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
     let onStartSearch: (String) -> Void
+
+    @State private var discoveryBatch = 0
+    @State private var loadedDiscovery: [Poem] = []
+    @Environment(\.chineseScriptPreference) private var script
 
     private let columns = [
         GridItem(.flexible(), spacing: 14),
@@ -17,22 +22,53 @@ struct DiscoverScreen: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    ScreenHeader(title: "按朝代、体裁与题材慢慢找。", subtitle: nil)
+                    ScreenHeader(title: "每天从诗库里，遇见一些没读过的。", subtitle: nil)
                     discoveryContent
                 }
                 .screenContentPadding()
             }
-            .navigationTitle("资料库")
+            .navigationTitle("发现")
             .navigationBarTitleDisplayMode(.large)
             .scrollIndicators(.hidden)
             .background(PoemeryTheme.background)
+            .task(id: discoveryTaskID) {
+                let day = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
+                let seed = "\(Int(day))|\(discoveryBatch)"
+                let excluded = Set(session.favoritePoemIDs + session.recentPoemIDs)
+                loadedDiscovery = await library.loadDiscovery(
+                    seed: seed,
+                    excluding: excluded,
+                    limit: 6,
+                    script: script
+                )
+            }
         }
     }
 
     private var discoveryContent: some View {
         VStack(alignment: .leading, spacing: 32) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    SectionTitle(title: "每日发现")
+                    Spacer()
+                    Button {
+                        discoveryBatch += 1
+                    } label: {
+                        Label("换一批", systemImage: "arrow.triangle.2.circlepath")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                }
+
+                PoemListSection(
+                    title: discoveryBatch == 0 ? "今天的相遇" : "第 \(discoveryBatch + 1) 批",
+                    poems: loadedDiscovery,
+                    queueTitle: "每日发现",
+                    onOpenPoem: onOpenPoem
+                )
+            }
+
             FeaturedCarousel(
-                title: "编辑推荐",
+                title: "编辑诗单与新收录",
                 collections: library.collections.filter { [.chart, .mood, .featured].contains($0.kind) },
                 library: library,
                 layout: .narrowPortrait,
@@ -41,9 +77,10 @@ struct DiscoverScreen: View {
 
             keywordBlock
 
-            browseBlock(title: "按朝代", values: library.dynasties())
+            browseBlock(title: "换个朝代", values: library.dynasties())
             browseBlock(title: "按体裁", values: library.forms(limit: 6))
             themeBlock
+            poetRouteBlock
 
             PoemListSection(title: "编辑精选", poems: library.popularPoems(limit: 6), onOpenPoem: onOpenPoem)
 
@@ -62,6 +99,10 @@ struct DiscoverScreen: View {
                 }
             }
         }
+    }
+
+    private var discoveryTaskID: String {
+        "\(script.rawValue)|\(discoveryBatch)|\(session.favoritePoemIDs.joined(separator: ","))|\(session.recentPoemIDs.joined(separator: ","))|\(library.totalPoemCount)"
     }
 
     private var keywordBlock: some View {
@@ -111,7 +152,7 @@ struct DiscoverScreen: View {
 
     private var themeBlock: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionTitle(title: "主题书架")
+            SectionTitle(title: "主题漫游")
 
             LazyVGrid(columns: columns, spacing: 14) {
                 ForEach(themeQueries, id: \.self) { theme in
@@ -125,6 +166,35 @@ struct DiscoverScreen: View {
                         )
                     }
                     .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var poetRouteBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionTitle(title: "诗人路线")
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(library.popularAuthors(limit: 10)) { author in
+                        Button {
+                            onStartSearch(author.name)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(author.name)
+                                    .font(.headline)
+                                    .foregroundStyle(PoemeryTheme.primaryText)
+                                Text("\(author.dynasty) · \(author.poemCount) 首")
+                                    .font(.caption)
+                                    .foregroundStyle(PoemeryTheme.secondaryText)
+                            }
+                            .padding(.horizontal, 16)
+                            .frame(height: 58)
+                            .background(PoemeryTheme.surface, in: RoundedRectangle(cornerRadius: 14))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
         }
