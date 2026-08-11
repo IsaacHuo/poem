@@ -1,0 +1,12 @@
+{
+  "generatedAt": "2026-08-12T00:00:00Z",
+  "apiBase": "https://zh.wikipedia.org/w/api.php",
+  "authorCount": 1847,
+  "matchedCount": 28,
+  "policy": "trusted-only",
+  "note": "Only unambiguous, source-backed profiles are bundled. Unmatched authors show the local collection count without a generated biography.",
+  "missingCount": 1819,
+  "ambiguous": [],
+  "skipped": ["anonymous and unattributed authors"],
+  "unavailable": ["Full refresh deferred because direct Wikimedia access timed out on the current network; the committed dataset remains usable offline."]
+}

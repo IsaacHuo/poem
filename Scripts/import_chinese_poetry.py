@@ -24,6 +24,7 @@ REPOSITORY_URL = f"https://github.com/{REPOSITORY}"
 COMMIT = "99ebbef7e1345c0985c44b9fd96a3f9e776f117b"
 RAW_BASE_URL = f"https://raw.githubusercontent.com/{REPOSITORY}/{COMMIT}"
 BLOB_BASE_URL = f"{REPOSITORY_URL}/blob/{COMMIT}"
+AUTHOR_PROFILE_SOURCE = Path(__file__).with_name("AuthorProfiles.json")
 
 AUTHOR_PORTRAITS = [
     {
@@ -357,6 +358,15 @@ def main() -> int:
         help="Write SQLite from an existing PoemsSeed.json without fetching upstream sources.",
     )
     parser.add_argument(
+        "--author-profiles-input",
+        help="Trusted normalized author profile JSON. Defaults to Scripts/AuthorProfiles.json.",
+    )
+    parser.add_argument(
+        "--replace-catalog-author-profiles",
+        action="store_true",
+        help="When rebuilding SQLite from a catalog, atomically replace its authorProfiles array.",
+    )
+    parser.add_argument(
         "--download-portraits",
         action="store_true",
         help="Download and generate the verified offline author portrait assets.",
@@ -373,12 +383,32 @@ def main() -> int:
         return 0
 
     if args.sqlite_from_catalog:
-        catalog = json.loads(Path(args.sqlite_from_catalog).read_text(encoding="utf-8"))
+        catalog_path = Path(args.sqlite_from_catalog)
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        if args.author_profiles_input or args.replace_catalog_author_profiles:
+            profile_source = Path(args.author_profiles_input) if args.author_profiles_input else AUTHOR_PROFILE_SOURCE
+            catalog["authorProfiles"] = build_author_profiles(catalog["poems"], profile_source)
         validate_catalog(catalog)
         sqlite_output = Path(args.sqlite_output)
-        write_sqlite_catalog(catalog, sqlite_output)
-        validate_sqlite_catalog(sqlite_output, catalog)
+        temporary_sqlite = sqlite_output.with_name(f"{sqlite_output.name}.tmp")
+        temporary_catalog = catalog_path.with_name(f"{catalog_path.name}.tmp")
+        try:
+            write_sqlite_catalog(catalog, temporary_sqlite)
+            validate_sqlite_catalog(temporary_sqlite, catalog)
+            if args.replace_catalog_author_profiles:
+                temporary_catalog.write_text(
+                    json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                temporary_catalog.replace(catalog_path)
+            temporary_sqlite.replace(sqlite_output)
+        finally:
+            for temporary in (temporary_sqlite, temporary_catalog):
+                if temporary.exists():
+                    temporary.unlink()
         print(f"Wrote {sqlite_output}")
+        if args.replace_catalog_author_profiles:
+            print(f"Updated {catalog_path} ({len(catalog['authorProfiles'])} trusted author profiles)")
         return 0
 
     catalog, report = build_catalog()
@@ -1181,6 +1211,22 @@ def validate_catalog(catalog: dict[str, Any]) -> None:
         if not any(tag in poem["tags"] or tag in poem.get("themes", []) or tag == poem["dynasty"] or tag == poem["form"] or tag == poem["author"] for poem in poems):
             raise ValueError(f"{category['id']} does not match any poems")
 
+    author_keys = {(author["dynasty"], author["name"]): author["id"] for author in sqlite_authors(poems)}
+    profile_ids: set[str] = set()
+    forbidden_biography_text = ("Poemery 当前收录其作品", "可从作品目录继续阅读")
+    for profile in catalog.get("authorProfiles", []):
+        key = (profile.get("dynasty"), profile.get("name"))
+        if author_keys.get(key) != profile.get("id"):
+            raise ValueError(f"Author profile does not resolve to catalog author: {key}")
+        if profile["id"] in profile_ids:
+            raise ValueError(f"Duplicate author profile id: {profile['id']}")
+        profile_ids.add(profile["id"])
+        biography = clean_text(profile.get("biography"))
+        if not biography or any(text in biography for text in forbidden_biography_text):
+            raise ValueError(f"Invalid template biography for {profile['id']}")
+        if not clean_text(profile.get("sourceName")) or not clean_text(profile.get("sourceLicense")):
+            raise ValueError(f"Missing author profile source metadata: {profile['id']}")
+
 
 def write_sqlite_catalog(catalog: dict[str, Any], output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -1532,46 +1578,53 @@ def sqlite_authors(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(authors.values())
 
 
-CURATED_AUTHOR_FACTS = {
-    "李白": {"lifeYears": "701—762", "courtesyNames": ["太白"], "aliases": ["青莲居士"], "biography": "李白，唐代诗人，字太白，号青莲居士。其诗想象奔放、语言明朗，后世常称“诗仙”。"},
-    "杜甫": {"lifeYears": "712—770", "courtesyNames": ["子美"], "aliases": ["少陵野老"], "biography": "杜甫，唐代诗人，字子美。其诗沉郁顿挫，深切记录时代与民生，后世常称“诗圣”。"},
-    "白居易": {"lifeYears": "772—846", "courtesyNames": ["乐天"], "aliases": ["香山居士"], "biography": "白居易，唐代诗人，字乐天，号香山居士。其诗平易晓畅，重视诗歌对现实生活的关照。"},
-    "王维": {"lifeYears": "约701—761", "courtesyNames": ["摩诘"], "aliases": [], "biography": "王维，唐代诗人、画家，字摩诘。其山水田园诗清远闲雅，常见诗画相生的意境。"},
-    "苏轼": {"lifeYears": "1037—1101", "courtesyNames": ["子瞻"], "aliases": ["东坡居士"], "nativePlace": "眉州眉山", "biography": "苏轼，北宋文学家，字子瞻，号东坡居士。诗词文书画皆工，词风开阔豪放而兼具旷达情怀。"},
-    "李清照": {"lifeYears": "1084—约1155", "courtesyNames": [], "aliases": ["易安居士"], "nativePlace": "齐州章丘", "biography": "李清照，宋代词人，号易安居士。其词语言清丽，情感细腻，前后期风格各有深致。"},
-    "辛弃疾": {"lifeYears": "1140—1207", "courtesyNames": ["幼安"], "aliases": ["稼轩"], "nativePlace": "济南历城", "biography": "辛弃疾，南宋词人，字幼安，号稼轩。其词慷慨沉雄，常寄寓家国抱负与人生感怀。"},
-    "柳永": {"lifeYears": "约984—约1053", "courtesyNames": ["耆卿"], "aliases": [], "biography": "柳永，北宋词人，原名三变。其词多写都市风物与离情别绪，并推动慢词的发展。"},
-    "屈原": {"lifeYears": "约前340—前278", "courtesyNames": ["灵均"], "aliases": ["正则"], "nativePlace": "楚国丹阳", "biography": "屈原，战国时期楚国诗人。其作品以瑰丽想象和深切家国情怀奠定楚辞传统，对后世文学影响深远。"},
-    "曹操": {"lifeYears": "155—220", "courtesyNames": ["孟德"], "aliases": [], "nativePlace": "沛国谯县", "biography": "曹操，东汉末年政治家、军事家、文学家，字孟德。其诗语言质朴而气象雄健，是建安文学的重要代表。"},
-    "关汉卿": {"lifeYears": None, "courtesyNames": [], "aliases": ["已斋叟"], "biography": "关汉卿，元代杂剧作家、散曲家。其作品关注世情与人物命运，是元曲的重要代表。"},
-    "马致远": {"lifeYears": "约1250—约1321", "courtesyNames": ["千里"], "aliases": ["东篱"], "biography": "马致远，元代戏曲家、散曲家。其小令清疏苍凉，常以羁旅与秋思意象见长。"},
-}
+def build_author_profiles(
+    poems: list[dict[str, Any]],
+    source: Path = AUTHOR_PROFILE_SOURCE,
+) -> list[dict[str, Any]]:
+    raw_profiles = json.loads(source.read_text(encoding="utf-8"))
+    if not isinstance(raw_profiles, list) or not raw_profiles:
+        raise ValueError(f"{source} must contain at least one trusted author profile")
 
-
-def build_author_profiles(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    authors_by_key = {
+        (author["dynasty"], author["name"]): author
+        for author in sqlite_authors(poems)
+    }
     profiles: list[dict[str, Any]] = []
-    for author in sqlite_authors(poems):
-        facts = CURATED_AUTHOR_FACTS.get(author["name"], {})
-        era = f"{author['dynasty']}代" if author["dynasty"] else "古代"
-        biography = facts.get("biography") or f"{author['name']}，{era}作者。Poemery 当前收录其作品 {len(author['poemIDs'])} 首，可从作品目录继续阅读。"
-        has_verified_facts = bool(facts)
+    seen_keys: set[tuple[str, str]] = set()
+    for raw_profile in raw_profiles:
+        key = (clean_text(raw_profile.get("dynasty")), clean_text(raw_profile.get("name")))
+        if key in seen_keys:
+            raise ValueError(f"Duplicate author profile for {key[0]}|{key[1]}")
+        seen_keys.add(key)
+        author = authors_by_key.get(key)
+        if author is None:
+            raise ValueError(f"Author profile does not match catalog: {key[0]}|{key[1]}")
+        biography = clean_text(raw_profile.get("biography"))
+        source_name = clean_text(raw_profile.get("sourceName"))
+        source_license = clean_text(raw_profile.get("sourceLicense"))
+        if not biography or not source_name or not source_license:
+            raise ValueError(f"Author profile is missing trusted source fields: {key[0]}|{key[1]}")
         profiles.append(
             {
+                **raw_profile,
                 "id": author["id"],
                 "name": author["name"],
                 "dynasty": author["dynasty"],
                 "biography": biography,
-                "lifeYears": facts.get("lifeYears"),
-                "courtesyNames": facts.get("courtesyNames", []),
-                "aliases": facts.get("aliases", []),
-                "nativePlace": facts.get("nativePlace"),
-                "sourceName": "Wikidata CC0 事实与 Poemery 原创编辑" if has_verified_facts else "Poemery 目录资料",
-                "sourceURL": "https://www.wikidata.org/" if has_verified_facts else None,
-                "sourceLicense": "CC0 facts; Poemery original copy" if has_verified_facts else "Poemery original copy",
-                "portrait": None,
+                "lifeYears": raw_profile.get("lifeYears"),
+                "courtesyNames": raw_profile.get("courtesyNames", []),
+                "aliases": raw_profile.get("aliases", []),
+                "nativePlace": raw_profile.get("nativePlace"),
+                "sourceName": source_name,
+                "sourceURL": raw_profile.get("sourceURL"),
+                "sourceLicense": source_license,
+                "sourceRevisionID": raw_profile.get("sourceRevisionID"),
+                "sourceFetchedAt": raw_profile.get("sourceFetchedAt"),
+                "portrait": raw_profile.get("portrait"),
             }
         )
-    return profiles
+    return sorted(profiles, key=lambda profile: profile["id"])
 
 
 def search_grams_for_poem(poem: dict[str, Any]) -> set[str]:

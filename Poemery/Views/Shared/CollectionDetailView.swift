@@ -395,18 +395,43 @@ private struct AuthorPortraitArtwork: View {
 struct AuthorIntroduction: View {
     let author: AuthorResult
 
+    @Environment(\.chineseScriptPreference) private var script
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionTitle(title: "作者简介")
+            SectionTitle(title: script.converted("作者简介"))
 
-            Text(author.introduction)
-                .font(.body)
-                .foregroundStyle(PoemeryTheme.secondaryText)
-                .lineSpacing(5)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
-                .groupedListBackground()
+            VStack(alignment: .leading, spacing: 12) {
+                if let biography = author.biography {
+                    Text(biography)
+                        .font(.body)
+                        .foregroundStyle(PoemeryTheme.secondaryText)
+                        .lineSpacing(5)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Text(script.converted(author.collectionSummary))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PoemeryTheme.primaryText)
+
+                if let profile = author.profile,
+                   let sourceURL = profile.sourceURL {
+                    Link(destination: sourceURL) {
+                        Label {
+                            Text(script.converted("资料来源：\(profile.sourceName) · \(profile.sourceLicense)"))
+                                .lineLimit(2)
+                        } icon: {
+                            Image(systemName: "link")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(PoemeryTheme.tertiaryText)
+                    }
+                    .accessibilityLabel(script.converted("查看作者资料来源"))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .groupedListBackground()
         }
     }
 }

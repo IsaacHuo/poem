@@ -151,7 +151,7 @@ private final class SQLiteDatabase {
             """
         ).map { row in
             let profile = row.optionalString("profile_json").flatMap {
-                try? JSONDecoder().decode(AuthorProfile.self, from: Data($0.utf8))
+                AuthorProfile.decode(from: Data($0.utf8))
             }
             return AuthorResult(
                 id: row.string("id"),
@@ -321,10 +321,9 @@ private final class SQLiteDatabase {
         )
         let hasMore = pageRows.count > pageLimit
         if hasMore { pageRows.removeLast() }
-        let decoder = JSONDecoder()
         let authors = pageRows.map { row in
             let profile = row.optionalString("profile_json").flatMap {
-                try? decoder.decode(AuthorProfile.self, from: Data($0.utf8))
+                AuthorProfile.decode(from: Data($0.utf8))
             }
             return AuthorResult(
                 id: row.string("id"), name: row.string("name"), dynasty: row.string("dynasty"),
@@ -530,7 +529,6 @@ private final class SQLiteDatabase {
             .replacingOccurrences(of: "%", with: "\\%")
             .replacingOccurrences(of: "_", with: "\\_")
         let pattern = "%\(escaped)%"
-        let decoder = JSONDecoder()
         let authors = try rows(
             """
             SELECT a.id, a.name, a.dynasty, a.poem_count, p.profile_json
@@ -541,7 +539,7 @@ private final class SQLiteDatabase {
             parameters: [.text(pattern)]
         ).map { row in
             let profile = row.optionalString("profile_json").flatMap {
-                try? decoder.decode(AuthorProfile.self, from: Data($0.utf8))
+                AuthorProfile.decode(from: Data($0.utf8))
             }
             return AuthorResult(
                 id: row.string("id"), name: row.string("name"), dynasty: row.string("dynasty"),

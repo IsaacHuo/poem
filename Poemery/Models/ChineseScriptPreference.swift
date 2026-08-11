@@ -86,6 +86,8 @@ extension AuthorProfile {
             sourceName: script.converted(sourceName),
             sourceURL: sourceURL,
             sourceLicense: sourceLicense,
+            sourceRevisionID: sourceRevisionID,
+            sourceFetchedAt: sourceFetchedAt,
             portrait: portrait
         )
     }

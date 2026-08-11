@@ -364,7 +364,47 @@ struct AuthorProfile: Identifiable, Codable, Hashable, Sendable {
     let sourceName: String
     let sourceURL: URL?
     let sourceLicense: String
+    let sourceRevisionID: Int?
+    let sourceFetchedAt: Date?
     let portrait: AuthorPortrait?
+
+    init(
+        id: String,
+        name: String,
+        dynasty: String,
+        biography: String,
+        lifeYears: String? = nil,
+        courtesyNames: [String] = [],
+        aliases: [String] = [],
+        nativePlace: String? = nil,
+        sourceName: String,
+        sourceURL: URL? = nil,
+        sourceLicense: String,
+        sourceRevisionID: Int? = nil,
+        sourceFetchedAt: Date? = nil,
+        portrait: AuthorPortrait? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.dynasty = dynasty
+        self.biography = biography
+        self.lifeYears = lifeYears
+        self.courtesyNames = courtesyNames
+        self.aliases = aliases
+        self.nativePlace = nativePlace
+        self.sourceName = sourceName
+        self.sourceURL = sourceURL
+        self.sourceLicense = sourceLicense
+        self.sourceRevisionID = sourceRevisionID
+        self.sourceFetchedAt = sourceFetchedAt
+        self.portrait = portrait
+    }
+
+    static func decode(from data: Data) -> AuthorProfile? {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try? decoder.decode(AuthorProfile.self, from: data)
+    }
 }
 
 struct PoemKeyword: Identifiable, Hashable, Sendable {
@@ -689,23 +729,19 @@ struct AuthorResult: Identifiable, Codable, Hashable, Sendable {
         case profile
     }
 
-    var introduction: String {
+    var biography: String? {
         if let biography = profile?.biography, !biography.isEmpty {
             return biography
         }
+        return nil
+    }
 
-        let simplifiedName = ChineseTextConverter.convert(name, to: .simplified)
-        if let introduction = Self.introductions[name] ?? Self.introductions[simplifiedName] {
-            return introduction
-        }
+    var collectionSummary: String {
+        poemCount == 0 ? "当前暂无收录作品" : "当前收录 \(poemCount) 首作品"
+    }
 
-        if name == "佚名" {
-            return "这类作品作者已不可考，诗库保留原始题名与文本，方便从作品本身继续阅读。"
-        }
-
-        let era = dynasty.isEmpty ? "" : "\(dynasty)代"
-        let countText = poemCount == 0 ? "暂无收录作品" : "当前诗库收录 \(poemCount) 首作品"
-        return "\(era)作者。\(countText)，可从作品列表继续阅读相关作品。"
+    var introduction: String {
+        biography ?? collectionSummary
     }
 
     var portrait: AuthorPortrait? {
@@ -716,41 +752,6 @@ struct AuthorResult: Identifiable, Codable, Hashable, Sendable {
         let simplifiedName = ChineseTextConverter.convert(name, to: .simplified)
         return Self.portraits[name] ?? Self.portraits[simplifiedName]
     }
-
-    private static let introductions: [String: String] = [
-        "李白": "李白，唐代诗人，字太白，号青莲居士。其诗想象奔放、语言明朗，后世常称“诗仙”。",
-        "杜甫": "杜甫，唐代诗人，字子美。其诗沉郁顿挫，深切记录时代与民生，后世常称“诗圣”。",
-        "白居易": "白居易，唐代诗人，字乐天，号香山居士。其诗平易晓畅，重视诗歌对现实生活的关照。",
-        "王维": "王维，唐代诗人、画家，字摩诘。其山水田园诗清远闲雅，常见诗画相生的意境。",
-        "王維": "王维，唐代诗人、画家，字摩诘。其山水田园诗清远闲雅，常见诗画相生的意境。",
-        "孟浩然": "孟浩然，唐代山水田园诗人。其诗多写隐逸、行旅与自然景色，风格清淡自然。",
-        "王昌龄": "王昌龄，唐代诗人，擅长七言绝句。其边塞诗气韵雄健，也有细腻含蓄的送别之作。",
-        "王昌齡": "王昌龄，唐代诗人，擅长七言绝句。其边塞诗气韵雄健，也有细腻含蓄的送别之作。",
-        "王之涣": "王之涣，唐代诗人。作品虽传世不多，却以开阔高远的边塞与登临气象著称。",
-        "王之渙": "王之涣，唐代诗人。作品虽传世不多，却以开阔高远的边塞与登临气象著称。",
-        "杜牧": "杜牧，唐代诗人，字牧之。其诗俊爽明丽，咏史、写景与抒怀皆有鲜明风致。",
-        "李商隐": "李商隐，唐代诗人，字义山。其诗辞采精工、意象繁密，尤以含蓄深婉见长。",
-        "李商隱": "李商隐，唐代诗人，字义山。其诗辞采精工、意象繁密，尤以含蓄深婉见长。",
-        "苏轼": "苏轼，宋代文学家，字子瞻，号东坡居士。诗词文书画皆工，词风开阔豪放而兼具旷达情怀。",
-        "蘇軾": "苏轼，宋代文学家，字子瞻，号东坡居士。诗词文书画皆工，词风开阔豪放而兼具旷达情怀。",
-        "柳永": "柳永，宋代词人，原名三变。其词多写都市风物与离情别绪，推动慢词的发展。",
-        "李清照": "李清照，宋代词人，号易安居士。其词语言清丽，情感细腻，前后期风格各有深致。",
-        "辛弃疾": "辛弃疾，宋代词人，字幼安，号稼轩。其词慷慨沉雄，常寄寓家国抱负与人生感怀。",
-        "辛棄疾": "辛弃疾，宋代词人，字幼安，号稼轩。其词慷慨沉雄，常寄寓家国抱负与人生感怀。",
-        "陆游": "陆游，宋代诗人，字务观，号放翁。诗作数量丰富，兼具家国情怀与日常生活气息。",
-        "陸游": "陆游，宋代诗人，字务观，号放翁。诗作数量丰富，兼具家国情怀与日常生活气息。",
-        "关汉卿": "关汉卿，元代杂剧作家、散曲家。其作品关注世情与人物命运，是元曲的重要代表。",
-        "關漢卿": "关汉卿，元代杂剧作家、散曲家。其作品关注世情与人物命运，是元曲的重要代表。",
-        "马致远": "马致远，元代戏曲家、散曲家。其小令清疏苍凉，常以羁旅与秋思意象见长。",
-        "馬致遠": "马致远，元代戏曲家、散曲家。其小令清疏苍凉，常以羁旅与秋思意象见长。",
-        "王安石": "王安石，北宋政治家、文学家，字介甫，号半山。其诗文立意峭拔、语言精练，既关注现实，也善于从日常景物中写出新意。",
-        "曹操": "曹操，东汉末年政治家、军事家、文学家，字孟德。其诗语言质朴而气象雄健，是建安文学的重要代表。",
-        "陶渊明": "陶渊明，东晋诗人，名潜，字元亮。其田园诗自然平淡而意蕴深远，对后世文人生活理想与诗歌审美影响深远。",
-        "李煜": "李煜，五代南唐后主，字重光。其词善写人生感受与故国之思，语言明净，情感深切，对宋词发展影响显著。",
-        "于谦": "于谦，明代政治家、诗人，字廷益，号节庵。其诗多见刚正自持的品格与关切时事的襟怀。",
-        "龚自珍": "龚自珍，清代思想家、文学家，字璱人，号定盦。其诗文关注时代变局，想象奇崛，常以鲜明语言表达革新愿望。",
-        "纳兰性德": "纳兰性德，清代词人，字容若，号楞伽山人。其词情感真挚、语言清丽，尤擅悼亡、行旅与边塞题材。"
-    ]
 
     private static let portraits: [String: AuthorPortrait] = [
         "王安石": AuthorPortrait(

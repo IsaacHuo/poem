@@ -197,7 +197,9 @@ final class PoemeryTests: XCTestCase {
         )
 
         XCTAssertTrue(knownAuthor.introduction.contains("诗仙"))
-        XCTAssertTrue(fallbackAuthor.introduction.contains("当前诗库收录 1 首作品"))
+        XCTAssertEqual(fallbackAuthor.introduction, "当前收录 1 首作品")
+        XCTAssertFalse(fallbackAuthor.introduction.contains("Poemery"))
+        XCTAssertFalse(fallbackAuthor.introduction.contains("作品目录"))
     }
 
     func testBundledLibraryBootstrapsWithoutMaterializingTheCatalog() async throws {
@@ -404,6 +406,20 @@ final class PoemeryTests: XCTestCase {
                 tag: "唐诗",
                 artworkStyle: .fallback,
                 symbol: "book.closed.fill"
+            )
+        ],
+        authorProfiles: [
+            AuthorProfile(
+                id: "唐-李白",
+                name: "李白",
+                dynasty: "唐",
+                biography: "李白，唐代诗人，字太白，号青莲居士。其诗想象奔放，后世常称“诗仙”。",
+                lifeYears: "701—762",
+                courtesyNames: ["太白"],
+                aliases: ["青莲居士"],
+                sourceName: "中文维基百科",
+                sourceURL: URL(string: "https://zh.wikipedia.org/wiki/李白"),
+                sourceLicense: "CC BY-SA 4.0"
             )
         ]
     )
