@@ -2,17 +2,68 @@ Poemery bundled poetry data notice
 
 Data source: https://github.com/chinese-poetry/chinese-poetry
 Pinned commit: 99ebbef7e1345c0985c44b9fd96a3f9e776f117b
-Generated at: 2026-06-07T13:01:27+00:00
+Generated at: 2026-08-11T05:18:41+00:00
 
 Source files:
-- 唐诗三百首: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%85%A8%E5%94%90%E8%AF%97/%E5%94%90%E8%AF%97%E4%B8%89%E7%99%BE%E9%A6%96.json (366 items)
-- 宋词三百首: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/%E5%AE%8B%E8%AF%8D%E4%B8%89%E7%99%BE%E9%A6%96.json (280 items)
-- 元曲: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%85%83%E6%9B%B2/yuanqu.json (11057 items)
-- 论语: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E8%AE%BA%E8%AF%AD/lunyu.json (20 items)
-- 诗经: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E8%AF%97%E7%BB%8F/shijing.json (305 items)
-- 大学: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/daxue.json (1 items)
-- 孟子: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/mengzi.json (14 items)
-- 中庸: https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/zhongyong.json (1 items)
+- 唐诗三百首 (366 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%85%A8%E5%94%90%E8%AF%97/%E5%94%90%E8%AF%97%E4%B8%89%E7%99%BE%E9%A6%96.json
+- 宋词三百首 (280 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/%E5%AE%8B%E8%AF%8D%E4%B8%89%E7%99%BE%E9%A6%96.json
+- 全宋词 (21053 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.0.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.1000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.2000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.3000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.4000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.5000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.6000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.7000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.8000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.9000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.10000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.11000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.12000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.13000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.14000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.15000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.16000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.17000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.18000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.19000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.20000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.21000.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%AE%8B%E8%AF%8D/ci.song.2019y.json
+- 楚辞 (65 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E6%A5%9A%E8%BE%9E/chuci.json
+- 曹操诗集 (26 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E6%9B%B9%E6%93%8D%E8%AF%97%E9%9B%86/caocao.json
+- 花间集 (497 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-1-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-2-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-3-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-4-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-5-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-6-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-7-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-8-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-9-juan.json
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-x-juan.json
+- 南唐词 (45 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/nantang/poetrys.json
+- 纳兰性德诗词 (258 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E7%BA%B3%E5%85%B0%E6%80%A7%E5%BE%B7/%E7%BA%B3%E5%85%B0%E6%80%A7%E5%BE%B7%E8%AF%97%E9%9B%86.json
+- 元曲 (11057 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%85%83%E6%9B%B2/yuanqu.json
+- 论语 (20 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E8%AE%BA%E8%AF%AD/lunyu.json
+- 诗经 (305 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E8%AF%97%E7%BB%8F/shijing.json
+- 大学 (1 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/daxue.json
+- 孟子 (14 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/mengzi.json
+- 中庸 (1 items)
+  - https://github.com/chinese-poetry/chinese-poetry/blob/99ebbef7e1345c0985c44b9fd96a3f9e776f117b/%E5%9B%9B%E4%B9%A6%E4%BA%94%E7%BB%8F/zhongyong.json
 
 The bundled poems are converted from the chinese-poetry/chinese-poetry repository.
 Poemery preserves the upstream text shape and does not include modern commentary,

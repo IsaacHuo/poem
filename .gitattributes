@@ -1,0 +1,2 @@
+Poemery/PoemLibrary.sqlite filter=lfs diff=lfs merge=lfs -text
+Poemery/PoemsSeed.json filter=lfs diff=lfs merge=lfs -text

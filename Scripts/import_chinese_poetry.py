@@ -7,9 +7,13 @@ import argparse
 import collections
 import datetime as dt
 import hashlib
+import http.client
 import json
 import sqlite3
+import subprocess
 import sys
+import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -20,6 +24,51 @@ REPOSITORY_URL = f"https://github.com/{REPOSITORY}"
 COMMIT = "99ebbef7e1345c0985c44b9fd96a3f9e776f117b"
 RAW_BASE_URL = f"https://raw.githubusercontent.com/{REPOSITORY}/{COMMIT}"
 BLOB_BASE_URL = f"{REPOSITORY_URL}/blob/{COMMIT}"
+
+AUTHOR_PORTRAITS = [
+    {
+        "asset": "AuthorPortraitWangAnshi",
+        "filename": "Wang_Anshi.jpg",
+        "source": "https://commons.wikimedia.org/wiki/File:Wang_Anshi.jpg",
+        "download": "https://upload.wikimedia.org/wikipedia/commons/4/4a/Wang_Anshi.jpg",
+        "sha1": "a5e0b2ae73a92e5e70951a2c1dafe9ac280c7547",
+    },
+    {
+        "asset": "AuthorPortraitCaoCao",
+        "filename": "Cao_Cao_scth.jpg",
+        "source": "https://commons.wikimedia.org/wiki/File:Cao_Cao_scth.jpg",
+        "download": "https://upload.wikimedia.org/wikipedia/commons/5/57/Cao_Cao_scth.jpg",
+        "sha1": "d2ed7f0e2e1a88e94b8c46c51b8757a7d1e9d3c9",
+    },
+    {
+        "asset": "AuthorPortraitTaoYuanming",
+        "filename": "Tao_Yuanming.jpg",
+        "source": "https://commons.wikimedia.org/wiki/File:%27Tao_Yuanming%27,_ink_on_paper_scroll_by_Min_Zhen,_18th_century_china.jpg",
+        "download": "https://upload.wikimedia.org/wikipedia/commons/d/d6/%27Tao_Yuanming%27%2C_ink_on_paper_scroll_by_Min_Zhen%2C_18th_century_china.jpg",
+        "sha1": "b01efa5c0a601ecd8ee696aaf8484aa20e75c836",
+    },
+    {
+        "asset": "AuthorPortraitLiYu",
+        "filename": "Li_Yu_scth.jpg",
+        "source": "https://commons.wikimedia.org/wiki/File:Li_Yu_scth.jpg",
+        "download": "https://upload.wikimedia.org/wikipedia/commons/6/6a/Li_Yu_scth.jpg",
+        "sha1": "8c948a913fc7e48f406fc213c210b712b7b59d65",
+    },
+    {
+        "asset": "AuthorPortraitYuQian",
+        "filename": "Yu_Qian_by_Gu_Jianlong.jpg",
+        "source": "https://commons.wikimedia.org/wiki/File:Yu_Qian_by_Gu_Jianlong.jpg",
+        "download": "https://upload.wikimedia.org/wikipedia/commons/b/bd/Yu_Qian_by_Gu_Jianlong.jpg",
+        "sha1": "d75a5308bd39d7f1124278e80287998e4ca3b054",
+    },
+    {
+        "asset": "AuthorPortraitGongZizhen",
+        "filename": "Gong_Zizhen.jpg",
+        "source": "https://commons.wikimedia.org/wiki/File:Gong_Zizhen.jpg",
+        "download": "https://upload.wikimedia.org/wikipedia/commons/3/34/Gong_Zizhen.jpg",
+        "sha1": "3c526b195b2a4917feca62d4e9706ec5bc45d1f1",
+    },
+]
 
 SOURCES = {
     "tang-300": {
@@ -39,6 +88,70 @@ SOURCES = {
         "form": "词",
         "base_tags": ["宋词", "宋词三百首"],
         "summary": "来源于 chinese-poetry/chinese-poetry 的《宋词三百首》数据；此处保留上游原文字形。",
+    },
+    "song-ci-complete": {
+        "paths": [
+            *[f"%E5%AE%8B%E8%AF%8D/ci.song.{index}.json" for index in range(0, 22000, 1000)],
+            "%E5%AE%8B%E8%AF%8D/ci.song.2019y.json",
+        ],
+        "label": "全宋词",
+        "expected_count": 21053,
+        "dynasty": "宋",
+        "form": "词",
+        "base_tags": ["宋词", "全宋词", "本次新收录"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的全宋词数据；此处保留上游原文字形。",
+        "format": "song-ci",
+    },
+    "chuci": {
+        "path": "%E6%A5%9A%E8%BE%9E/chuci.json",
+        "label": "楚辞",
+        "expected_count": 65,
+        "dynasty": "先秦",
+        "form": "楚辞",
+        "base_tags": ["楚辞", "先秦诗", "本次新收录"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的《楚辞》数据；此处保留上游原文字形。",
+        "format": "chuci",
+    },
+    "caocao": {
+        "path": "%E6%9B%B9%E6%93%8D%E8%AF%97%E9%9B%86/caocao.json",
+        "label": "曹操诗集",
+        "expected_count": 26,
+        "dynasty": "汉",
+        "form": "古诗",
+        "author": "曹操",
+        "base_tags": ["曹操诗集", "汉诗", "建安文学", "本次新收录"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的曹操诗集数据；此处保留上游原文字形。",
+    },
+    "huajianji": {
+        "paths": [
+            *[f"%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-{index}-juan.json" for index in range(1, 10)],
+            "%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/huajianji/huajianji-x-juan.json",
+        ],
+        "label": "花间集",
+        "expected_count": 497,
+        "dynasty": "五代",
+        "form": "词",
+        "base_tags": ["五代词", "花间集"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的《花间集》数据；现代 notes 暂不导入。",
+    },
+    "nantang": {
+        "path": "%E4%BA%94%E4%BB%A3%E8%AF%97%E8%AF%8D/nantang/poetrys.json",
+        "label": "南唐词",
+        "expected_count": 45,
+        "dynasty": "五代",
+        "form": "词",
+        "base_tags": ["五代词", "南唐词"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的南唐词数据；现代 notes 暂不导入。",
+    },
+    "nalan": {
+        "path": "%E7%BA%B3%E5%85%B0%E6%80%A7%E5%BE%B7/%E7%BA%B3%E5%85%B0%E6%80%A7%E5%BE%B7%E8%AF%97%E9%9B%86.json",
+        "label": "纳兰性德诗词",
+        "expected_count": 258,
+        "dynasty": "清",
+        "form": "诗词",
+        "base_tags": ["清代诗词", "纳兰性德"],
+        "summary": "来源于 chinese-poetry/chinese-poetry 的纳兰性德诗词数据；此处保留上游原文字形。",
+        "format": "nalan",
     },
     "yuanqu": {
         "path": "%E5%85%83%E6%9B%B2/yuanqu.json",
@@ -107,7 +220,8 @@ SOURCES = {
 }
 
 EXPECTED_SKIPPED_EMPTY_TEXT_COUNT = 2
-EXPECTED_TOTAL = sum(source["expected_count"] for source in SOURCES.values()) - EXPECTED_SKIPPED_EMPTY_TEXT_COUNT
+EXPECTED_MINIMUM_TOTAL = 33_000
+EXPECTED_MAXIMUM_TOTAL = 34_000
 
 TANG_FORMS = [
     "五言绝句",
@@ -137,6 +251,34 @@ SOURCE_PALETTES = {
         ("#2F5D8C", "#A8C7D8", "#253242"),
         ("#5B6F47", "#D5C88A", "#2C3328"),
         ("#7C4B53", "#D6A39B", "#30272A"),
+    ],
+    "song-ci-complete": [
+        ("#2F6F73", "#9CC6B8", "#26323A"),
+        ("#395C8A", "#B9C7E6", "#2B2B34"),
+        ("#426B55", "#B8C99D", "#2A332A"),
+    ],
+    "chuci": [
+        ("#315B4F", "#D0B16E", "#243130"),
+        ("#584B9C", "#B8A7E8", "#252538"),
+    ],
+    "caocao": [
+        ("#24596B", "#86B8B0", "#26333A"),
+        ("#6F3D2E", "#D7A85E", "#26323A"),
+    ],
+    "huajianji": [
+        ("#8B3C63", "#D6A5C2", "#2B2632"),
+        ("#7E365A", "#D99EB3", "#2C2530"),
+        ("#694A86", "#D2B0DF", "#2C2834"),
+    ],
+    "nantang": [
+        ("#50618B", "#B8AED9", "#292A3A"),
+        ("#395C8A", "#B9C7E6", "#2B2B34"),
+        ("#46588C", "#BFB7E7", "#252A3A"),
+    ],
+    "nalan": [
+        ("#405D72", "#B7CCD1", "#263039"),
+        ("#355B72", "#A9D0CA", "#242E36"),
+        ("#7E365A", "#D99EB3", "#2C2530"),
     ],
     "yuanqu": [
         ("#8E5B2D", "#D8A15D", "#2E2A26"),
@@ -178,6 +320,12 @@ SOURCE_PALETTES = {
 SOURCE_FALLBACK_GLYPHS = {
     "tang-300": "诗",
     "song-ci-300": "词",
+    "song-ci-complete": "词",
+    "chuci": "楚",
+    "caocao": "操",
+    "huajianji": "花",
+    "nantang": "南",
+    "nalan": "兰",
     "yuanqu": "曲",
     "lunyu": "论",
     "shijing": "经",
@@ -208,7 +356,21 @@ def main() -> int:
         "--sqlite-from-catalog",
         help="Write SQLite from an existing PoemsSeed.json without fetching upstream sources.",
     )
+    parser.add_argument(
+        "--download-portraits",
+        action="store_true",
+        help="Download and generate the verified offline author portrait assets.",
+    )
+    parser.add_argument(
+        "--portrait-assets-output",
+        default="Poemery/Assets.xcassets",
+        help="Asset catalog that receives author portrait imagesets.",
+    )
     args = parser.parse_args()
+
+    if args.download_portraits:
+        download_author_portraits(Path(args.portrait_assets_output))
+        return 0
 
     if args.sqlite_from_catalog:
         catalog = json.loads(Path(args.sqlite_from_catalog).read_text(encoding="utf-8"))
@@ -221,21 +383,35 @@ def main() -> int:
 
     catalog, report = build_catalog()
     validate_catalog(catalog)
+    notice_text = build_notice(report)
 
     output = Path(args.output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(
-        json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-
     notice_output = Path(args.notice_output)
-    notice_output.parent.mkdir(parents=True, exist_ok=True)
-    notice_output.write_text(build_notice(report), encoding="utf-8")
-
     sqlite_output = Path(args.sqlite_output)
-    write_sqlite_catalog(catalog, sqlite_output)
-    validate_sqlite_catalog(sqlite_output, catalog)
+    for destination in (output, notice_output, sqlite_output):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+    temporary_outputs = {
+        output: output.with_name(f"{output.name}.tmp"),
+        notice_output: notice_output.with_name(f"{notice_output.name}.tmp"),
+        sqlite_output: sqlite_output.with_name(f"{sqlite_output.name}.tmp"),
+    }
+
+    try:
+        temporary_outputs[output].write_text(
+            json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        temporary_outputs[notice_output].write_text(notice_text, encoding="utf-8")
+        write_sqlite_catalog(catalog, temporary_outputs[sqlite_output])
+        validate_sqlite_catalog(temporary_outputs[sqlite_output], catalog)
+
+        for destination, temporary_output in temporary_outputs.items():
+            temporary_output.replace(destination)
+    finally:
+        for temporary_output in temporary_outputs.values():
+            if temporary_output.exists():
+                temporary_output.unlink()
 
     print(f"Wrote {output} ({len(catalog['poems'])} poems)")
     print(f"Wrote {notice_output}")
@@ -254,26 +430,45 @@ def main() -> int:
 
 def build_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
     poems: list[dict[str, Any]] = []
+    poem_index_by_identity: dict[str, int] = {}
     source_counts: dict[str, int] = {}
     skipped_items: list[str] = []
     base_id_counts: collections.Counter[str] = collections.Counter()
 
     for source_id, config in SOURCES.items():
-        items = fetch_json(config["path"])
-        if not isinstance(items, list) and int(config["expected_count"]) == 1:
-            items = [items]
-        if not isinstance(items, list):
-            raise ValueError(f"{source_id} did not return a JSON array")
-        expected_count = int(config["expected_count"])
-        if len(items) != expected_count:
-            raise ValueError(f"{source_id} expected {expected_count} items, got {len(items)}")
+        source_items: list[tuple[dict[str, Any], str]] = []
+        for source_path in config.get("paths", [config.get("path")]):
+            if not source_path:
+                raise ValueError(f"{source_id} has no source path")
+            items = fetch_json(source_path)
+            if not isinstance(items, list) and int(config["expected_count"]) == 1:
+                items = [items]
+            if not isinstance(items, list):
+                raise ValueError(f"{source_id}/{source_path} did not return a JSON array")
+            source_items.extend((item, source_path) for item in items)
 
-        source_counts[source_id] = len(items)
-        for item in items:
-            poem = convert_item(source_id, config, item, base_id_counts)
+        expected_count = int(config["expected_count"])
+        if len(source_items) != expected_count:
+            raise ValueError(f"{source_id} expected {expected_count} items, got {len(source_items)}")
+
+        source_counts[source_id] = len(source_items)
+        for item, source_path in source_items:
+            item_config = {**config, "path": source_path}
+            poem = convert_item(source_id, item_config, item, base_id_counts)
             if poem is None:
                 skipped_items.append(f"{source_id}/{skipped_item_label(item)}")
                 continue
+            identity = content_identity(poem)
+            if identity in poem_index_by_identity:
+                existing = poems[poem_index_by_identity[identity]]
+                existing["tags"] = merged_tags(existing["tags"], poem["tags"])
+                existing["themes"] = merged_tags(existing["themes"], poem["themes"])
+                existing_sources = existing.setdefault("sourceNames", [existing["sourceName"]])
+                if poem["sourceName"] not in existing_sources:
+                    existing_sources.append(poem["sourceName"])
+                existing["sourceName"] = " · ".join(existing_sources)
+                continue
+            poem_index_by_identity[identity] = len(poems)
             poems.append(poem)
 
     if len(skipped_items) != EXPECTED_SKIPPED_EMPTY_TEXT_COUNT:
@@ -285,6 +480,7 @@ def build_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
         "poems": poems,
         "collections": collections_data,
         "categories": categories,
+        "authorProfiles": build_author_profiles(poems),
     }
     report = {
         "source_counts": source_counts,
@@ -294,14 +490,110 @@ def build_catalog() -> tuple[dict[str, Any], dict[str, Any]]:
     return catalog, report
 
 
+def download_author_portraits(asset_catalog: Path) -> None:
+    cache_root = Path.home() / "Library" / "Caches" / "PoemeryImporter" / "Portraits"
+    cache_root.mkdir(parents=True, exist_ok=True)
+    asset_catalog.mkdir(parents=True, exist_ok=True)
+
+    for portrait in AUTHOR_PORTRAITS:
+        source_cache = cache_root / portrait["filename"]
+        used_verified_original = False
+        used_verified_proxy = False
+        if source_cache.exists():
+            cached_sha1 = hashlib.sha1(source_cache.read_bytes()).hexdigest()
+            used_verified_original = cached_sha1 == portrait["sha1"]
+            used_verified_proxy = cached_sha1 == portrait.get("proxy_sha1")
+            if not used_verified_original and not used_verified_proxy:
+                source_cache.unlink()
+        if not source_cache.exists():
+            try:
+                payload = fetch_binary(portrait["download"], attempts=2, timeout=10)
+                expected_sha1 = portrait.get("sha1")
+                if expected_sha1 and hashlib.sha1(payload).hexdigest() != expected_sha1:
+                    raise ValueError(f"SHA-1 mismatch for {portrait['source']}")
+                used_verified_original = expected_sha1 is not None
+            except (OSError, http.client.HTTPException, ValueError) as direct_error:
+                proxy_url = (
+                    "https://images.weserv.nl/?url="
+                    + urllib.parse.quote(portrait["download"], safe="")
+                    + "&w=1024&we=1&output=jpg&q=92"
+                )
+                try:
+                    payload = fetch_binary(proxy_url, attempts=4, timeout=45)
+                except (OSError, http.client.HTTPException) as proxy_error:
+                    raise RuntimeError(
+                        f"Could not download portrait {portrait['source']} from the original or image proxy"
+                    ) from proxy_error
+                proxy_sha1 = portrait.get("proxy_sha1")
+                if proxy_sha1 is None or hashlib.sha1(payload).hexdigest() != proxy_sha1:
+                    raise ValueError(f"Pinned proxy SHA-1 mismatch for {portrait['source']}")
+                used_verified_proxy = True
+                print(f"Original host unavailable for {portrait['asset']}; using a Commons-derived proxy image: {direct_error}")
+
+            if len(payload) < 8_000 or not payload.startswith(b"\xff\xd8\xff"):
+                raise ValueError(f"Invalid JPEG payload for {portrait['source']}")
+            source_cache.write_bytes(payload)
+
+        imageset = asset_catalog / f"{portrait['asset']}.imageset"
+        imageset.mkdir(parents=True, exist_ok=True)
+        output_image = imageset / portrait["filename"]
+        temporary_image = imageset / f"{portrait['filename']}.tmp.jpg"
+        subprocess.run(
+            ["/usr/bin/sips", "-Z", "1024", "-s", "format", "jpeg", str(source_cache), "--out", str(temporary_image)],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        )
+        temporary_image.replace(output_image)
+        contents = {
+            "images": [
+                {"filename": portrait["filename"], "idiom": "universal", "scale": "1x"},
+                {"idiom": "universal", "scale": "2x"},
+                {"idiom": "universal", "scale": "3x"},
+            ],
+            "info": {"author": "xcode", "version": 1},
+            "properties": {"preserves-vector-representation": False},
+        }
+        (imageset / "Contents.json").write_text(
+            json.dumps(contents, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        verification = "verified original SHA-1" if used_verified_original else "verified pinned proxy SHA-1"
+        print(f"Wrote {imageset} ({verification})")
+
+
+def fetch_binary(url: str, attempts: int, timeout: int) -> bytes:
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "Poemery-Catalog-Builder/1.0"})
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return response.read()
+        except (OSError, http.client.HTTPException) as error:
+            last_error = error
+            if attempt + 1 < attempts:
+                time.sleep(2**attempt)
+    raise OSError(f"Could not fetch {url} after {attempts} attempts") from last_error
+
+
 def fetch_json(encoded_path: str) -> Any:
-    with urllib.request.urlopen(f"{RAW_BASE_URL}/{encoded_path}", timeout=60) as response:
-        return json.loads(response.read().decode("utf-8"))
+    return json.loads(fetch_text(encoded_path))
 
 
-def fetch_text(encoded_path: str) -> str:
-    with urllib.request.urlopen(f"{RAW_BASE_URL}/{encoded_path}", timeout=60) as response:
-        return response.read().decode("utf-8")
+def fetch_text(encoded_path: str, attempts: int = 4) -> str:
+    url = f"{RAW_BASE_URL}/{encoded_path}"
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            request = urllib.request.Request(url, headers={"User-Agent": "Poemery-Catalog-Builder/1.0"})
+            with urllib.request.urlopen(request, timeout=60) as response:
+                return response.read().decode("utf-8")
+        except (OSError, http.client.HTTPException, UnicodeDecodeError) as error:
+            last_error = error
+            if attempt + 1 < attempts:
+                time.sleep(2**attempt)
+
+    raise RuntimeError(f"Could not fetch {url} after {attempts} attempts") from last_error
 
 
 def convert_item(
@@ -320,6 +612,14 @@ def convert_item(
         author = str(config.get("author") or "佚名")
         title = clean_text(item.get("title")) or "无题"
         paragraphs = cleaned_paragraphs(item.get("content", []))
+    elif source_format == "chuci":
+        author = clean_text(item.get("author")) or "佚名"
+        title = clean_text(item.get("title")) or "无题"
+        paragraphs = cleaned_paragraphs(item.get("content", []))
+    elif source_format == "nalan":
+        author = clean_text(item.get("author")) or "纳兰性德"
+        title = clean_text(item.get("title")) or "无题"
+        paragraphs = cleaned_paragraphs(item.get("para", []))
     else:
         author = clean_text(item.get("author")) or str(config.get("author") or "佚名")
         title = clean_text(item.get("title")) or clean_text(item.get("rhythmic")) or "无题"
@@ -336,15 +636,19 @@ def convert_item(
     poem_id = base_id if occurrence == 1 else f"{base_id}-{occurrence}"
 
     tags = merged_tags(config["base_tags"], item.get("tags", []), shijing_tags(item) if source_format == "shijing" else [])
-    if source_id == "song-ci-300":
+    if source_id in {"song-ci-300", "song-ci-complete", "huajianji", "nantang"}:
         rhythmic = clean_text(item.get("rhythmic"))
         if rhythmic:
             tags = merged_tags(tags, [rhythmic])
 
     form = infer_form(source_id, tags, str(config["form"]))
+    if source_id == "nalan" and "·" in title:
+        form = "词"
     if form not in tags:
         tags = merged_tags(tags, [form])
 
+    text_digest = hashlib.sha256(normalized_identity_text("".join(paragraphs)).encode("utf-8")).hexdigest()[:16]
+    identity_key = f"{config['dynasty']}|{author}|{title}|{text_digest}"
     return {
         "id": poem_id,
         "title": title,
@@ -353,6 +657,9 @@ def convert_item(
         "form": form,
         "tags": tags,
         "summary": str(config["summary"]),
+        "sourceName": f"chinese-poetry/chinese-poetry · {config['label']}",
+        "sourceLicense": "MIT",
+        "canonicalKey": identity_key,
         "themes": themes_for_poem(source_id, author, title, form, tags, paragraphs),
         "difficulty": difficulty_for_poem(form, paragraphs),
         "sourceURL": f"{BLOB_BASE_URL}/{config['path']}",
@@ -367,6 +674,22 @@ def convert_item(
         ],
         "annotations": [],
     }
+
+
+def normalized_identity_text(value: str) -> str:
+    return "".join(character for character in value if not character.isspace())
+
+
+def content_identity(poem: dict[str, Any]) -> str:
+    payload = "|".join(
+        [
+            poem["dynasty"],
+            poem["author"],
+            poem["title"],
+            *[line["text"] for line in poem["lines"]],
+        ]
+    )
+    return hashlib.sha256(normalized_identity_text(payload).encode("utf-8")).hexdigest()
 
 
 def skipped_item_label(item: dict[str, Any]) -> str:
@@ -526,12 +849,68 @@ def build_collections(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
             style("#2F6F73", "#9CC6B8", "#26323A", "宋"),
         ),
         make_collection(
+            "cp-collection-huajianji",
+            "花间集",
+            f"{len(by_tag['花间集'])} 首五代词",
+            "featured",
+            by_tag["花间集"],
+            style("#8B3C63", "#D6A5C2", "#2B2632", "花"),
+        ),
+        make_collection(
+            "cp-collection-nantang",
+            "南唐词",
+            f"{len(by_tag['南唐词'])} 首作品",
+            "featured",
+            by_tag["南唐词"],
+            style("#50618B", "#B8AED9", "#292A3A", "南"),
+        ),
+        make_collection(
+            "cp-collection-nalan",
+            "纳兰性德诗词",
+            f"{len(by_tag['纳兰性德'])} 首作品",
+            "author",
+            by_tag["纳兰性德"],
+            style("#405D72", "#B7CCD1", "#263039", "兰"),
+        ),
+        make_collection(
             "cp-collection-yuanqu",
             "元曲",
             f"{len(by_tag['元曲'])} 条元曲作品",
             "chart",
             by_tag["元曲"],
             style("#8E5B2D", "#D8A15D", "#2E2A26", "曲"),
+        ),
+        make_collection(
+            "cp-collection-song-ci-complete",
+            "全宋词",
+            f"{len(by_tag['全宋词'])} 首宋词",
+            "featured",
+            by_tag["全宋词"],
+            style("#2F6F73", "#9CC6B8", "#26323A", "词"),
+        ),
+        make_collection(
+            "cp-collection-chuci",
+            "楚辞",
+            f"{len(by_tag['楚辞'])} 篇作品",
+            "featured",
+            by_tag["楚辞"],
+            style("#315B4F", "#D0B16E", "#243130", "楚"),
+        ),
+        make_collection(
+            "cp-collection-caocao",
+            "曹操诗集",
+            f"{len(by_tag['曹操诗集'])} 首作品",
+            "author",
+            by_tag["曹操诗集"],
+            style("#24596B", "#86B8B0", "#26333A", "操"),
+        ),
+        make_collection(
+            "cp-collection-newly-added",
+            "本次新收录",
+            f"{len(by_tag['本次新收录'])} 首新作品",
+            "chart",
+            by_tag["本次新收录"],
+            style("#584B9C", "#B8A7E8", "#252538", "新"),
         ),
     ]
 
@@ -578,6 +957,9 @@ def build_collections(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
         ("杜甫", style("#6F3D2E", "#D7A85E", "#26323A", "杜")),
         ("苏轼", style("#395C8A", "#B9C7E6", "#2B2B34", "苏")),
         ("关汉卿", style("#8E5B2D", "#D8A15D", "#2E2A26", "关")),
+        ("李煜", style("#50618B", "#B8AED9", "#292A3A", "李")),
+        ("温庭筠", style("#8B3C63", "#D6A5C2", "#2B2632", "温")),
+        ("纳兰性德", style("#405D72", "#B7CCD1", "#263039", "兰")),
     ]:
         author_poems = by_author.get(author, [])
         if author_poems:
@@ -596,6 +978,8 @@ def build_collections(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
         ("唐", style("#A33A32", "#E8B96F", "#2B2B34", "唐")),
         ("宋", style("#2F6F73", "#9CC6B8", "#26323A", "宋")),
         ("元", style("#8E5B2D", "#D8A15D", "#2E2A26", "元")),
+        ("五代", style("#50618B", "#B8AED9", "#292A3A", "五")),
+        ("清", style("#405D72", "#B7CCD1", "#263039", "清")),
     ]:
         dynasty_poems = by_dynasty.get(dynasty, [])
         if dynasty_poems:
@@ -656,6 +1040,9 @@ def build_categories(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
         ("cp-category-tang", "唐诗", "唐诗三百首", "唐诗", "book.closed.fill", style("#A33A32", "#E8B96F", "#2B2B34", "唐")),
         ("cp-category-song-ci", "宋词", "宋词三百首", "宋词", "music.note", style("#2F6F73", "#9CC6B8", "#26323A", "宋")),
         ("cp-category-yuanqu", "元曲", "杂剧与散曲", "元曲", "theatermasks.fill", style("#8E5B2D", "#D8A15D", "#2E2A26", "曲")),
+        ("cp-category-huajianji", "花间集", "五代词选", "花间集", "book.closed.fill", style("#8B3C63", "#D6A5C2", "#2B2632", "花")),
+        ("cp-category-nantang", "南唐词", "李煜等南唐词人", "南唐词", "music.note", style("#50618B", "#B8AED9", "#292A3A", "南")),
+        ("cp-category-nalan", "纳兰性德", "清代诗词", "纳兰性德", "person.fill", style("#405D72", "#B7CCD1", "#263039", "兰")),
         ("cp-category-lunyu", "论语", "孔门语录", "论语", "quote.bubble.fill", style("#3F5F51", "#D2C488", "#263029", "论")),
         ("cp-category-shijing", "诗经", "风雅颂", "诗经", "scroll.fill", style("#8B3C63", "#D6A5C2", "#2B2632", "经")),
         ("cp-category-classics", "四书五经", "大学中庸孟子", "四书五经", "books.vertical.fill", style("#4F5F38", "#D4C989", "#293025", "书")),
@@ -747,8 +1134,10 @@ def slug(value: str) -> str:
 
 def validate_catalog(catalog: dict[str, Any]) -> None:
     poems = catalog["poems"]
-    if len(poems) != EXPECTED_TOTAL:
-        raise ValueError(f"Expected {EXPECTED_TOTAL} poems, got {len(poems)}")
+    if not EXPECTED_MINIMUM_TOTAL <= len(poems) <= EXPECTED_MAXIMUM_TOTAL:
+        raise ValueError(
+            f"Expected {EXPECTED_MINIMUM_TOTAL}...{EXPECTED_MAXIMUM_TOTAL} poems, got {len(poems)}"
+        )
 
     poem_ids = [poem["id"] for poem in poems]
     duplicate_ids = [poem_id for poem_id, count in collections.Counter(poem_ids).items() if count > 1]
@@ -802,7 +1191,7 @@ def write_sqlite_catalog(catalog: dict[str, Any], output: Path) -> None:
         connection.execute("PRAGMA foreign_keys = ON")
         create_sqlite_schema(connection)
         insert_sqlite_catalog(connection, catalog)
-        connection.execute("PRAGMA user_version = 1")
+        connection.execute("PRAGMA user_version = 3")
         connection.commit()
 
 
@@ -831,7 +1220,9 @@ def create_sqlite_schema(connection: sqlite3.Connection) -> None:
             artwork_secondary_hex TEXT NOT NULL,
             artwork_tertiary_hex TEXT NOT NULL,
             artwork_glyph TEXT NOT NULL,
-            sort_order INTEGER NOT NULL
+            first_line TEXT NOT NULL,
+            sort_order INTEGER NOT NULL,
+            popularity_rank INTEGER NOT NULL
         ) WITHOUT ROWID;
 
         CREATE TABLE poem_lines (
@@ -915,13 +1306,28 @@ def create_sqlite_schema(connection: sqlite3.Connection) -> None:
             PRIMARY KEY (author_id, poem_order)
         ) WITHOUT ROWID;
 
-        CREATE TABLE search_grams (
-            gram TEXT PRIMARY KEY NOT NULL,
-            poem_offsets BLOB NOT NULL
+        CREATE TABLE author_profiles (
+            id TEXT PRIMARY KEY NOT NULL,
+            profile_json TEXT NOT NULL
         ) WITHOUT ROWID;
 
-        CREATE INDEX idx_poem_tags_tag ON poem_tags(tag);
-        CREATE INDEX idx_poem_themes_theme ON poem_themes(theme);
+        CREATE VIRTUAL TABLE poem_fts USING fts5(
+            poem_id UNINDEXED,
+            title,
+            author,
+            metadata,
+            body,
+            normalized,
+            tokenize='trigram'
+        );
+
+        CREATE UNIQUE INDEX idx_poems_sort_order ON poems(sort_order, id);
+        CREATE INDEX idx_poems_popularity ON poems(popularity_rank, id);
+        CREATE INDEX idx_poems_dynasty ON poems(dynasty, popularity_rank, id);
+        CREATE INDEX idx_poems_form ON poems(form, popularity_rank, id);
+        CREATE INDEX idx_poems_author ON poems(author, popularity_rank, id);
+        CREATE INDEX idx_poem_tags_tag ON poem_tags(tag, poem_id);
+        CREATE INDEX idx_poem_themes_theme ON poem_themes(theme, poem_id);
         CREATE INDEX idx_collection_poems_poem_id ON collection_poems(poem_id);
         CREATE INDEX idx_author_poems_poem_id ON author_poems(poem_id);
         """
@@ -933,7 +1339,7 @@ def insert_sqlite_catalog(connection: sqlite3.Connection, catalog: dict[str, Any
     connection.executemany(
         "INSERT INTO metadata(key, value) VALUES (?, ?)",
         [
-            ("schema_version", "1"),
+            ("schema_version", "3"),
             ("repository", REPOSITORY),
             ("repository_url", REPOSITORY_URL),
             ("commit", COMMIT),
@@ -941,8 +1347,6 @@ def insert_sqlite_catalog(connection: sqlite3.Connection, catalog: dict[str, Any
             ("poem_count", str(len(catalog["poems"]))),
         ],
     )
-
-    gram_postings: dict[str, list[int]] = collections.defaultdict(list)
 
     for sort_order, poem in enumerate(catalog["poems"]):
         artwork = poem["artworkStyle"]
@@ -952,9 +1356,9 @@ def insert_sqlite_catalog(connection: sqlite3.Connection, catalog: dict[str, Any
                 id, title, author, dynasty, form, summary, source_url, source_name,
                 source_license, editorial_summary, difficulty, canonical_key,
                 artwork_primary_hex, artwork_secondary_hex, artwork_tertiary_hex,
-                artwork_glyph, sort_order
+                artwork_glyph, first_line, sort_order, popularity_rank
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 poem["id"],
@@ -973,6 +1377,8 @@ def insert_sqlite_catalog(connection: sqlite3.Connection, catalog: dict[str, Any
                 artwork["secondaryHex"],
                 artwork["tertiaryHex"],
                 artwork["glyph"],
+                poem["lines"][0]["text"],
+                sort_order,
                 sort_order,
             ),
         )
@@ -1012,17 +1418,27 @@ def insert_sqlite_catalog(connection: sqlite3.Connection, catalog: dict[str, Any
             "INSERT INTO poem_themes(poem_id, theme, theme_order) VALUES (?, ?, ?)",
             [(poem["id"], theme, index) for index, theme in enumerate(poem.get("themes", []))],
         )
-        for gram in search_grams_for_poem(poem):
-            gram_postings[gram].append(sort_order)
-
-    connection.executemany(
-        "INSERT INTO search_grams(gram, poem_offsets) VALUES (?, ?)",
-        [
-            (gram, sqlite3.Binary(encode_varint_postings(postings)))
-            for gram, postings in sorted(gram_postings.items())
-        ],
-    )
-
+        metadata_text = " ".join(
+            [poem["dynasty"], poem["form"], *poem["tags"], *poem.get("themes", [])]
+        )
+        body_text = "\n".join(line["text"] for line in poem["lines"])
+        normalized_text = " ".join(
+            [poem["title"], poem["author"], metadata_text, body_text]
+        ).lower()
+        connection.execute(
+            """
+            INSERT INTO poem_fts(poem_id, title, author, metadata, body, normalized)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                poem["id"],
+                poem["title"],
+                poem["author"],
+                metadata_text,
+                body_text,
+                normalized_text,
+            ),
+        )
     for sort_order, collection_data in enumerate(catalog["collections"]):
         accent = collection_data["accent"]
         connection.execute(
@@ -1090,6 +1506,14 @@ def insert_sqlite_catalog(connection: sqlite3.Connection, catalog: dict[str, Any
             ],
         )
 
+    connection.executemany(
+        "INSERT INTO author_profiles(id, profile_json) VALUES (?, ?)",
+        [
+            (profile["id"], json.dumps(profile, ensure_ascii=False, separators=(",", ":")))
+            for profile in catalog.get("authorProfiles", [])
+        ],
+    )
+
 
 def sqlite_authors(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
     authors: collections.OrderedDict[str, dict[str, Any]] = collections.OrderedDict()
@@ -1106,6 +1530,48 @@ def sqlite_authors(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
         )
         author["poemIDs"].append(poem["id"])
     return list(authors.values())
+
+
+CURATED_AUTHOR_FACTS = {
+    "李白": {"lifeYears": "701—762", "courtesyNames": ["太白"], "aliases": ["青莲居士"], "biography": "李白，唐代诗人，字太白，号青莲居士。其诗想象奔放、语言明朗，后世常称“诗仙”。"},
+    "杜甫": {"lifeYears": "712—770", "courtesyNames": ["子美"], "aliases": ["少陵野老"], "biography": "杜甫，唐代诗人，字子美。其诗沉郁顿挫，深切记录时代与民生，后世常称“诗圣”。"},
+    "白居易": {"lifeYears": "772—846", "courtesyNames": ["乐天"], "aliases": ["香山居士"], "biography": "白居易，唐代诗人，字乐天，号香山居士。其诗平易晓畅，重视诗歌对现实生活的关照。"},
+    "王维": {"lifeYears": "约701—761", "courtesyNames": ["摩诘"], "aliases": [], "biography": "王维，唐代诗人、画家，字摩诘。其山水田园诗清远闲雅，常见诗画相生的意境。"},
+    "苏轼": {"lifeYears": "1037—1101", "courtesyNames": ["子瞻"], "aliases": ["东坡居士"], "nativePlace": "眉州眉山", "biography": "苏轼，北宋文学家，字子瞻，号东坡居士。诗词文书画皆工，词风开阔豪放而兼具旷达情怀。"},
+    "李清照": {"lifeYears": "1084—约1155", "courtesyNames": [], "aliases": ["易安居士"], "nativePlace": "齐州章丘", "biography": "李清照，宋代词人，号易安居士。其词语言清丽，情感细腻，前后期风格各有深致。"},
+    "辛弃疾": {"lifeYears": "1140—1207", "courtesyNames": ["幼安"], "aliases": ["稼轩"], "nativePlace": "济南历城", "biography": "辛弃疾，南宋词人，字幼安，号稼轩。其词慷慨沉雄，常寄寓家国抱负与人生感怀。"},
+    "柳永": {"lifeYears": "约984—约1053", "courtesyNames": ["耆卿"], "aliases": [], "biography": "柳永，北宋词人，原名三变。其词多写都市风物与离情别绪，并推动慢词的发展。"},
+    "屈原": {"lifeYears": "约前340—前278", "courtesyNames": ["灵均"], "aliases": ["正则"], "nativePlace": "楚国丹阳", "biography": "屈原，战国时期楚国诗人。其作品以瑰丽想象和深切家国情怀奠定楚辞传统，对后世文学影响深远。"},
+    "曹操": {"lifeYears": "155—220", "courtesyNames": ["孟德"], "aliases": [], "nativePlace": "沛国谯县", "biography": "曹操，东汉末年政治家、军事家、文学家，字孟德。其诗语言质朴而气象雄健，是建安文学的重要代表。"},
+    "关汉卿": {"lifeYears": None, "courtesyNames": [], "aliases": ["已斋叟"], "biography": "关汉卿，元代杂剧作家、散曲家。其作品关注世情与人物命运，是元曲的重要代表。"},
+    "马致远": {"lifeYears": "约1250—约1321", "courtesyNames": ["千里"], "aliases": ["东篱"], "biography": "马致远，元代戏曲家、散曲家。其小令清疏苍凉，常以羁旅与秋思意象见长。"},
+}
+
+
+def build_author_profiles(poems: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    profiles: list[dict[str, Any]] = []
+    for author in sqlite_authors(poems):
+        facts = CURATED_AUTHOR_FACTS.get(author["name"], {})
+        era = f"{author['dynasty']}代" if author["dynasty"] else "古代"
+        biography = facts.get("biography") or f"{author['name']}，{era}作者。Poemery 当前收录其作品 {len(author['poemIDs'])} 首，可从作品目录继续阅读。"
+        has_verified_facts = bool(facts)
+        profiles.append(
+            {
+                "id": author["id"],
+                "name": author["name"],
+                "dynasty": author["dynasty"],
+                "biography": biography,
+                "lifeYears": facts.get("lifeYears"),
+                "courtesyNames": facts.get("courtesyNames", []),
+                "aliases": facts.get("aliases", []),
+                "nativePlace": facts.get("nativePlace"),
+                "sourceName": "Wikidata CC0 事实与 Poemery 原创编辑" if has_verified_facts else "Poemery 目录资料",
+                "sourceURL": "https://www.wikidata.org/" if has_verified_facts else None,
+                "sourceLicense": "CC0 facts; Poemery original copy" if has_verified_facts else "Poemery original copy",
+                "portrait": None,
+            }
+        )
+    return profiles
 
 
 def search_grams_for_poem(poem: dict[str, Any]) -> set[str]:
@@ -1149,6 +1615,10 @@ def validate_sqlite_catalog(output: Path, catalog: dict[str, Any]) -> None:
     with sqlite3.connect(output) as connection:
         connection.execute("PRAGMA foreign_keys = ON")
 
+        schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
+        if schema_version != 3:
+            raise ValueError(f"{output} expected SQLite user_version 3, got {schema_version}")
+
         checks = [
             ("poems", len(catalog["poems"])),
             ("poem_lines", sum(len(poem["lines"]) for poem in catalog["poems"])),
@@ -1157,6 +1627,8 @@ def validate_sqlite_catalog(output: Path, catalog: dict[str, Any]) -> None:
             ("collections", len(catalog["collections"])),
             ("collection_poems", sum(len(collection_data["poemIDs"]) for collection_data in catalog["collections"])),
             ("categories", len(catalog["categories"])),
+            ("author_profiles", len(catalog.get("authorProfiles", []))),
+            ("poem_fts", len(catalog["poems"])),
         ]
         for table, expected_count in checks:
             count = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
@@ -1174,18 +1646,70 @@ def validate_sqlite_catalog(output: Path, catalog: dict[str, Any]) -> None:
         if invalid_collection_refs:
             raise ValueError(f"{output} has {invalid_collection_refs} invalid collection poem references")
 
-        search_gram_count = connection.execute("SELECT COUNT(*) FROM search_grams").fetchone()[0]
-        if search_gram_count == 0:
-            raise ValueError(f"{output} has no search gram coverage")
+        missing_first_lines = connection.execute(
+            "SELECT COUNT(*) FROM poems WHERE length(trim(first_line)) = 0"
+        ).fetchone()[0]
+        if missing_first_lines:
+            raise ValueError(f"{output} has {missing_first_lines} poems without a first-line summary")
 
+        missing_details = connection.execute(
+            """
+            SELECT COUNT(*) FROM poems
+            WHERE NOT EXISTS (SELECT 1 FROM poem_lines WHERE poem_lines.poem_id = poems.id)
+            """
+        ).fetchone()[0]
+        if missing_details:
+            raise ValueError(f"{output} has {missing_details} poems without detail rows")
+
+        sample_poem = next(poem for poem in catalog["poems"] if len(poem["lines"][0]["text"]) >= 3)
+        sample_text = sample_poem["lines"][0]["text"][:3]
+        expression = f'"{sample_text.replace(chr(34), chr(34) * 2)}"'
+        fts_match = connection.execute(
+            "SELECT poem_id FROM poem_fts WHERE poem_fts MATCH ? AND poem_id = ? LIMIT 1",
+            (expression, sample_poem["id"]),
+        ).fetchone()
+        if fts_match is None:
+            raise ValueError(f"{output} FTS5 did not find source text for {sample_poem['id']}")
+
+        paged_ids: list[str] = []
+        cursor_order = -1
+        cursor_id = ""
+        while True:
+            rows = connection.execute(
+                """
+                SELECT id, sort_order FROM poems
+                WHERE sort_order > ? OR (sort_order = ? AND id > ?)
+                ORDER BY sort_order, id LIMIT 50
+                """,
+                (cursor_order, cursor_order, cursor_id),
+            ).fetchall()
+            if not rows:
+                break
+            paged_ids.extend(row[0] for row in rows)
+            cursor_id, cursor_order = rows[-1]
+        expected_ids = [poem["id"] for poem in catalog["poems"]]
+        if paged_ids != expected_ids:
+            raise ValueError(f"{output} keyset cursor order contains a duplicate, omission, or reorder")
+
+        query_plans = {
+            "idx_poems_sort_order": "SELECT id FROM poems ORDER BY sort_order, id LIMIT 50",
+            "idx_poems_dynasty": "SELECT id FROM poems WHERE dynasty = '唐' ORDER BY popularity_rank, id LIMIT 50",
+            "idx_poems_form": "SELECT id FROM poems WHERE form = '词' ORDER BY popularity_rank, id LIMIT 50",
+        }
+        for expected_index, sql in query_plans.items():
+            plan = " ".join(str(row[-1]) for row in connection.execute(f"EXPLAIN QUERY PLAN {sql}"))
+            if expected_index not in plan:
+                raise ValueError(f"{output} query plan does not use {expected_index}: {plan}")
 
 def build_notice(report: dict[str, Any]) -> str:
     generated_at = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat()
     license_text = fetch_text("LICENSE").strip()
-    source_lines = "\n".join(
-        f"- {source['label']}: {BLOB_BASE_URL}/{source['path']} ({report['source_counts'][source_id]} items)"
-        for source_id, source in SOURCES.items()
-    )
+    source_entries: list[str] = []
+    for source_id, source in SOURCES.items():
+        paths = source.get("paths", [source.get("path")])
+        source_entries.append(f"- {source['label']} ({report['source_counts'][source_id]} items)")
+        source_entries.extend(f"  - {BLOB_BASE_URL}/{path}" for path in paths if path)
+    source_lines = "\n".join(source_entries)
     return f"""Poemery bundled poetry data notice
 
 Data source: {REPOSITORY_URL}
