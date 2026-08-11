@@ -323,6 +323,40 @@ final class PoemeryTests: XCTestCase {
         XCTAssertEqual(session.moveToPreviousPoem(in: store)?.id, poems[0].id)
     }
 
+    func testUserPlaylistsPersistAndSupportFullManagement() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PoemeryTests-\(UUID().uuidString)", isDirectory: true)
+        let fileURL = directory.appendingPathComponent("UserPlaylists.json")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = UserPlaylistStore(fileURL: fileURL)
+        let playlist = try store.createPlaylist(named: "  夜读  ", adding: "jing-ye-si")
+
+        XCTAssertEqual(playlist.name, "夜读")
+        XCTAssertEqual(playlist.poemIDs, ["jing-ye-si"])
+
+        try store.add(poemID: "ordinary", to: playlist.id)
+        try store.add(poemID: "ordinary", to: playlist.id)
+        XCTAssertEqual(store.playlist(id: playlist.id)?.poemIDs, ["jing-ye-si", "ordinary"])
+
+        try store.movePoems(from: IndexSet(integer: 1), to: 0, in: playlist.id)
+        try store.renamePlaylist(id: playlist.id, to: "月下")
+
+        let reloaded = UserPlaylistStore(fileURL: fileURL)
+        XCTAssertEqual(reloaded.playlist(id: playlist.id)?.name, "月下")
+        XCTAssertEqual(reloaded.playlist(id: playlist.id)?.poemIDs, ["ordinary", "jing-ye-si"])
+
+        try reloaded.removePoems(at: IndexSet(integer: 0), from: playlist.id)
+        XCTAssertEqual(reloaded.playlist(id: playlist.id)?.poemIDs, ["jing-ye-si"])
+
+        XCTAssertThrowsError(try reloaded.createPlaylist(named: "月下")) { error in
+            XCTAssertEqual(error as? UserPlaylistError, .duplicateName)
+        }
+
+        try reloaded.deletePlaylist(id: playlist.id)
+        XCTAssertTrue(reloaded.playlists.isEmpty)
+    }
+
     private func makeDefaults(file: StaticString = #filePath, line: UInt = #line) -> UserDefaults {
         let suiteName = "PoemeryTests.\(UUID().uuidString)"
         guard let defaults = UserDefaults(suiteName: suiteName) else {

@@ -7,6 +7,7 @@ struct PoemDetailView: View {
     let queue: ReadingQueue
     let library: PoemLibraryStore
     let session: ReadingSessionStore
+    let userPlaylists: UserPlaylistStore
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.chineseScriptPreference) private var script
@@ -14,18 +15,21 @@ struct PoemDetailView: View {
     @State private var authorPath: [AuthorResult.ID] = []
     @State private var selectedAnnotation: PoemAnnotation?
     @State private var shareComposerItem: PoemShareComposerItem?
+    @State private var playlistPresentation: PlaylistPresentation?
     @State private var hasStartedInitialReading = false
 
     init(
         initialPoemID: Poem.ID,
         queue: ReadingQueue,
         library: PoemLibraryStore,
-        session: ReadingSessionStore
+        session: ReadingSessionStore,
+        userPlaylists: UserPlaylistStore
     ) {
         self.initialPoemID = initialPoemID
         self.queue = queue
         self.library = library
         self.session = session
+        self.userPlaylists = userPlaylists
         self._currentPoemID = State(initialValue: initialPoemID)
     }
 
@@ -108,6 +112,16 @@ struct PoemDetailView: View {
                     .accessibilityLabel(script.converted("关闭"))
                 }
 
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        playlistPresentation = PlaylistPresentation(poemID: visiblePoem.id)
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.headline.weight(.semibold))
+                    }
+                    .accessibilityLabel(script.converted("加入诗单"))
+                }
+
                 ToolbarItemGroup(placement: .bottomBar) {
                     Button {
                         movePoem(by: -1)
@@ -160,6 +174,12 @@ struct PoemDetailView: View {
             .sheet(item: $shareComposerItem) { item in
                 PoemShareComposer(poem: item.poem)
                     .presentationDetents([.large])
+            }
+            .sheet(item: $playlistPresentation) { presentation in
+                PlaylistPickerSheet(
+                    poemID: presentation.poemID,
+                    userPlaylists: userPlaylists
+                )
             }
             .onAppear {
                 if !hasStartedInitialReading {
@@ -399,6 +419,134 @@ struct PoemDetailView: View {
         }
     }
 
+}
+
+private struct PlaylistPresentation: Identifiable {
+    let poemID: Poem.ID
+    var id: Poem.ID { poemID }
+}
+
+private struct PlaylistPickerSheet: View {
+    let poemID: Poem.ID
+    let userPlaylists: UserPlaylistStore
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.chineseScriptPreference) private var script
+    @State private var isCreatingPlaylist = false
+    @State private var newPlaylistName = ""
+    @State private var errorMessage: String?
+    @State private var feedbackTrigger = 0
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        newPlaylistName = ""
+                        isCreatingPlaylist = true
+                    } label: {
+                        Label(script.converted("新建诗单"), systemImage: "plus.circle.fill")
+                    }
+                }
+
+                Section(script.converted("我的诗单")) {
+                    if userPlaylists.playlists.isEmpty {
+                        ContentUnavailableView(
+                            script.converted("还没有自定义诗单"),
+                            systemImage: "music.note.list",
+                            description: Text(script.converted("新建诗单后，当前作品会自动加入。"))
+                        )
+                    } else {
+                        ForEach(userPlaylists.playlists) { playlist in
+                            playlistRow(playlist)
+                        }
+                    }
+                }
+            }
+            .navigationTitle(script.converted("加入诗单"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(script.converted("取消")) {
+                        dismiss()
+                    }
+                }
+            }
+            .alert(script.converted("新建诗单"), isPresented: $isCreatingPlaylist) {
+                TextField(script.converted("诗单名称"), text: $newPlaylistName)
+                Button(script.converted("创建")) {
+                    createPlaylist()
+                }
+                Button(script.converted("取消"), role: .cancel) {}
+            } message: {
+                Text(script.converted("名称需要包含 1 至 40 个字符。"))
+            }
+            .alert(
+                script.converted("没有保存成功"),
+                isPresented: Binding(
+                    get: { errorMessage != nil },
+                    set: { if !$0 { errorMessage = nil } }
+                )
+            ) {
+                Button(script.converted("好"), role: .cancel) {}
+            } message: {
+                Text(script.converted(errorMessage ?? ""))
+            }
+            .sensoryFeedback(.success, trigger: feedbackTrigger)
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func playlistRow(_ playlist: UserPlaylist) -> some View {
+        let alreadyContainsPoem = userPlaylists.contains(poemID: poemID, in: playlist.id)
+        return Button {
+            addToPlaylist(playlist)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "music.note.list")
+                    .foregroundStyle(PoemeryTheme.accent)
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(playlist.name)
+                        .foregroundStyle(PoemeryTheme.primaryText)
+                    Text(script.converted("\(playlist.poemIDs.count) 首作品"))
+                        .font(.caption)
+                        .foregroundStyle(PoemeryTheme.secondaryText)
+                }
+
+                Spacer()
+
+                if alreadyContainsPoem {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(PoemeryTheme.accent)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .disabled(alreadyContainsPoem)
+    }
+
+    private func createPlaylist() {
+        do {
+            _ = try userPlaylists.createPlaylist(named: newPlaylistName, adding: poemID)
+            feedbackTrigger += 1
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func addToPlaylist(_ playlist: UserPlaylist) {
+        do {
+            try userPlaylists.add(poemID: poemID, to: playlist.id)
+            feedbackTrigger += 1
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 }
 
 private struct PoemSupplementContent: View {

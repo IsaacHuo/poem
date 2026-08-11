@@ -3,11 +3,11 @@ import SwiftUI
 struct LibraryScreen: View {
     let library: PoemLibraryStore
     let session: ReadingSessionStore
+    let userPlaylists: UserPlaylistStore
     let onOpenPoem: (Poem, ReadingQueue) -> Void
     let onOpenCollection: (PoemCollection) -> Void
     let onRefresh: @Sendable () async -> Void
 
-    @State private var selectedShelf: LibraryShelf = .poems
     @State private var selectedSort: LibrarySort = .curated
 
     var body: some View {
@@ -25,8 +25,7 @@ struct LibraryScreen: View {
                 ScreenHeader(title: "你的诗歌书库", subtitle: nil)
                 localLibraryStatus
 
-                libraryShelfPicker
-                librarySortPicker
+                UserPlaylistsSection(userPlaylists: userPlaylists)
 
                 VStack(spacing: 0) {
                     LibraryNavigationRow(
@@ -86,7 +85,9 @@ struct LibraryScreen: View {
                 }
                 .groupedListBackground()
 
-                shelfPreview
+                librarySortPicker
+
+                poemPreview
 
                 CollectionListSection(
                     collections: library.collections,
@@ -143,15 +144,6 @@ struct LibraryScreen: View {
         session.recentPoems(in: library)
     }
 
-    private var libraryShelfPicker: some View {
-        Picker("资料库内容", selection: $selectedShelf) {
-            ForEach(LibraryShelf.allCases) { shelf in
-                Text(shelf.title).tag(shelf)
-            }
-        }
-        .pickerStyle(.segmented)
-    }
-
     private var librarySortPicker: some View {
         Picker("排序", selection: $selectedSort) {
             ForEach(LibrarySort.allCases) { sort in
@@ -161,47 +153,13 @@ struct LibraryScreen: View {
         .pickerStyle(.segmented)
     }
 
-    @ViewBuilder
-    private var shelfPreview: some View {
-        switch selectedShelf {
-        case .poems:
-            PoemListSection(
-                title: selectedSort.title,
-                poems: sortedPoems(library.cachedPoems(limit: 80)).prefixArray(6),
-                queueTitle: "诗词",
-                onOpenPoem: onOpenPoem
-            )
-
-            PoemListSection(
-                title: "作品榜",
-                poems: library.chartPoems(limit: 8),
-                queueTitle: "作品榜",
-                onOpenPoem: onOpenPoem
-            )
-        case .favorites:
-            PoemShelf(
-                title: "收藏",
-                poems: sortedPoems(favoritePoems),
-                emptyTitle: "还没有收藏",
-                emptySubtitle: "打开作品详情后可以把喜欢的诗词加入收藏。",
-                onOpenPoem: onOpenPoem
-            )
-        case .recents:
-            PoemShelf(
-                title: "最近阅读",
-                poems: recentPoems,
-                emptyTitle: "还没有最近阅读",
-                emptySubtitle: "打开任意作品详情后会出现在这里。",
-                onOpenPoem: onOpenPoem
-            )
-        case .authors:
-            AuthorShelf(authors: Array(authors.prefix(8))) { author in
-                let poems = library.poemsByAuthor(author)
-                if let firstPoem = poems.first {
-                    onOpenPoem(firstPoem, ReadingQueue(title: author.name, poems: poems))
-                }
-            }
-        }
+    private var poemPreview: some View {
+        PoemListSection(
+            title: selectedSort.title,
+            poems: sortedPoems(library.cachedPoems(limit: 80)).prefixArray(6),
+            queueTitle: "诗词",
+            onOpenPoem: onOpenPoem
+        )
     }
 
     private func sortedPoems(_ poems: [Poem]) -> [Poem] {
@@ -224,6 +182,13 @@ struct LibraryScreen: View {
     @ViewBuilder
     private func destinationView(for destination: LibraryDestination) -> some View {
         switch destination {
+        case .userPlaylist(let playlistID):
+            UserPlaylistDetailView(
+                playlistID: playlistID,
+                userPlaylists: userPlaylists,
+                library: library,
+                onOpenPoem: onOpenPoem
+            )
         case .collections:
             ScrollView {
                 CollectionListSection(
@@ -306,6 +271,7 @@ struct LibraryScreen: View {
 }
 
 private enum LibraryDestination: Hashable {
+    case userPlaylist(UserPlaylist.ID)
     case collections
     case authors
     case authorDetail(AuthorResult)
@@ -366,24 +332,6 @@ private struct LibraryFacetDirectory: View {
     }
 }
 
-private enum LibraryShelf: String, CaseIterable, Identifiable {
-    case poems
-    case favorites
-    case recents
-    case authors
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .poems: "诗词"
-        case .favorites: "收藏"
-        case .recents: "最近"
-        case .authors: "诗人"
-        }
-    }
-}
-
 private enum LibrarySort: String, CaseIterable, Identifiable {
     case curated
     case title
@@ -439,6 +387,430 @@ private struct LibraryNavigationRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+private struct PlaylistEditorPresentation: Identifiable {
+    enum Mode {
+        case create
+        case rename(UserPlaylist.ID)
+    }
+
+    let mode: Mode
+    let initialName: String
+
+    var id: String {
+        switch mode {
+        case .create:
+            return "create-playlist"
+        case .rename(let playlistID):
+            return "rename-playlist-\(playlistID.uuidString)"
+        }
+    }
+}
+
+private struct UserPlaylistsSection: View {
+    let userPlaylists: UserPlaylistStore
+
+    @Environment(\.chineseScriptPreference) private var script
+    @State private var editorPresentation: PlaylistEditorPresentation?
+    @State private var pendingDeletion: UserPlaylist?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                SectionTitle(title: script.converted("我的诗单"))
+
+                Spacer()
+
+                Button {
+                    editorPresentation = PlaylistEditorPresentation(mode: .create, initialName: "")
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.body.weight(.semibold))
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel(script.converted("新建诗单"))
+            }
+
+            if userPlaylists.playlists.isEmpty {
+                Button {
+                    editorPresentation = PlaylistEditorPresentation(mode: .create, initialName: "")
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "music.note.list")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(PoemeryTheme.accent)
+                            .frame(width: 34)
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(script.converted("新建你的第一张诗单"))
+                                .font(.headline)
+                                .foregroundStyle(PoemeryTheme.primaryText)
+                            Text(script.converted("把想反复阅读的作品整理到一起。"))
+                                .font(.subheadline)
+                                .foregroundStyle(PoemeryTheme.secondaryText)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundStyle(PoemeryTheme.accent)
+                    }
+                    .padding(14)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .groupedListBackground()
+            } else {
+                LazyVStack(spacing: 0) {
+                    ForEach(userPlaylists.playlists) { playlist in
+                        HStack(spacing: 0) {
+                            NavigationLink(value: LibraryDestination.userPlaylist(playlist.id)) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "music.note.list")
+                                        .font(.title3.weight(.semibold))
+                                        .foregroundStyle(PoemeryTheme.accent)
+                                        .frame(width: 34)
+
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(playlist.name)
+                                            .font(.headline)
+                                            .foregroundStyle(PoemeryTheme.primaryText)
+                                            .lineLimit(1)
+                                        Text(script.converted("\(playlist.poemIDs.count) 首作品"))
+                                            .font(.subheadline)
+                                            .foregroundStyle(PoemeryTheme.secondaryText)
+                                    }
+
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+
+                            Menu {
+                                Button {
+                                    editorPresentation = PlaylistEditorPresentation(
+                                        mode: .rename(playlist.id),
+                                        initialName: playlist.name
+                                    )
+                                } label: {
+                                    Label(script.converted("重命名"), systemImage: "pencil")
+                                }
+
+                                Button(role: .destructive) {
+                                    pendingDeletion = playlist
+                                } label: {
+                                    Label(script.converted("删除诗单"), systemImage: "trash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .font(.body.weight(.semibold))
+                                    .frame(width: 44, height: 44)
+                            }
+                            .accessibilityLabel(script.converted("管理\(playlist.name)"))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+
+                        if playlist.id != userPlaylists.playlists.last?.id {
+                            Divider().padding(.leading, 60)
+                        }
+                    }
+                }
+                .groupedListBackground()
+            }
+        }
+        .sheet(item: $editorPresentation) { presentation in
+            PlaylistNameEditorSheet(presentation: presentation, userPlaylists: userPlaylists)
+        }
+        .alert(
+            script.converted("删除诗单？"),
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } }
+            ),
+            presenting: pendingDeletion
+        ) { playlist in
+            Button(script.converted("删除"), role: .destructive) {
+                deletePlaylist(playlist)
+            }
+            Button(script.converted("取消"), role: .cancel) {}
+        } message: { playlist in
+            Text(script.converted("“\(playlist.name)”及其整理记录会从本机删除，诗词原文不会受到影响。"))
+        }
+        .alert(
+            script.converted("没有保存成功"),
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )
+        ) {
+            Button(script.converted("好"), role: .cancel) {}
+        } message: {
+            Text(script.converted(errorMessage ?? ""))
+        }
+    }
+
+    private func deletePlaylist(_ playlist: UserPlaylist) {
+        do {
+            try userPlaylists.deletePlaylist(id: playlist.id)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct PlaylistNameEditorSheet: View {
+    let presentation: PlaylistEditorPresentation
+    let userPlaylists: UserPlaylistStore
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.chineseScriptPreference) private var script
+    @State private var name: String
+    @State private var errorMessage: String?
+
+    init(presentation: PlaylistEditorPresentation, userPlaylists: UserPlaylistStore) {
+        self.presentation = presentation
+        self.userPlaylists = userPlaylists
+        self._name = State(initialValue: presentation.initialName)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(script.converted("诗单名称"), text: $name)
+                        .textInputAutocapitalization(.never)
+                        .submitLabel(.done)
+                        .onSubmit(save)
+                } footer: {
+                    Text(script.converted("名称需要包含 1 至 40 个字符，且不能与现有诗单重名。"))
+                }
+
+                if let errorMessage {
+                    Section {
+                        Label(script.converted(errorMessage), systemImage: "exclamationmark.circle.fill")
+                            .foregroundStyle(PoemeryTheme.accent)
+                    }
+                }
+            }
+            .navigationTitle(script.converted(title))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(script.converted("取消")) {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(script.converted("保存"), action: save)
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var title: String {
+        switch presentation.mode {
+        case .create: "新建诗单"
+        case .rename: "重命名诗单"
+        }
+    }
+
+    private func save() {
+        do {
+            switch presentation.mode {
+            case .create:
+                _ = try userPlaylists.createPlaylist(named: name)
+            case .rename(let playlistID):
+                try userPlaylists.renamePlaylist(id: playlistID, to: name)
+            }
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct UserPlaylistDetailView: View {
+    let playlistID: UserPlaylist.ID
+    let userPlaylists: UserPlaylistStore
+    let library: PoemLibraryStore
+    let onOpenPoem: (Poem, ReadingQueue) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.chineseScriptPreference) private var script
+    @State private var poemsByID: [Poem.ID: Poem] = [:]
+    @State private var isLoading = false
+    @State private var editorPresentation: PlaylistEditorPresentation?
+    @State private var isConfirmingDeletion = false
+    @State private var errorMessage: String?
+
+    private var playlist: UserPlaylist? {
+        userPlaylists.playlist(id: playlistID)
+    }
+
+    private var resolvedPoems: [Poem] {
+        playlist?.poemIDs.compactMap { poemsByID[$0] } ?? []
+    }
+
+    var body: some View {
+        Group {
+            if let playlist {
+                List {
+                    if playlist.poemIDs.isEmpty {
+                        ContentUnavailableView(
+                            script.converted("诗单还是空的"),
+                            systemImage: "music.note.list",
+                            description: Text(script.converted("在诗词详情右上角点击加号即可加入。"))
+                        )
+                        .listRowBackground(Color.clear)
+                    } else {
+                        Section {
+                            ForEach(playlist.poemIDs, id: \.self) { poemID in
+                                playlistRow(poemID: poemID, playlist: playlist)
+                            }
+                            .onDelete(perform: removePoems)
+                            .onMove(perform: movePoems)
+                        } header: {
+                            Text(script.converted("\(playlist.poemIDs.count) 首作品"))
+                        }
+                    }
+                }
+                .scrollContentBackground(.hidden)
+                .background(PoemeryTheme.background)
+                .navigationTitle(playlist.name)
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        EditButton()
+
+                        Menu {
+                            Button {
+                                editorPresentation = PlaylistEditorPresentation(
+                                    mode: .rename(playlist.id),
+                                    initialName: playlist.name
+                                )
+                            } label: {
+                                Label(script.converted("重命名"), systemImage: "pencil")
+                            }
+
+                            Button(role: .destructive) {
+                                isConfirmingDeletion = true
+                            } label: {
+                                Label(script.converted("删除诗单"), systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                    }
+                }
+                .task(id: taskID(for: playlist)) {
+                    await loadPoems(for: playlist)
+                }
+            } else {
+                ContentUnavailableView(
+                    script.converted("诗单已经不存在"),
+                    systemImage: "music.note.list",
+                    description: Text(script.converted("返回资料库后可以新建诗单。"))
+                )
+                .background(PoemeryTheme.background)
+            }
+        }
+        .sheet(item: $editorPresentation) { presentation in
+            PlaylistNameEditorSheet(presentation: presentation, userPlaylists: userPlaylists)
+        }
+        .alert(script.converted("删除诗单？"), isPresented: $isConfirmingDeletion) {
+            Button(script.converted("删除"), role: .destructive, action: deletePlaylist)
+            Button(script.converted("取消"), role: .cancel) {}
+        } message: {
+            Text(script.converted("诗单及其整理记录会从本机删除，诗词原文不会受到影响。"))
+        }
+        .alert(
+            script.converted("没有保存成功"),
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )
+        ) {
+            Button(script.converted("好"), role: .cancel) {}
+        } message: {
+            Text(script.converted(errorMessage ?? ""))
+        }
+    }
+
+    @ViewBuilder
+    private func playlistRow(poemID: Poem.ID, playlist: UserPlaylist) -> some View {
+        if let poem = poemsByID[poemID] {
+            Button {
+                onOpenPoem(poem, ReadingQueue(title: playlist.name, poems: resolvedPoems))
+            } label: {
+                PoemListRow(poem: poem)
+            }
+            .buttonStyle(.plain)
+        } else if isLoading {
+            HStack(spacing: 12) {
+                ProgressView().controlSize(.small)
+                Text(script.converted("正在载入作品"))
+                    .foregroundStyle(PoemeryTheme.secondaryText)
+            }
+            .frame(minHeight: 58)
+        } else {
+            Label {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(script.converted("作品暂不可用"))
+                        .foregroundStyle(PoemeryTheme.primaryText)
+                    Text(script.converted("记录仍保留在诗单中"))
+                        .font(.caption)
+                        .foregroundStyle(PoemeryTheme.secondaryText)
+                }
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+                    .foregroundStyle(PoemeryTheme.accent)
+            }
+            .frame(minHeight: 58)
+        }
+    }
+
+    private func taskID(for playlist: UserPlaylist) -> String {
+        playlist.poemIDs.joined(separator: "|") + "|" + script.rawValue
+    }
+
+    private func loadPoems(for playlist: UserPlaylist) async {
+        isLoading = true
+        let poems = await library.loadSummaries(ids: playlist.poemIDs, script: script)
+        poemsByID = Dictionary(uniqueKeysWithValues: poems.map { ($0.id, $0) })
+        isLoading = false
+    }
+
+    private func removePoems(at offsets: IndexSet) {
+        do {
+            try userPlaylists.removePoems(at: offsets, from: playlistID)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func movePoems(from offsets: IndexSet, to destination: Int) {
+        do {
+            try userPlaylists.movePoems(from: offsets, to: destination, in: playlistID)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func deletePlaylist() {
+        do {
+            try userPlaylists.deletePlaylist(id: playlistID)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 

@@ -1,6 +1,189 @@
 import Foundation
 import Observation
 
+struct UserPlaylist: Identifiable, Codable, Hashable, Sendable {
+    let id: UUID
+    var name: String
+    let createdAt: Date
+    var updatedAt: Date
+    var poemIDs: [Poem.ID]
+}
+
+enum UserPlaylistError: LocalizedError, Equatable {
+    case invalidName
+    case duplicateName
+    case playlistNotFound
+    case persistenceFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidName:
+            return "诗单名称需要包含 1 至 40 个字符。"
+        case .duplicateName:
+            return "已经有同名诗单。"
+        case .playlistNotFound:
+            return "这个诗单已经不存在。"
+        case .persistenceFailed:
+            return "诗单未能保存到本机，请稍后重试。"
+        }
+    }
+}
+
+@MainActor
+@Observable
+final class UserPlaylistStore {
+    private(set) var playlists: [UserPlaylist]
+
+    private let fileURL: URL
+    private let fileManager: FileManager
+
+    convenience init() {
+        let fileManager = FileManager.default
+        let applicationSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? fileManager.temporaryDirectory
+        self.init(
+            fileURL: applicationSupport
+                .appendingPathComponent("Poemery", isDirectory: true)
+                .appendingPathComponent("UserPlaylists.json"),
+            fileManager: fileManager
+        )
+    }
+
+    init(fileURL: URL, fileManager: FileManager = .default) {
+        self.fileURL = fileURL
+        self.fileManager = fileManager
+        self.playlists = Self.load(from: fileURL)
+    }
+
+    @discardableResult
+    func createPlaylist(named name: String, adding poemID: Poem.ID? = nil) throws -> UserPlaylist {
+        let normalizedName = try validatedName(name, excluding: nil)
+        let now = Date()
+        let playlist = UserPlaylist(
+            id: UUID(),
+            name: normalizedName,
+            createdAt: now,
+            updatedAt: now,
+            poemIDs: poemID.map { [$0] } ?? []
+        )
+        playlists.insert(playlist, at: 0)
+        try persistOrRevert { playlists.removeAll { $0.id == playlist.id } }
+        return playlist
+    }
+
+    func renamePlaylist(id: UserPlaylist.ID, to name: String) throws {
+        guard let index = playlists.firstIndex(where: { $0.id == id }) else {
+            throw UserPlaylistError.playlistNotFound
+        }
+        let normalizedName = try validatedName(name, excluding: id)
+        let previous = playlists[index]
+        playlists[index].name = normalizedName
+        playlists[index].updatedAt = Date()
+        try persistOrRevert { playlists[index] = previous }
+    }
+
+    func deletePlaylist(id: UserPlaylist.ID) throws {
+        guard let index = playlists.firstIndex(where: { $0.id == id }) else {
+            throw UserPlaylistError.playlistNotFound
+        }
+        let removed = playlists.remove(at: index)
+        try persistOrRevert { playlists.insert(removed, at: min(index, playlists.count)) }
+    }
+
+    func add(poemID: Poem.ID, to playlistID: UserPlaylist.ID) throws {
+        guard let index = playlists.firstIndex(where: { $0.id == playlistID }) else {
+            throw UserPlaylistError.playlistNotFound
+        }
+        guard !playlists[index].poemIDs.contains(poemID) else {
+            return
+        }
+        let previous = playlists[index]
+        playlists[index].poemIDs.append(poemID)
+        playlists[index].updatedAt = Date()
+        try persistOrRevert { playlists[index] = previous }
+    }
+
+    func removePoems(at offsets: IndexSet, from playlistID: UserPlaylist.ID) throws {
+        guard let index = playlists.firstIndex(where: { $0.id == playlistID }) else {
+            throw UserPlaylistError.playlistNotFound
+        }
+        let previous = playlists[index]
+        for offset in offsets.sorted(by: >) where playlists[index].poemIDs.indices.contains(offset) {
+            playlists[index].poemIDs.remove(at: offset)
+        }
+        playlists[index].updatedAt = Date()
+        try persistOrRevert { playlists[index] = previous }
+    }
+
+    func movePoems(from offsets: IndexSet, to destination: Int, in playlistID: UserPlaylist.ID) throws {
+        guard let index = playlists.firstIndex(where: { $0.id == playlistID }) else {
+            throw UserPlaylistError.playlistNotFound
+        }
+        let previous = playlists[index]
+        let validOffsets = offsets.sorted().filter { playlists[index].poemIDs.indices.contains($0) }
+        let movedIDs = validOffsets.map { playlists[index].poemIDs[$0] }
+        for offset in validOffsets.reversed() {
+            playlists[index].poemIDs.remove(at: offset)
+        }
+        let removedBeforeDestination = validOffsets.filter { $0 < destination }.count
+        let insertionIndex = min(
+            max(0, destination - removedBeforeDestination),
+            playlists[index].poemIDs.count
+        )
+        playlists[index].poemIDs.insert(contentsOf: movedIDs, at: insertionIndex)
+        playlists[index].updatedAt = Date()
+        try persistOrRevert { playlists[index] = previous }
+    }
+
+    func contains(poemID: Poem.ID, in playlistID: UserPlaylist.ID) -> Bool {
+        playlists.first(where: { $0.id == playlistID })?.poemIDs.contains(poemID) == true
+    }
+
+    func playlist(id: UserPlaylist.ID) -> UserPlaylist? {
+        playlists.first { $0.id == id }
+    }
+
+    private func validatedName(_ name: String, excluding playlistID: UserPlaylist.ID?) throws -> String {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty, normalized.count <= 40 else {
+            throw UserPlaylistError.invalidName
+        }
+        let alreadyExists = playlists.contains { playlist in
+            playlist.id != playlistID
+                && playlist.name.compare(normalized, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+        }
+        guard !alreadyExists else {
+            throw UserPlaylistError.duplicateName
+        }
+        return normalized
+    }
+
+    private func persistOrRevert(_ revert: () -> Void) throws {
+        do {
+            try fileManager.createDirectory(
+                at: fileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try encoder.encode(playlists).write(to: fileURL, options: [.atomic])
+        } catch {
+            revert()
+            throw UserPlaylistError.persistenceFailed
+        }
+    }
+
+    private static func load(from fileURL: URL) -> [UserPlaylist] {
+        guard let data = try? Data(contentsOf: fileURL) else {
+            return []
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return (try? decoder.decode([UserPlaylist].self, from: data)) ?? []
+    }
+}
+
 struct ReadingQueue: Identifiable, Codable, Hashable {
     let id: String
     let title: String

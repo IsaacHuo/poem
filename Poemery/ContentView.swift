@@ -5,6 +5,7 @@ struct ContentView: View {
     @AppStorage(ChineseScriptPreference.storageKey) private var chineseScriptRawValue = ChineseScriptPreference.simplified.rawValue
     @State private var libraryLoadState: LibraryLoadState = .loading(PoemLibraryStore.bootstrap())
     @State private var session = ReadingSessionStore()
+    @State private var userPlaylists = UserPlaylistStore()
     @State private var selectedTab: AppTab = .home
     @State private var lastContentTab: AppTab = .home
     @State private var presentedItem: PresentedLibraryItem?
@@ -106,6 +107,7 @@ struct ContentView: View {
                 LibraryScreen(
                     library: library,
                     session: session,
+                    userPlaylists: userPlaylists,
                     onOpenPoem: openPoem,
                     onOpenCollection: openCollection,
                     onRefresh: { await refreshLibrary(library) }
@@ -164,6 +166,7 @@ struct ContentView: View {
                     LibraryScreen(
                         library: library,
                         session: session,
+                        userPlaylists: userPlaylists,
                         onOpenPoem: openPoem,
                         onOpenCollection: openCollection,
                         onRefresh: { await refreshLibrary(library) }
@@ -298,7 +301,8 @@ struct ContentView: View {
                 initialPoemID: item.poemID,
                 queue: item.queue,
                 library: library,
-                session: session
+                session: session,
+                userPlaylists: userPlaylists
             )
         } else {
             EmptyView()
