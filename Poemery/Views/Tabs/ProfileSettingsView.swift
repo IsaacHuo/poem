@@ -3,6 +3,7 @@ import SwiftUI
 enum ProfileDestination: Hashable {
     case favorites
     case recents
+    case statistics
     case settings
     case dataSource
     case privacy

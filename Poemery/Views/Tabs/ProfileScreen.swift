@@ -30,6 +30,19 @@ struct ProfileScreen: View {
         topValues(from: recentPoems.map(\.form), limit: 3)
     }
 
+    private var statisticsValue: String {
+        let totalMinutes = Int(session.statistics.totalDuration) / 60
+        let hours = totalMinutes / 60
+        if hours > 0 {
+            return script.converted("\(hours) 小时")
+        }
+        let minutes = totalMinutes % 60
+        if minutes > 0 {
+            return script.converted("\(minutes) 分钟")
+        }
+        return script.converted("\(Int(session.statistics.totalDuration)) 秒")
+    }
+
     var body: some View {
         NavigationStack {
             rootContent
@@ -95,6 +108,8 @@ struct ProfileScreen: View {
                 queueTitle: script.converted("最近阅读"),
                 onOpenPoem: onOpenPoem
             )
+        case .statistics:
+            ReadingStatisticsView(library: library, session: session)
         case .settings:
             ProfileSettingsHomeView(
                 chineseScriptRawValue: $chineseScriptRawValue,
@@ -159,6 +174,13 @@ struct ProfileScreen: View {
 
                 NavigationLink(value: ProfileDestination.recents) {
                     AccountValueRow(symbol: "clock.fill", title: script.converted("最近阅读"), value: "\(recentPoems.count)")
+                }
+                .buttonStyle(.plain)
+
+                Divider().padding(.leading, 50)
+
+                NavigationLink(value: ProfileDestination.statistics) {
+                    AccountValueRow(symbol: "chart.bar.fill", title: script.converted("阅读统计"), value: statisticsValue)
                 }
                 .buttonStyle(.plain)
             }

@@ -38,7 +38,7 @@ struct CollectionDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 18) {
-            CollectionCover(collection: collection, poemCount: collection.poemCount)
+            CollectionCover(collection: collection)
                 .frame(maxWidth: .infinity)
 
             VStack(alignment: .leading, spacing: 8) {
@@ -51,10 +51,6 @@ struct CollectionDetailView: View {
                 Text(collection.subtitle)
                     .font(.headline)
                     .foregroundStyle(PoemeryTheme.secondaryText)
-
-                Text("\(collection.poemCount) 首作品")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(PoemeryTheme.accent)
             }
         }
     }
@@ -438,7 +434,6 @@ struct AuthorIntroduction: View {
 
 private struct CollectionCover: View {
     let collection: PoemCollection
-    let poemCount: Int
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -491,16 +486,12 @@ private struct CollectionCover: View {
                 Text("诗意选集")
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.white)
-
-                Text("\(poemCount) 首作品")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.82))
             }
             .padding(22)
         }
         .frame(height: 280)
         .shadow(color: collection.accent.primary.opacity(0.22), radius: 24, x: 0, y: 14)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(collection.title)，\(poemCount) 首作品")
+        .accessibilityLabel(collection.title)
     }
 }

@@ -11,6 +11,7 @@ struct PoemDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.chineseScriptPreference) private var script
+    @Environment(\.scenePhase) private var scenePhase
     @State private var currentPoemID: Poem.ID
     @State private var authorPath: [AuthorResult.ID] = []
     @State private var selectedAnnotation: PoemAnnotation?
@@ -81,6 +82,8 @@ struct PoemDetailView: View {
                         RelatedPoemsSection(poems: relatedPoems, onOpenPoem: showRelatedPoem)
                             .frame(maxWidth: 680, alignment: .leading)
                     }
+                    .id(visiblePoem.id)
+                    .transition(.opacity)
                     .padding(.horizontal, 20)
                     .padding(.top, 18)
                     .padding(.bottom, 56)
@@ -90,6 +93,7 @@ struct PoemDetailView: View {
                 .background(background)
                 .simultaneousGesture(swipeGesture)
                 .onChange(of: currentPoemID) {
+                    session.endReadingLog()
                     selectedAnnotation = nil
                     isSelectingText = false
                     var transaction = Transaction()
@@ -97,6 +101,7 @@ struct PoemDetailView: View {
                     withTransaction(transaction) {
                         proxy.scrollTo("reader-top", anchor: .top)
                     }
+                    session.beginReadingLog(poemID: visiblePoem.id)
                 }
                 .onAppear {
                     if let lineID = session.readingPosition(for: visiblePoem.id) {
@@ -117,14 +122,33 @@ struct PoemDetailView: View {
                     .accessibilityLabel(script.converted("关闭"))
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        playlistPresentation = PlaylistPresentation(poemID: visiblePoem.id)
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            shareComposerItem = PoemShareComposerItem(poem: visiblePoem)
+                        } label: {
+                            Label(script.converted("分享卡片"), systemImage: "square.and.arrow.up")
+                        }
+
+                        Button {
+                            playlistPresentation = PlaylistPresentation(poemID: visiblePoem.id)
+                        } label: {
+                            Label(script.converted("加入诗单"), systemImage: "plus")
+                        }
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "ellipsis")
                             .font(.headline.weight(.semibold))
                     }
-                    .accessibilityLabel(script.converted("加入诗单"))
+                    .accessibilityLabel(script.converted("更多操作"))
+
+                    Button {
+                        session.toggleFavorite(visiblePoem)
+                    } label: {
+                        Image(systemName: session.isFavorite(visiblePoem) ? "star.fill" : "star")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(session.isFavorite(visiblePoem) ? PoemeryTheme.accent : PoemeryTheme.primaryText)
+                    }
+                    .accessibilityLabel(script.converted(session.isFavorite(visiblePoem) ? "取消收藏" : "收藏"))
                 }
 
                 ToolbarItemGroup(placement: .bottomBar) {
@@ -191,6 +215,17 @@ struct PoemDetailView: View {
                     session.startReading(visiblePoem, in: queue)
                     hasStartedInitialReading = true
                 }
+                session.beginReadingLog(poemID: visiblePoem.id)
+            }
+            .onDisappear {
+                session.endReadingLog()
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    session.beginReadingLog(poemID: visiblePoem.id)
+                } else {
+                    session.endReadingLog()
+                }
             }
             .task(id: "\(currentPoemID)|\(script.rawValue)") {
                 await library.loadPoemDetailIfNeeded(id: currentPoemID, script: script)
@@ -244,10 +279,6 @@ struct PoemDetailView: View {
                     .lineLimit(1)
             }
             .layoutPriority(1)
-
-            Spacer(minLength: 8)
-
-            actionButtons
         }
         .frame(maxWidth: 680)
         .accessibilityElement(children: .contain)
@@ -280,46 +311,6 @@ struct PoemDetailView: View {
         }
         .font(.subheadline.weight(.semibold))
         .foregroundStyle(PoemeryTheme.secondaryText)
-    }
-
-    private var actionButtons: some View {
-        HStack(spacing: 8) {
-            favoriteButton
-            shareButton
-        }
-    }
-
-    private var favoriteButton: some View {
-        Button {
-            session.toggleFavorite(visiblePoem)
-        } label: {
-            Image(systemName: session.isFavorite(visiblePoem) ? "heart.fill" : "heart")
-                .font(.headline.weight(.bold))
-                .foregroundStyle(session.isFavorite(visiblePoem) ? PoemeryTheme.accent : PoemeryTheme.primaryText)
-                .frame(width: 42, height: 42)
-                .background(.regularMaterial, in: Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(script.converted(session.isFavorite(visiblePoem) ? "取消收藏" : "收藏"))
-    }
-
-    @ViewBuilder
-    private var shareButton: some View {
-        Button {
-            shareComposerItem = PoemShareComposerItem(poem: visiblePoem)
-        } label: {
-            shareButtonLabel
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(script.converted("制作分享图片"))
-    }
-
-    private var shareButtonLabel: some View {
-        Image(systemName: "square.and.arrow.up")
-            .font(.headline.weight(.bold))
-            .foregroundStyle(PoemeryTheme.primaryText)
-            .frame(width: 42, height: 42)
-            .background(.regularMaterial, in: Circle())
     }
 
     private var background: some View {
@@ -398,13 +389,17 @@ struct PoemDetailView: View {
 
     private func showRelatedPoem(_ poem: Poem, queue: ReadingQueue) {
         session.startReading(poem, in: queue)
-        currentPoemID = poem.id
+        withAnimation(PoemeryTheme.motion) {
+            currentPoemID = poem.id
+        }
     }
 
     private func showAuthorPoem(_ poem: Poem, queue: ReadingQueue) {
         session.startReading(poem, in: queue)
-        currentPoemID = poem.id
-        authorPath = []
+        withAnimation(PoemeryTheme.motion) {
+            currentPoemID = poem.id
+            authorPath = []
+        }
     }
 
     private func movePoem(by offset: Int) {
@@ -428,7 +423,9 @@ struct PoemDetailView: View {
             }
 
             session.startReading(poem, in: queue)
-            currentPoemID = poem.id
+            withAnimation(PoemeryTheme.motion) {
+                currentPoemID = poem.id
+            }
             isMovingPoem = false
         }
     }

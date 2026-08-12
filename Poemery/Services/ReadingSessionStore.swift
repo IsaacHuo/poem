@@ -204,12 +204,45 @@ struct ReadingQueue: Identifiable, Codable, Hashable {
     }
 }
 
+struct ReadingLogEntry: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    let poemID: Poem.ID
+    let startedAt: Date
+    let duration: TimeInterval
+
+    init(id: UUID = UUID(), poemID: Poem.ID, startedAt: Date, duration: TimeInterval) {
+        self.id = id
+        self.poemID = poemID
+        self.startedAt = startedAt
+        self.duration = duration
+    }
+}
+
+struct ReadingDayStat: Identifiable, Hashable, Sendable {
+    let date: Date
+    let duration: TimeInterval
+    let count: Int
+
+    var id: Date { date }
+}
+
+struct ReadingStatistics: Sendable {
+    var totalDuration: TimeInterval = 0
+    var todayDuration: TimeInterval = 0
+    var totalReads: Int = 0
+    var activeDays: Int = 0
+    var currentStreakDays: Int = 0
+    var last7Days: [ReadingDayStat] = []
+    var recentEntries: [ReadingLogEntry] = []
+}
+
 @MainActor
 @Observable
 final class ReadingSessionStore {
     private let favoritesKey = "poemery.favoritePoemIDs"
     private let recentsKey = "poemery.recentPoemIDs"
     private let readingPositionsKey = "poemery.readingPositions"
+    private let readingLogKey = "poemery.readingLog"
     private let defaults: UserDefaults
 
     private(set) var favoritePoemIDs: [Poem.ID]
@@ -217,6 +250,9 @@ final class ReadingSessionStore {
     private(set) var currentPoemID: Poem.ID?
     private(set) var currentQueue: ReadingQueue?
     private(set) var readingPositions: [Poem.ID: PoemLine.ID]
+    private(set) var readingLog: [ReadingLogEntry]
+    private var activeReadingStart: Date?
+    private var activeReadingPoemID: Poem.ID?
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -225,6 +261,8 @@ final class ReadingSessionStore {
         self.currentPoemID = nil
         self.currentQueue = nil
         self.readingPositions = defaults.dictionary(forKey: readingPositionsKey) as? [Poem.ID: PoemLine.ID] ?? [:]
+        self.readingLog = defaults.data(forKey: readingLogKey)
+            .flatMap { try? JSONDecoder().decode([ReadingLogEntry].self, from: $0) } ?? []
     }
 
     func favoritePoems(in library: PoemLibraryStore) -> [Poem] {
@@ -276,8 +314,79 @@ final class ReadingSessionStore {
         currentQueue = nil
         recentPoemIDs.removeAll()
         readingPositions.removeAll()
+        clearReadingLog()
         persistRecents()
         persistReadingPositions()
+    }
+
+    func beginReadingLog(poemID: Poem.ID) {
+        endReadingLog()
+        activeReadingStart = Date()
+        activeReadingPoemID = poemID
+    }
+
+    func endReadingLog() {
+        guard let startedAt = activeReadingStart, let poemID = activeReadingPoemID else {
+            activeReadingStart = nil
+            activeReadingPoemID = nil
+            return
+        }
+        activeReadingStart = nil
+        activeReadingPoemID = nil
+        let duration = Date().timeIntervalSince(startedAt)
+        appendReadingLogEntry(poemID: poemID, startedAt: startedAt, duration: duration)
+    }
+
+    func clearReadingLog() {
+        activeReadingStart = nil
+        activeReadingPoemID = nil
+        readingLog.removeAll()
+        persistReadingLog()
+    }
+
+    var statistics: ReadingStatistics {
+        let calendar = Calendar.current
+        let now = Date()
+        let startOfToday = calendar.startOfDay(for: now)
+
+        let totalDuration = readingLog.reduce(0) { $0 + $1.duration }
+        let todayDuration = readingLog
+            .filter { calendar.isDate($0.startedAt, inSameDayAs: now) }
+            .reduce(0) { $0 + $1.duration }
+        let daysWithReads = Set(readingLog.map { calendar.startOfDay(for: $0.startedAt) })
+
+        var streak = 0
+        var streakDay = startOfToday
+        if !daysWithReads.contains(streakDay) {
+            streakDay = calendar.date(byAdding: .day, value: -1, to: streakDay) ?? streakDay
+        }
+        while daysWithReads.contains(streakDay) {
+            streak += 1
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: streakDay) else { break }
+            streakDay = previous
+        }
+
+        let last7Days: [ReadingDayStat] = (0..<7).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: startOfToday) else {
+                return nil
+            }
+            let entries = readingLog.filter { calendar.isDate($0.startedAt, inSameDayAs: date) }
+            return ReadingDayStat(
+                date: date,
+                duration: entries.reduce(0) { $0 + $1.duration },
+                count: entries.count
+            )
+        }
+
+        return ReadingStatistics(
+            totalDuration: totalDuration,
+            todayDuration: todayDuration,
+            totalReads: readingLog.count,
+            activeDays: daysWithReads.count,
+            currentStreakDays: streak,
+            last7Days: last7Days,
+            recentEntries: Array(readingLog.suffix(20).reversed())
+        )
     }
 
     func readingPosition(for poemID: Poem.ID) -> PoemLine.ID? {
@@ -316,6 +425,24 @@ final class ReadingSessionStore {
 
     private func persistReadingPositions() {
         defaults.set(readingPositions, forKey: readingPositionsKey)
+    }
+
+    private func appendReadingLogEntry(poemID: Poem.ID, startedAt: Date, duration: TimeInterval) {
+        let cappedDuration = min(max(duration, 0), 4 * 60 * 60)
+        guard cappedDuration >= 1 else {
+            return
+        }
+        readingLog.append(ReadingLogEntry(poemID: poemID, startedAt: startedAt, duration: cappedDuration))
+        if readingLog.count > 600 {
+            readingLog = Array(readingLog.suffix(600))
+        }
+        persistReadingLog()
+    }
+
+    private func persistReadingLog() {
+        if let data = try? JSONEncoder().encode(readingLog) {
+            defaults.set(data, forKey: readingLogKey)
+        }
     }
 
     private func moveCurrentPoem(by offset: Int, in library: PoemLibraryStore) -> Poem? {
